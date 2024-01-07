@@ -1,0 +1,41 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{6873E6F9-CE49-40A4-97AB-987460196324}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{A872A311-55A9-4DEF-B3E5-F9DECC4D9270}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ado", "ado", "{C91A4E31-72D9-42D5-92BA-CB8672BB676A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{41DCC33D-7B04-41A3-8A5D-677A8FAF4A2F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dilcore.DocumentDb.Abstractions", "src\Dilcore.DocumentDb.Abstractions\Dilcore.DocumentDb.Abstractions.csproj", "{5BDC3667-60FB-4A10-8F07-85ED0B9786FA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dilcore.DocumentDb.MongoDb", "src\Dilcore.DocumentDb.MongoDb\Dilcore.DocumentDb.MongoDb.csproj", "{D1696A31-9630-4000-AE61-7B200EBB8993}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dilcore.DocumentDb.MongoDb.Abstractions", "src\Dilcore.DocumentDb.MongoDb.Abstractions\Dilcore.DocumentDb.MongoDb.Abstractions.csproj", "{8276972E-75DE-47FF-B86A-A225363E4E2B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{5BDC3667-60FB-4A10-8F07-85ED0B9786FA} = {6873E6F9-CE49-40A4-97AB-987460196324}
+		{D1696A31-9630-4000-AE61-7B200EBB8993} = {6873E6F9-CE49-40A4-97AB-987460196324}
+		{8276972E-75DE-47FF-B86A-A225363E4E2B} = {6873E6F9-CE49-40A4-97AB-987460196324}
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5BDC3667-60FB-4A10-8F07-85ED0B9786FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BDC3667-60FB-4A10-8F07-85ED0B9786FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5BDC3667-60FB-4A10-8F07-85ED0B9786FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5BDC3667-60FB-4A10-8F07-85ED0B9786FA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1696A31-9630-4000-AE61-7B200EBB8993}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1696A31-9630-4000-AE61-7B200EBB8993}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1696A31-9630-4000-AE61-7B200EBB8993}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1696A31-9630-4000-AE61-7B200EBB8993}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8276972E-75DE-47FF-B86A-A225363E4E2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8276972E-75DE-47FF-B86A-A225363E4E2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8276972E-75DE-47FF-B86A-A225363E4E2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8276972E-75DE-47FF-B86A-A225363E4E2B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
