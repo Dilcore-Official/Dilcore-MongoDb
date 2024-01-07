@@ -6,8 +6,8 @@ using MongoDB.Driver;
 
 namespace Dilcore.DocumentDb.MongoDb.Services;
 
-internal class MongoDbCollectionProvider(
-    MongoDbProvider mongoDbProvider,
+internal class MongoCollectionProvider(
+    IMongoDatabaseProvider mongoDatabaseProvider,
     IDocumentCollectionPrefixProvider collectionPrefixProvider)
     : IMongoDbCollectionProvider
 {
@@ -20,7 +20,7 @@ internal class MongoDbCollectionProvider(
         var options = new GetCollectionOptions<TDocument>();
         collectionOptions(options);
 
-        var databaseResult = await mongoDbProvider.GetDatabaseAsync(cancellationToken);
+        var databaseResult = await mongoDatabaseProvider.GetDatabaseAsync(options.DatabaseName, cancellationToken);
 
         if (databaseResult.IsFailed)
         {

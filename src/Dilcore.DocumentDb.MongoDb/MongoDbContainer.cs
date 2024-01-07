@@ -1,5 +1,6 @@
 using Dilcore.DocumentDb.Abstractions;
 using Dilcore.DocumentDb.MongoDb.Defaults;
+using Dilcore.DocumentDb.MongoDb.Repositories;
 using Dilcore.DocumentDb.MongoDb.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,11 +15,14 @@ public class MongoDbContainer
         _services = services;
     }
     
-    public MongoDbContainer AddCustomDatabasePrefixProvider<T>() 
+    public MongoDbContainer AddCustomDatabasePrefixProvider<T>(bool replace = false) 
         where T : class, IDocumentDatabasePrefixProvider
     {
-        var descriptor = _services.SingleOrDefault(x => x.ServiceType == typeof(IDocumentDatabasePrefixProvider));
-        _services.Remove(descriptor);
+        if (replace)
+        {
+            var descriptor = _services.SingleOrDefault(x => x.ServiceType == typeof(IDocumentDatabasePrefixProvider));
+            _services.Remove(descriptor);
+        }
         
         _services.AddSingleton<IDocumentDatabasePrefixProvider, T>();
         
@@ -35,7 +39,15 @@ public class MongoDbContainer
         
         return this;
     }
-
+    
+    public MongoDbContainer AddGenericRepository<T>(Action<GetCollectionOptions<T>> options)
+        where T : class, IDocumentEntity
+    {
+        _services.AddSingleton(options);
+        _services.AddSingleton<IGenericRepository<T>, GenericMongoDbRepository<T>>();
+        return this;
+    }
+    
     private MongoDbContainer AddDefaultPrefixProviders()
     {
         _services.AddSingleton<IDocumentDatabasePrefixProvider, DefaultDocumentDatabasePrefixProvider>();
@@ -46,7 +58,13 @@ public class MongoDbContainer
 
     private MongoDbContainer AddMongoDbCollectionProvider()
     {
-        _services.AddSingleton<IMongoDbCollectionProvider, MongoDbCollectionProvider>();
+        _services.AddSingleton<IMongoDbCollectionProvider, MongoCollectionProvider>();
+        return this;
+    }
+
+    private MongoDbContainer AddDefaultMongoDbProvider()
+    {
+        _services.AddSingleton<IMongoDatabaseProvider, MongoDatabaseProvider>();
         return this;
     }
     
@@ -54,6 +72,7 @@ public class MongoDbContainer
     {
         var container = new MongoDbContainer(services);
         return container.AddDefaultPrefixProviders()
-            .AddMongoDbCollectionProvider();
+            .AddMongoDbCollectionProvider()
+            .AddDefaultMongoDbProvider();
     }
 }

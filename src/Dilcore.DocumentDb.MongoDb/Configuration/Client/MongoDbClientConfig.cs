@@ -1,13 +1,11 @@
-namespace Dilcore.DocumentDb.MongoDb.Configuration;
+namespace Dilcore.DocumentDb.MongoDb.Configuration.Client;
 
-internal class MongoDbConfig
+internal class MongoDbClientConfig
 {
     /// <summary>
     /// Gets or sets MongoDb connection string
     /// </summary>
     internal string ConnectionString { get; set; }
-    
-    internal string DatabaseName { get; set; }
     
     /// <summary>
     /// Max connection pool size to MongoDB Cluster

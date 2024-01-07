@@ -1,7 +1,7 @@
 using FluentValidation;
 using MongoDB.Driver;
 
-namespace Dilcore.DocumentDb.MongoDb.Configuration;
+namespace Dilcore.DocumentDb.MongoDb.Configuration.Client;
 
 /// <summary>
 /// 
@@ -16,11 +16,6 @@ public class MongoDbConfigBuilder
     /// Connection string to the MongoDb
     /// </summary>
     public string ConnectionString { get; private set; }
-    
-    /// <summary>
-    /// MongoDB database name
-    /// </summary>
-    public string DatabaseName { get; private set; }
     
     /// <summary>
     /// Gets max connection pool size to the MongoDb connection
@@ -39,17 +34,6 @@ public class MongoDbConfigBuilder
     }
 
     /// <summary>
-    /// Set database name 
-    /// </summary>
-    /// <param name="databaseName"></param>
-    /// <returns></returns>
-    public MongoDbConfigBuilder UseDatabaseName(string databaseName)
-    {
-        DatabaseName = databaseName;
-        return this;
-    }
-    
-    /// <summary>
     /// Set MongoDB connection pool size for <see cref="IMongoClient"/>. By default it is 25
     /// </summary>
     /// <param name="maxConnectionPoolSize"></param>
@@ -60,14 +44,13 @@ public class MongoDbConfigBuilder
         return this;
     }
     
-    internal MongoDbConfig Build()
+    internal MongoDbClientConfig Build()
     {
         BuilderValidator.ValidateAndThrow(this);
         
-        return new MongoDbConfig
+        return new MongoDbClientConfig
         {
             ConnectionString = ConnectionString,
-            DatabaseName = DatabaseName,
             MaxConnectionPoolSize = MaxConnectionPoolSize ?? DefaultMaxConnectionPoolSize
         };
     }
@@ -81,10 +64,6 @@ public class MongoDbConfigBuilder
             RuleFor(x => x.ConnectionString)
                 .NotEmpty()
                 .WithMessage("MongoDB Connection String cannot be null or empty");
-            
-            RuleFor(x => x.DatabaseName)
-                .NotEmpty()
-                .WithMessage("MongoDB Database Description cannot be null or empty");
         }
     }
 }
