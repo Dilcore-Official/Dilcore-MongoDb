@@ -2,16 +2,15 @@ using System.Linq.Expressions;
 using Dilcore.DocumentDb.Abstractions;
 using Dilcore.DocumentDb.Abstractions.Extensions;
 using Dilcore.DocumentDb.Abstractions.Repositories;
+using Dilcore.DocumentDb.MongoDb.Repositories.Abstractions;
 using FluentResults;
 using MongoDB.Driver;
 
 namespace Dilcore.DocumentDb.MongoDb.Repositories;
 
-internal class GenericMongoDbRepository<TDocument>(
-    Action<GetCollectionOptions<TDocument>> options,
-    IMongoDbCollectionProvider collectionProvider)
+internal class GenericMongoDbRepository<TDocument>(Action<GetCollectionOptions<TDocument>> options, Func<CancellationToken, Task<Result<IMongoCollection<TDocument>>>> collectionProvider)
     : BaseMongoDbRepository<TDocument>(options, collectionProvider), IGenericRepository<TDocument>
-    where TDocument : class, IDocumentEntity
+    where TDocument : class, IDocumentEntity 
 {
     public Task<Result<TDocument>> StoreAsync(TDocument entity, CancellationToken cancellationToken = default)
         => ExecuteAsync((collection, ct) => StoreEntityAsync(entity, collection, ct), cancellationToken);
@@ -107,8 +106,6 @@ internal class GenericMongoDbRepository<TDocument>(
 
         if (entity.IsNew())
         {
-            entity.GenerateETag();
-
             await CreateAsync(entity, collection, cancellationToken);
         }
         else
@@ -131,6 +128,7 @@ internal class GenericMongoDbRepository<TDocument>(
         {
             entity.NewId();
         }
+        entity.GenerateETag();
 
         await collection.InsertOneAsync(entity, new InsertOneOptions(), cancellationToken);
     }

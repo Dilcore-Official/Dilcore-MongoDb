@@ -8,8 +8,6 @@ namespace Dilcore.DocumentDb.MongoDb.Configuration.Client;
 /// </summary>
 public class MongoDbConfigBuilder
 {
-    private const int DefaultMaxConnectionPoolSize = 25;
-    
     private static readonly Validator BuilderValidator = new();
    
     /// <summary>
@@ -38,7 +36,7 @@ public class MongoDbConfigBuilder
     /// </summary>
     /// <param name="maxConnectionPoolSize"></param>
     /// <returns></returns>
-    public MongoDbConfigBuilder UseMaxConnectionPoolSize(int maxConnectionPoolSize)
+    public MongoDbConfigBuilder UseMaxConnectionPoolSize(int maxConnectionPoolSize = Constants.MaxConnectionPoolSize)
     {
         MaxConnectionPoolSize = maxConnectionPoolSize;
         return this;
@@ -51,7 +49,7 @@ public class MongoDbConfigBuilder
         return new MongoDbClientConfig
         {
             ConnectionString = ConnectionString,
-            MaxConnectionPoolSize = MaxConnectionPoolSize ?? DefaultMaxConnectionPoolSize
+            MaxConnectionPoolSize = MaxConnectionPoolSize ?? Constants.MaxConnectionPoolSize
         };
     }
     
@@ -64,6 +62,10 @@ public class MongoDbConfigBuilder
             RuleFor(x => x.ConnectionString)
                 .NotEmpty()
                 .WithMessage("MongoDB Connection String cannot be null or empty");
+            
+            RuleFor(x => x.MaxConnectionPoolSize)
+                .GreaterThan(0)
+                .WithMessage("Max connection pool size should be greater than 0");
         }
     }
 }

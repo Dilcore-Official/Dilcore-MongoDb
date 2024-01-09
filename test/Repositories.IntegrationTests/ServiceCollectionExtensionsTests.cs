@@ -1,30 +1,22 @@
 ﻿using Dilcore.DocumentDb.Abstractions;
 using Dilcore.DocumentDb.MongoDb.Extensions;
-using Dilcore.DocumentDb.MongoDb.Services;
+using Dilcore.DocumentDb.MongoDb.Repositories.Abstractions;
+using Dilcore.DocumentDb.MongoDb.Repositories.Extensions;
+using Dilcore.DocumentDb.MongoDb.Repositories.IntegrationTests.Infrastructure;
 using FluentAssertions;
 using FluentResults;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
-using Testcontainers.MongoDb;
 
-namespace Dilcore.DocumentDb.MongoDb.IntegrationTests;
+namespace Dilcore.DocumentDb.MongoDb.Repositories.IntegrationTests;
 
-public class ServiceCollectionExtensionsTests
+public class ServiceCollectionExtensionsTests : BaseIntegrationTests
 {
-    private readonly Testcontainers.MongoDb.MongoDbContainer _mongoDbContainer =
-        new MongoDbBuilder().Build();
-
-    [OneTimeSetUp]
-    public async Task InitializeAsync()
-    {
-        await _mongoDbContainer.StartAsync();
-    }
-    
     [Test]
     public async Task ServiceCollectionExtensions_AddMongoDb()
     {
         var services = new ServiceCollection();
-        var connectionString = _mongoDbContainer.GetConnectionString();
+        var connectionString = MongoDbContainer.GetConnectionString();
         
         services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
         {
@@ -64,8 +56,7 @@ public class ServiceCollectionExtensionsTests
             Value = 3.3m
         });
         
-        var mongoClientProvider = serviceProvider.GetRequiredService<MongoClientProvider>();
-        var mongoClient = mongoClientProvider.GetMongoClient();
+        var mongoClient = await GetMongoClient(serviceProvider);
         var databases = await mongoClient.ListDatabaseNamesAsync();
         var databaseNames = await databases.ToListAsync();
         
@@ -92,12 +83,21 @@ public class ServiceCollectionExtensionsTests
         entity3 = await collection3.Find(e => e.Value == 3.3m).FirstOrDefaultAsync();
         entity3.Should().BeNull();
     }
-    
+
+    private static async Task<IMongoClient> GetMongoClient(ServiceProvider serviceProvider)
+    {
+        var mongoClientProvider = serviceProvider.GetRequiredKeyedService<IMongoDatabaseProvider>("TestDB1");
+        var getDatabase = await mongoClientProvider.GetDatabaseAsync("TestDB1");
+        
+        var mongoClient = getDatabase.ValueOrDefault.Client;
+        return mongoClient;
+    }
+
     [Test]
     public async Task ServiceCollectionExtensions_AddMongoDb_WithDifferentDatabasePrefixProviders()
     {
         var services = new ServiceCollection();
-        var connectionString = _mongoDbContainer.GetConnectionString();
+        var connectionString = MongoDbContainer.GetConnectionString();
 
         services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
         {
@@ -147,8 +147,8 @@ public class ServiceCollectionExtensionsTests
             Value = 3.3m
         });
         
-        var mongoClientProvider = serviceProvider.GetRequiredService<MongoClientProvider>();
-        var mongoClient = mongoClientProvider.GetMongoClient();
+        var mongoClient = await GetMongoClient(serviceProvider);
+
         var databases = await mongoClient.ListDatabaseNamesAsync();
         var databaseNames = await databases.ToListAsync();
         
@@ -179,7 +179,7 @@ public class ServiceCollectionExtensionsTests
     public async Task ServiceCollectionExtensions_AddMongoDb_WithDifferentCollectionPrefixProviders()
     {
         var services = new ServiceCollection();
-        var connectionString = _mongoDbContainer.GetConnectionString();
+        var connectionString = MongoDbContainer.GetConnectionString();
 
         services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
         {
@@ -216,9 +216,8 @@ public class ServiceCollectionExtensionsTests
             Value = "2"
         });
         
-    
-        var mongoClientProvider = serviceProvider.GetRequiredService<MongoClientProvider>();
-        var mongoClient = mongoClientProvider.GetMongoClient();
+        var mongoClient = await GetMongoClient(serviceProvider);
+
         var databases = await mongoClient.ListDatabaseNamesAsync();
         var databaseNames = await databases.ToListAsync();
         
@@ -238,10 +237,176 @@ public class ServiceCollectionExtensionsTests
         entity2.Should().NotBeNull();
     }
     
-    [OneTimeTearDown]
-    public Task TearDown()
+    [Test]
+    public async Task ServiceCollectionExtensions_AddMongoDb_WithDuplicatedDatabaseNames()
     {
-        return _mongoDbContainer.DisposeAsync().AsTask();
+        var services = new ServiceCollection();
+        var connectionString = MongoDbContainer.GetConnectionString();
+
+        services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
+        {
+            builder.AddDatabase("TestDB1",
+                    db =>
+                    {
+                        db.AddCustomDatabasePrefixResolver<TestDbPrefixProvider1>();
+                        db.AddCustomCollectionPrefixResolver<TestCollectionProvider>();
+
+                        db.AddGenericRepository<TestEntity1>(options => options.WithCollectionName("testEntity1")
+                            .WithDatabaseName("TestDB1"));
+                    })
+                .AddDatabase("TestDB1",
+                    db =>
+                    {
+                        db.AddCustomDatabasePrefixResolver<TestDbPrefixProvider1>();
+                        db.AddCustomCollectionPrefixResolver<TestCollectionProvider>();
+
+                        db.AddGenericRepository<TestEntity1>(options => options.WithCollectionName("testEntity1")
+                            .WithDatabaseName("TestDB1"));
+                    });
+        });
+        
+        var serviceProvider = services.BuildServiceProvider();
+        
+        var repository1 = serviceProvider.GetRequiredService<IGenericRepository<TestEntity1>>();
+        await repository1.StoreAsync(new TestEntity1
+        {
+            Value = 1
+        });
+        
+        var mongoClient = await GetMongoClient(serviceProvider);
+
+        var databases = await mongoClient.ListDatabaseNamesAsync();
+        var databaseNames = await databases.ToListAsync();
+        
+        databaseNames.Should().OnlyHaveUniqueItems();
+        var database1 = mongoClient.GetDatabase("prefix1_TestDB1");
+        var collection1 = database1.GetCollection<TestEntity1>("collectionPrefix_testEntity1");
+        
+        var entity1 = await collection1.Find(entity1 => entity1.Value == 1).FirstOrDefaultAsync();
+        entity1.Should().NotBeNull();
+    }
+    
+    [Test]
+    public async Task ServiceCollectionExtensions_AddMongoDb_WithDuplicatedDatabaseNames_And_DifferentCollections()
+    {
+        var services = new ServiceCollection();
+        var connectionString = MongoDbContainer.GetConnectionString();
+
+        services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
+        {
+            builder.AddDatabase("TestDB1",
+                    db =>
+                    {
+                        // db.AddCustomDatabasePrefixResolver<TestDbPrefixProvider1>();
+                        // db.AddCustomCollectionPrefixResolver<TestCollectionProvider>();
+
+                        db.AddGenericRepository<TestEntity1>(options => options.WithCollectionName("testEntity1")
+                            .WithDatabaseName("TestDB1"));
+                    })
+                .AddDatabase("TestDB1",
+                    db =>
+                    {
+                        // db.AddCustomDatabasePrefixResolver<TestDbPrefixProvider2>();
+
+                        db.AddGenericRepository<TestEntity2>(options => options.WithCollectionName("testEntity2")
+                            .WithDatabaseName("TestDB1"));
+                    });
+        });
+        
+        var serviceProvider = services.BuildServiceProvider();
+        
+        var repository1 = serviceProvider.GetRequiredService<IGenericRepository<TestEntity1>>();
+        await repository1.StoreAsync(new TestEntity1
+        {
+            Value = 1
+        });
+        
+        var repository2 = serviceProvider.GetRequiredService<IGenericRepository<TestEntity2>>();
+        await repository2.StoreAsync(new TestEntity2
+        {
+            Value = "2"
+        });
+        
+    
+        var mongoClient = await GetMongoClient(serviceProvider);
+
+        var databases = await mongoClient.ListDatabaseNamesAsync();
+        var databaseNames = await databases.ToListAsync();
+        
+        databaseNames.Should().Contain("TestDB1");
+
+        var database = mongoClient.GetDatabase("TestDB1");
+        var collection1 = database.GetCollection<TestEntity1>("testEntity1");
+        
+        var entity1 = await collection1.Find(entity1 => entity1.Value == 1).FirstOrDefaultAsync();
+        entity1.Should().NotBeNull();
+        
+        var collection2 = database.GetCollection<TestEntity2>("testEntity2");
+        
+        var entity2 = await collection2.Find(entity2 => entity2.Value == "2").FirstOrDefaultAsync();
+        entity2.Should().NotBeNull();
+    }
+    
+    [Test]
+    public async Task ServiceCollectionExtensions_AddMongoDb_WithDuplicatedDatabaseNames_And_CrossAddedPrefixProviders()
+    {
+        var services = new ServiceCollection();
+        var connectionString = MongoDbContainer.GetConnectionString();
+
+        services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
+        {
+            builder.AddDatabase("TestDB1",
+                    db =>
+                    {
+                        db.AddCustomDatabasePrefixResolver<TestDbPrefixProvider1>();
+                        db.AddCustomCollectionPrefixResolver<TestCollectionProvider>();
+
+                        db.AddGenericRepository<TestEntity1>(options => options.WithCollectionName("testEntity1")
+                            .WithDatabaseName("TestDB1"));
+                    })
+                .AddDatabase("TestDB1",
+                    db =>
+                    {
+                        db.AddCustomDatabasePrefixResolver<TestDbPrefixProvider2>();
+
+                        db.AddGenericRepository<TestEntity2>(options => options.WithCollectionName("testEntity2")
+                            .WithDatabaseName("TestDB1"));
+                    });
+        });
+        
+        var serviceProvider = services.BuildServiceProvider();
+        
+        var repository1 = serviceProvider.GetRequiredService<IGenericRepository<TestEntity1>>();
+        await repository1.StoreAsync(new TestEntity1
+        {
+            Value = 1
+        });
+        
+        var repository2 = serviceProvider.GetRequiredService<IGenericRepository<TestEntity2>>();
+        await repository2.StoreAsync(new TestEntity2
+        {
+            Value = "2"
+        });
+        
+    
+        var mongoClient = await GetMongoClient(serviceProvider);
+
+        var databases = await mongoClient.ListDatabaseNamesAsync();
+        var databaseNames = await databases.ToListAsync();
+        
+        databaseNames.Should().Contain("prefix2_TestDB1");
+
+        var database = mongoClient.GetDatabase("prefix2_TestDB1");
+        
+        var collection1 = database.GetCollection<TestEntity1>("testEntity1");
+        
+        var entity1 = await collection1.Find(entity1 => entity1.Value == 1).FirstOrDefaultAsync();
+        entity1.Should().NotBeNull();
+        
+        var collection2 = database.GetCollection<TestEntity2>("testEntity2");
+        
+        var entity2 = await collection2.Find(entity2 => entity2.Value == "2").FirstOrDefaultAsync();
+        entity2.Should().NotBeNull();
     }
     
     public class TestEntity1 : IDocumentEntity

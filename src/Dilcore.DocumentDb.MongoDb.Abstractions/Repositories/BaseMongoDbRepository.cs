@@ -3,18 +3,12 @@ using MongoDB.Driver;
 
 namespace Dilcore.DocumentDb.Abstractions.Repositories;
 
-public abstract class BaseMongoDbRepository<TDocument> where TDocument : class, IDocumentEntity
+public abstract class BaseMongoDbRepository<TDocument>(
+    Action<GetCollectionOptions<TDocument>> optionsAction,
+    Func<CancellationToken, Task<Result<IMongoCollection<TDocument>>>> collectionProvider)
+    where TDocument : class, IDocumentEntity
 {
     protected static readonly FilterDefinition<TDocument> NotDeletedFilter = Builders<TDocument>.Filter.Eq(x => x.IsDeleted, false);
-    private readonly Action<GetCollectionOptions<TDocument>> _options;
-    private readonly IMongoDbCollectionProvider _collectionProvider;
-
-    protected BaseMongoDbRepository(Action<GetCollectionOptions<TDocument>> options,
-        IMongoDbCollectionProvider collectionProvider)
-    {
-        _options = options;
-        _collectionProvider = collectionProvider;
-    }
 
     protected Task<Result<TDocument>> ExecuteAsync(Func<IMongoCollection<TDocument>, CancellationToken, Task<Result<TDocument>>> func, CancellationToken cancellationToken = default)
         => ExecuteAsync(func, result => Result.Fail<TDocument>(result.Errors), cancellationToken);
@@ -44,12 +38,12 @@ public abstract class BaseMongoDbRepository<TDocument> where TDocument : class, 
     protected GetCollectionOptions<TDocument> GetOptions()
     {
         var options = new GetCollectionOptions<TDocument>();
-        _options(options);
+        optionsAction(options);
         return options;
     }
     
     private Task<Result<IMongoCollection<TDocument>>> GetCollectionAsync(CancellationToken cancellationToken = default)
     {
-        return _collectionProvider.GetCollectionAsync(_options, cancellationToken);
+        return collectionProvider(cancellationToken);
     }
 }

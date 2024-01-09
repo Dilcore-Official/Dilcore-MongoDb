@@ -1,7 +1,8 @@
 using System.Linq.Expressions;
+using Dilcore.DocumentDb.Abstractions;
 using FluentResults;
 
-namespace Dilcore.DocumentDb.Abstractions;
+namespace Dilcore.DocumentDb.MongoDb.Repositories.Abstractions;
 
 public interface IGenericRepository<TDocument>
     where TDocument : IDocumentEntity

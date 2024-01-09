@@ -16,6 +16,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dilcore.DocumentDb.MongoDb.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dilcore.DocumentDb.MongoDb.IntegrationTests", "test\IntegrationTests\Dilcore.DocumentDb.MongoDb.IntegrationTests.csproj", "{34C84CDD-1A95-4ED1-A559-C728189FF2ED}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dilcore.DocumentDb.MongoDb.Repositories", "src\Dilcore.DocumentDb.MongoDb.Repositories\Dilcore.DocumentDb.MongoDb.Repositories.csproj", "{C5C90855-F39A-4947-878E-595E485EEB30}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dilcore.DocumentDb.MongoDb.Repositories.IntegrationTests", "test\Repositories.IntegrationTests\Dilcore.DocumentDb.MongoDb.Repositories.IntegrationTests.csproj", "{1CFCDB49-97E4-48CA-AC6B-0B94623F6F6E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,6 +30,8 @@ Global
 		{D1696A31-9630-4000-AE61-7B200EBB8993} = {6873E6F9-CE49-40A4-97AB-987460196324}
 		{8276972E-75DE-47FF-B86A-A225363E4E2B} = {6873E6F9-CE49-40A4-97AB-987460196324}
 		{34C84CDD-1A95-4ED1-A559-C728189FF2ED} = {A872A311-55A9-4DEF-B3E5-F9DECC4D9270}
+		{C5C90855-F39A-4947-878E-595E485EEB30} = {6873E6F9-CE49-40A4-97AB-987460196324}
+		{1CFCDB49-97E4-48CA-AC6B-0B94623F6F6E} = {A872A311-55A9-4DEF-B3E5-F9DECC4D9270}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{5BDC3667-60FB-4A10-8F07-85ED0B9786FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -44,5 +50,13 @@ Global
 		{34C84CDD-1A95-4ED1-A559-C728189FF2ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{34C84CDD-1A95-4ED1-A559-C728189FF2ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{34C84CDD-1A95-4ED1-A559-C728189FF2ED}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5C90855-F39A-4947-878E-595E485EEB30}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5C90855-F39A-4947-878E-595E485EEB30}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5C90855-F39A-4947-878E-595E485EEB30}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5C90855-F39A-4947-878E-595E485EEB30}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1CFCDB49-97E4-48CA-AC6B-0B94623F6F6E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1CFCDB49-97E4-48CA-AC6B-0B94623F6F6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1CFCDB49-97E4-48CA-AC6B-0B94623F6F6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1CFCDB49-97E4-48CA-AC6B-0B94623F6F6E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
