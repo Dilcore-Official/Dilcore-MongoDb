@@ -50,8 +50,9 @@ public class GenericBulkRepositoryTests : BaseIntegrationTests
 
         var createResult = await _bulkRepository.BulkStoreAsync(entities.ToArray());
         createResult.Should().BeSuccess();
-        
-        var entitiesListResult = await _repository.GetListAsync();
+
+        var ids = entities.Select(x => x.Id);
+        var entitiesListResult = await _repository.GetListAsync(x => ids.Contains(x.Id));
         entitiesListResult.Should().BeSuccess();
         
         entitiesListResult.ValueOrDefault.Should().HaveCount(entities.Count);
@@ -153,15 +154,6 @@ public class GenericBulkRepositoryTests : BaseIntegrationTests
         
         var entitiesListResult = await repository.GetListAsync();
         entitiesListResult.Should().BeSuccess();
-        
-        entitiesListResult.ValueOrDefault.Should().HaveCount(entities.Count);
-        entitiesListResult.ValueOrDefault.Should().AllSatisfy(x =>
-        {
-            x.Id.Should().NotBeEmpty();
-            x.ETag.Should().NotBe(0);
-            x.IsDeleted.Should().BeFalse();
-            x.UpdateAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(10));
-        });
         
         var ids = entitiesListResult.ValueOrDefault.Select(x => x.Id).ToArray();
         

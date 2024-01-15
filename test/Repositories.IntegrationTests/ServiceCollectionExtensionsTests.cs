@@ -411,7 +411,7 @@ public class ServiceCollectionExtensionsTests : BaseIntegrationTests
     
     [TestCase(true)]
     [TestCase(false)]
-    public async Task ServiceCollectionExtensions_AddMongoDb_WithBulkRepository(bool withBulkRepo)
+    public void ServiceCollectionExtensions_AddMongoDb_WithBulkRepository(bool withBulkRepo)
     {
         var services = new ServiceCollection();
         var connectionString = Guid.NewGuid().ToString();

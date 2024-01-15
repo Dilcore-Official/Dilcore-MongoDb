@@ -10,12 +10,18 @@ public interface IGenericRepository<TDocument>
     Task<Result<TDocument>> StoreAsync(TDocument entity, CancellationToken cancellationToken = default);
 
     Task<Result<TDocument>> GetAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<Result<TDerived>> GetAsync<TDerived>(Guid id, CancellationToken cancellationToken = default)
+        where TDerived : class, TDocument;
+    
     Task<Result<TDocument>> GetAsync(Expression<Func<TDocument, bool>> expression,
         CancellationToken cancellationToken = default);
     
     Task<Result<IReadOnlyList<TDocument>>> GetListAsync(CancellationToken cancellationToken = default);
     Task<Result<IReadOnlyList<TDocument>>> GetListAsync(Expression<Func<TDocument, bool>> expression,
         CancellationToken cancellationToken = default);
+    
+    Task<Result<IReadOnlyList<TDerived>>> GetListAsync<TDerived>(Expression<Func<TDerived, bool>> expression, CancellationToken cancellationToken = default)
+        where TDerived : class, TDocument;
     
     Task<Result<bool>> DeleteAsync(Guid id, long eTag, CancellationToken cancellationToken = default);
     Task<Result<bool>> DeleteAsync(Expression<Func<TDocument, bool>> expression,

@@ -55,7 +55,7 @@ public class GenericMongoDbBulkRepository<TDocument>(
                 return PermanentDeleteAsync(collection, filter, token);
             }
 
-            filter &= NotDeletedFilter;
+            filter = ApplyNotDeleteFilter(filter);
 
             return SoftDeleteManyAsync(collection, filter, token);
         }, cancellationToken);
@@ -79,7 +79,7 @@ public class GenericMongoDbBulkRepository<TDocument>(
         return result.DeletedCount == 0 ? Result.Fail("No entities were deleted") : Result.Ok();
     }
 
-    private static IEnumerable<WriteModel<TDocument>> CreateWriteModels(IEnumerable<TDocument> entities)
+    private IEnumerable<WriteModel<TDocument>> CreateWriteModels(IEnumerable<TDocument> entities)
     {
         foreach (var entity in entities)
         {
@@ -102,8 +102,10 @@ public class GenericMongoDbBulkRepository<TDocument>(
             entity.UpdatedNow();
 
             var filter = Builders<TDocument>.Filter.Eq(x => x.Id, entity.Id);
-            filter &= NotDeletedFilter;
             filter &= Builders<TDocument>.Filter.Eq(x => x.ETag, currentETag);
+            
+            filter = ApplyNotDeleteFilter(filter);
+
 
             var updateDocument = entity.ToBsonUpdateDocument();
             yield return new UpdateOneModel<TDocument>(filter, updateDocument);

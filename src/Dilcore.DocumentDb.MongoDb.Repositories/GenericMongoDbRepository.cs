@@ -9,9 +9,11 @@ using MongoDB.Driver;
 
 namespace Dilcore.DocumentDb.MongoDb.Repositories;
 
-internal class GenericMongoDbRepository<TDocument>(Action<GetCollectionOptions<TDocument>> options, Func<CancellationToken, Task<Result<IMongoCollection<TDocument>>>> collectionProvider)
+internal class GenericMongoDbRepository<TDocument>(
+    Action<GetCollectionOptions<TDocument>> options,
+    Func<CancellationToken, Task<Result<IMongoCollection<TDocument>>>> collectionProvider)
     : BaseMongoDbRepository<TDocument>(options, collectionProvider), IGenericRepository<TDocument>
-    where TDocument : class, IDocumentEntity 
+    where TDocument : class, IDocumentEntity
 {
     public Task<Result<TDocument>> StoreAsync(TDocument entity, CancellationToken cancellationToken = default)
         => ExecuteAsync((collection, ct) => StoreEntityAsync(entity, collection, ct), cancellationToken);
@@ -20,9 +22,23 @@ internal class GenericMongoDbRepository<TDocument>(Action<GetCollectionOptions<T
         ExecuteAsync(async (collection, token) =>
         {
             var filter = Builders<TDocument>.Filter.Eq(x => x.Id, id);
-            filter &= NotDeletedFilter;
+            filter = ApplyNotDeleteFilter(filter);
 
             var entity = await collection.Find(filter).FirstOrDefaultAsync(token);
+            return Result.Ok(entity);
+        }, cancellationToken);
+
+    public Task<Result<TDerived>> GetAsync<TDerived>(Guid id, CancellationToken cancellationToken = default)
+        where TDerived : class, TDocument
+        => ExecuteAsync(async (collection, token) =>
+        {
+            var filter = Builders<TDerived>.Filter.Eq(x => x.Id, id);
+            filter = ApplyNotDeleteFilter(filter);
+
+            var entity = await collection.OfType<TDerived>()
+                .Find(filter)
+                .FirstOrDefaultAsync(token);
+
             return Result.Ok(entity);
         }, cancellationToken);
 
@@ -31,7 +47,7 @@ internal class GenericMongoDbRepository<TDocument>(Action<GetCollectionOptions<T
         ExecuteAsync(async (collection, token) =>
         {
             var filter = Builders<TDocument>.Filter.Where(expression);
-            filter &= NotDeletedFilter;
+            filter = ApplyNotDeleteFilter(filter);
 
             var entity = await collection.Find(filter).FirstOrDefaultAsync(token);
             return Result.Ok(entity);
@@ -40,7 +56,7 @@ internal class GenericMongoDbRepository<TDocument>(Action<GetCollectionOptions<T
     public Task<Result<IReadOnlyList<TDocument>>> GetListAsync(CancellationToken cancellationToken = default) =>
         ExecuteAsync(async (collection, token) =>
         {
-            var filter = NotDeletedFilter;
+            var filter = ApplyNotDeleteFilter();
 
             var entities = await collection.Find(filter).ToListAsync(token);
 
@@ -52,12 +68,26 @@ internal class GenericMongoDbRepository<TDocument>(Action<GetCollectionOptions<T
         ExecuteAsync(async (collection, token) =>
         {
             var filter = Builders<TDocument>.Filter.Where(expression);
-            filter &= NotDeletedFilter;
+            filter = ApplyNotDeleteFilter(filter);
 
             var entities = await collection.Find(filter).ToListAsync(token);
 
             return Result.Ok<IReadOnlyList<TDocument>>(entities);
         }, cancellationToken);
+
+    public Task<Result<IReadOnlyList<TDerived>>> GetListAsync<TDerived>(Expression<Func<TDerived, bool>> expression,
+        CancellationToken cancellationToken = default)
+        where TDerived : class, TDocument
+        =>
+            ExecuteAsync(async (collection, token) =>
+            {
+                var filter = Builders<TDerived>.Filter.Where(expression);
+                filter = ApplyNotDeleteFilter(filter);
+
+                var entities = await collection.OfType<TDerived>().Find(filter).ToListAsync(token);
+
+                return Result.Ok<IReadOnlyList<TDerived>>(entities);
+            }, cancellationToken);
 
     public Task<Result<bool>> DeleteAsync(Guid id, long eTag, CancellationToken cancellationToken = default) =>
         ExecuteAsync(async (collection, token) =>
@@ -71,14 +101,14 @@ internal class GenericMongoDbRepository<TDocument>(Action<GetCollectionOptions<T
             {
                 return await PermanentDeleteOneAsync(collection, filter, token);
             }
-            
-            filter &= NotDeletedFilter;
+
+            filter = ApplyNotDeleteFilter(filter);
             return await SoftDeleteOneAsync(collection, filter, token);
 
         }, cancellationToken);
 
     public Task<Result<bool>> DeleteAsync(Expression<Func<TDocument, bool>> expression,
-        CancellationToken cancellationToken = default)=>
+        CancellationToken cancellationToken = default) =>
         ExecuteAsync(async (collection, token) =>
         {
             var collectionOptions = GetOptions();
@@ -89,15 +119,15 @@ internal class GenericMongoDbRepository<TDocument>(Action<GetCollectionOptions<T
             {
                 return await PermanentDeleteOneAsync(collection, filter, token);
             }
-            
-            filter &= NotDeletedFilter;
+
+            filter = ApplyNotDeleteFilter(filter);
             return await SoftDeleteOneAsync(collection, filter, token);
 
         }, cancellationToken);
-    
+
     #region Store
 
-    private static async Task<Result<TDocument>> StoreEntityAsync(TDocument entity,
+    private async Task<Result<TDocument>> StoreEntityAsync(TDocument entity,
         IMongoCollection<TDocument> collection, CancellationToken cancellationToken = default)
     {
         var currentEtag = entity.ETag;
@@ -128,18 +158,19 @@ internal class GenericMongoDbRepository<TDocument>(Action<GetCollectionOptions<T
         {
             entity.NewId();
         }
+
         entity.GenerateETag();
 
         await collection.InsertOneAsync(entity, new InsertOneOptions(), cancellationToken);
     }
 
-    private static async Task<bool> UpdateAsync(TDocument entity, long currentEtag,
+    private async Task<bool> UpdateAsync(TDocument entity, long currentEtag,
         IMongoCollection<TDocument> collection, CancellationToken cancellationToken)
     {
-        var filter = Builders<TDocument>.Filter.And(
-            Builders<TDocument>.Filter.Eq(x => x.Id, entity.Id),
-            NotDeletedFilter,
-            Builders<TDocument>.Filter.Eq(x => x.ETag, currentEtag));
+        var filter = Builders<TDocument>.Filter.Eq(x => x.Id, entity.Id);
+        filter &= Builders<TDocument>.Filter.Eq(x => x.ETag, currentEtag);
+
+        filter = ApplyNotDeleteFilter(filter);
 
         entity.GenerateETag();
 
@@ -151,47 +182,28 @@ internal class GenericMongoDbRepository<TDocument>(Action<GetCollectionOptions<T
         return updateResult.ModifiedCount == 1;
     }
 
-    // TODO: move to bulk repository
-    private static IEnumerable<WriteModel<TDocument>> GetUpdateModels(IEnumerable<TDocument> entities)
-    {
-        foreach (var entity in entities)
-        {
-            entity.UpdatedNow();
-            entity.GenerateETag();
-
-            var filter = Builders<TDocument>.Filter.Eq(x => x.Id, entity.Id);
-
-            var updateDoc = entity.ToBsonUpdateDocument();
-
-            var upsertOne = new UpdateOneModel<TDocument>(filter, updateDoc)
-            {
-                IsUpsert = true
-            };
-
-            yield return upsertOne;
-        }
-    }
-
     #endregion
 
     #region Delete
-    
-    private static async Task<Result<bool>> SoftDeleteOneAsync(IMongoCollection<TDocument> collection, FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
+
+    private static async Task<Result<bool>> SoftDeleteOneAsync(IMongoCollection<TDocument> collection,
+        FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
     {
         var update = Builders<TDocument>.Update.Set(x => x.IsDeleted, true)
             .Set(x => x.ETag, DocumentDbHelper.GenerateEtag());
 
         var result = await collection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
-        
+
         return Result.Ok(result.ModifiedCount == 1);
     }
-    
-    private static async Task<Result<bool>> PermanentDeleteOneAsync(IMongoCollection<TDocument> collection, FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
+
+    private static async Task<Result<bool>> PermanentDeleteOneAsync(IMongoCollection<TDocument> collection,
+        FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
     {
         var result = await collection.DeleteOneAsync(filter, cancellationToken);
-        
+
         return Result.Ok(result.DeletedCount == 1);
     }
-    
+
     #endregion
 }
