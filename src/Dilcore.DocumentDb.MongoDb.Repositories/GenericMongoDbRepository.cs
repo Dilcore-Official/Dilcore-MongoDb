@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using Dilcore.DocumentDb.Abstractions;
 using Dilcore.DocumentDb.Abstractions.Extensions;
 using Dilcore.DocumentDb.Abstractions.Helpers;
@@ -40,17 +39,6 @@ internal class GenericMongoDbRepository<TDocument>(
             return Result.Ok(entity);
         }, cancellationToken);
 
-    public Task<Result<TDocument>> GetAsync(Expression<Func<TDocument, bool>> expression,
-        CancellationToken cancellationToken = default) =>
-        ExecuteAsync(async (collection, token) =>
-        {
-            var filter = Builders<TDocument>.Filter.Where(expression);
-            filter = ApplyNotDeleteFilter(filter);
-
-            var entity = await collection.Find(filter).FirstOrDefaultAsync(token);
-            return Result.Ok(entity);
-        }, cancellationToken);
-
     public Task<Result<IReadOnlyList<TDocument>>> GetListAsync(CancellationToken cancellationToken = default) =>
         ExecuteAsync(async (collection, token) =>
         {
@@ -89,26 +77,6 @@ internal class GenericMongoDbRepository<TDocument>(
         {
             var collectionOptions = GetOptions();
             
-            if (collectionOptions.SoftDeleteDisabled)
-            {
-                return await PermanentDeleteOneAsync(collection, filter, token);
-            }
-
-            filter = ApplyNotDeleteFilter(filter);
-            return await SoftDeleteOneAsync(collection, filter, token);
-
-        }, cancellationToken);
-
-    
-
-    public Task<Result<bool>> DeleteAsync(Expression<Func<TDocument, bool>> expression,
-        CancellationToken cancellationToken = default) =>
-        ExecuteAsync(async (collection, token) =>
-        {
-            var collectionOptions = GetOptions();
-
-            var filter = Builders<TDocument>.Filter.Where(expression);
-
             if (collectionOptions.SoftDeleteDisabled)
             {
                 return await PermanentDeleteOneAsync(collection, filter, token);
