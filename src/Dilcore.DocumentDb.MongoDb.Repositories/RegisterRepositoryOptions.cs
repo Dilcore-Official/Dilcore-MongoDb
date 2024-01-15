@@ -3,6 +3,7 @@
 public class RegisterRepositoryOptions
 {
     internal bool RegisterBulkRepository { get; private set; }
+    internal bool RegisterProjectionRepository { get; private set; }
 
     private RegisterRepositoryOptions()
     { }
@@ -13,5 +14,11 @@ public class RegisterRepositoryOptions
         return this;
     }
         
+    public RegisterRepositoryOptions WithProjectionRepository()
+    {
+        RegisterProjectionRepository = true;
+        return this;
+    }
+    
     internal static RegisterRepositoryOptions Create() => new();
 }

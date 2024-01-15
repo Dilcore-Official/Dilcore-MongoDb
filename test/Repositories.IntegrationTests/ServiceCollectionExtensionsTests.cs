@@ -1,11 +1,8 @@
 ﻿using Dilcore.DocumentDb.Abstractions;
 using Dilcore.DocumentDb.MongoDb.Extensions;
 using Dilcore.DocumentDb.MongoDb.Repositories.Abstractions;
-using Dilcore.DocumentDb.MongoDb.Repositories;
 using Dilcore.DocumentDb.MongoDb.Repositories.IntegrationTests.Infrastructure;
-using FluentAssertions;
 using FluentResults;
-using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 
 namespace Dilcore.DocumentDb.MongoDb.Repositories.IntegrationTests;
@@ -442,6 +439,48 @@ public class ServiceCollectionExtensionsTests : BaseIntegrationTests
         Action action = () => serviceProvider.GetRequiredService<IGenericBulkRepository<TestEntity1>>();
 
         if (withBulkRepo)
+        {
+            action.Should().NotThrow<InvalidOperationException>();
+        }
+        else
+        {
+            action.Should().Throw<InvalidOperationException>();
+        }
+    }
+    
+    [TestCase(true)]
+    [TestCase(false)]
+    public void ServiceCollectionExtensions_AddMongoDb_WithProjectionRepository(bool withProjectionRepo)
+    {
+        var services = new ServiceCollection();
+        var connectionString = Guid.NewGuid().ToString();
+
+        services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
+        {
+            builder.AddDatabase("TestDB1",
+                db =>
+                {
+                    if (withProjectionRepo)
+                    {
+                        db.AddGenericRepository<TestEntity1>(registerOptions => registerOptions.WithProjectionRepository(),
+                            collectionOptions => collectionOptions
+                                .WithCollectionName("testEntity1")
+                                .WithDatabaseName("TestDB1"));   
+                    }
+                    else
+                    {
+                        db.AddGenericRepository<TestEntity1>(collectionOptions => collectionOptions
+                            .WithCollectionName("testEntity1")
+                            .WithDatabaseName("TestDB1"));   
+                    }
+                });
+        });
+        
+        var serviceProvider = services.BuildServiceProvider();
+
+        Action action = () => serviceProvider.GetRequiredService<IGenericProjectionRepository<TestEntity1>>();
+
+        if (withProjectionRepo)
         {
             action.Should().NotThrow<InvalidOperationException>();
         }

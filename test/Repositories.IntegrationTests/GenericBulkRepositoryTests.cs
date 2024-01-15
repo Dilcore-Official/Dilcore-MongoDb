@@ -1,12 +1,7 @@
-﻿using AutoFixture;
-using Dilcore.DocumentDb.Abstractions;
+﻿using Dilcore.DocumentDb.Abstractions;
 using Dilcore.DocumentDb.MongoDb.Extensions;
 using Dilcore.DocumentDb.MongoDb.Repositories.Abstractions;
-using Dilcore.DocumentDb.MongoDb.Repositories;
 using Dilcore.DocumentDb.MongoDb.Repositories.IntegrationTests.Infrastructure;
-using FluentAssertions;
-using FluentResults.Extensions.FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 
 namespace Dilcore.DocumentDb.MongoDb.Repositories.IntegrationTests;

@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using Dilcore.DocumentDb.Abstractions;
 using FluentResults;
 using MongoDB.Driver;
