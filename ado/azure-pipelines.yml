@@ -66,7 +66,7 @@ stages:
         - task: DotNetCoreCLI@2
           inputs:
             command: 'test'
-            projects: '**/*.*[Tt]est.csproj'
+            projects: '*.sln'
             arguments: '--configuration $(BuildConfiguration) --no-restore --logger trx'
         - task: PublishTestResults@2
           inputs:
