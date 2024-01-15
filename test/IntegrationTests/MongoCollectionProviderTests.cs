@@ -1,9 +1,6 @@
 ﻿using Dilcore.DocumentDb.Abstractions;
 using Dilcore.DocumentDb.MongoDb.Extensions;
-using FluentAssertions;
 using FluentResults;
-using FluentResults.Extensions.FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using Testcontainers.MongoDb;
 

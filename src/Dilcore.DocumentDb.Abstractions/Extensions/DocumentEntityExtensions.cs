@@ -1,3 +1,4 @@
+using Dilcore.DocumentDb.Abstractions.Exceptions;
 using Dilcore.DocumentDb.Abstractions.Helpers;
 
 namespace Dilcore.DocumentDb.Abstractions.Extensions;
@@ -28,7 +29,7 @@ public static class DocumentEntityExtensions
     {
         if (document.IsIdEmpty())
         {
-            throw new Exception("Id not provided");
+            throw new DocumentIdentifierIsEmptyException();
         }
     }
 
