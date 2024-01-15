@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using MongoDB.Driver;
 
 namespace Dilcore.DocumentDb.Abstractions;
@@ -9,6 +10,7 @@ public class GetCollectionOptions<TDocument>
     public string CollectionName { get; private set; }
     public IReadOnlyList<CreateIndexModel<TDocument>> Indices { get; private set; }
     public TimeSpan? CollectionItemsTimeToLive { get; private set; }
+    public Expression<Func<TDocument, object>> TimeToLeavePropertySelector { get; private set; }
     
     public bool CreateEmptyCollection { get; private set; }
     public bool SoftDeleteEnabled { get; private set; }
@@ -37,9 +39,10 @@ public class GetCollectionOptions<TDocument>
         return this;
     }
     
-    public GetCollectionOptions<TDocument> WithCollectionItemsTimeToLive(TimeSpan timeToLive)
+    public GetCollectionOptions<TDocument> WithCollectionItemsTimeToLive(TimeSpan timeToLive, Expression<Func<TDocument, object>> propertySelector)
     {
         CollectionItemsTimeToLive = timeToLive;
+        TimeToLeavePropertySelector = propertySelector;
         return this;
     }
     

@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Dilcore.DocumentDb.Abstractions;
 using FluentResults;
 using MongoDB.Bson;
@@ -66,7 +67,7 @@ internal class MongoCollectionProvider(
         
         if (options.CollectionItemsTimeToLive.HasValue)
         {
-            await CreateTimeToLiveIndexAsync(collection, options.CollectionItemsTimeToLive.Value, cancellationToken);
+            await CreateTimeToLiveIndexAsync(collection, options.CollectionItemsTimeToLive.Value, options.TimeToLeavePropertySelector, cancellationToken);
         }
 
         if (options.Indices != null && options.Indices.Any())
@@ -79,10 +80,10 @@ internal class MongoCollectionProvider(
     }
 
     private static async Task CreateTimeToLiveIndexAsync<TDocument>(IMongoCollection<TDocument> collection,
-        TimeSpan timeToLeave, CancellationToken cancellationToken) 
+        TimeSpan timeToLeave, Expression<Func<TDocument, object>> optionsTimeToLeavePropertySelector, CancellationToken cancellationToken) 
         where TDocument : IDocumentEntity
     {
-        var indexKeysDefinition = Builders<TDocument>.IndexKeys.Ascending(x => x.ExpireAt);
+        var indexKeysDefinition = Builders<TDocument>.IndexKeys.Ascending(optionsTimeToLeavePropertySelector);
         
         var indexOptions = new CreateIndexOptions { ExpireAfter = timeToLeave };
         var indexModel = new CreateIndexModel<TDocument>(indexKeysDefinition, indexOptions);

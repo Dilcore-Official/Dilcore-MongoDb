@@ -409,6 +409,48 @@ public class ServiceCollectionExtensionsTests : BaseIntegrationTests
         entity2.Should().NotBeNull();
     }
     
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task ServiceCollectionExtensions_AddMongoDb_WithBulkRepository(bool withBulkRepo)
+    {
+        var services = new ServiceCollection();
+        var connectionString = Guid.NewGuid().ToString();
+
+        services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
+        {
+            builder.AddDatabase("TestDB1",
+                db =>
+                {
+                    if (withBulkRepo)
+                    {
+                        db.AddGenericRepository<TestEntity1>(registerOptions => registerOptions.WithBulkRepository(),
+                            collectionOptions => collectionOptions
+                                .WithCollectionName("testEntity1")
+                                .WithDatabaseName("TestDB1"));   
+                    }
+                    else
+                    {
+                        db.AddGenericRepository<TestEntity1>(collectionOptions => collectionOptions
+                            .WithCollectionName("testEntity1")
+                            .WithDatabaseName("TestDB1"));   
+                    }
+                });
+        });
+        
+        var serviceProvider = services.BuildServiceProvider();
+
+        Action action = () => serviceProvider.GetRequiredService<IGenericBulkRepository<TestEntity1>>();
+
+        if (withBulkRepo)
+        {
+            action.Should().NotThrow<InvalidOperationException>();
+        }
+        else
+        {
+            action.Should().Throw<InvalidOperationException>();
+        }
+    }
+    
     public class TestEntity1 : IDocumentEntity
     {
         public Guid Id { get; set; }

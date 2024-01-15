@@ -6,6 +6,4 @@ public interface IDocumentEntity
     long ETag { get; set; }
     bool IsDeleted { get; set; }
     DateTime UpdateAt { get; set; }
-    
-    DateTime? ExpireAt { get; set; }
 }

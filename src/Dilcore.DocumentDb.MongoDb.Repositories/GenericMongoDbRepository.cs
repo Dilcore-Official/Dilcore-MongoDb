@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using Dilcore.DocumentDb.Abstractions;
 using Dilcore.DocumentDb.Abstractions.Extensions;
+using Dilcore.DocumentDb.Abstractions.Helpers;
 using Dilcore.DocumentDb.Abstractions.Repositories;
 using Dilcore.DocumentDb.MongoDb.Repositories.Abstractions;
 using FluentResults;
@@ -80,10 +81,9 @@ internal class GenericMongoDbRepository<TDocument>(Action<GetCollectionOptions<T
         CancellationToken cancellationToken = default)=>
         ExecuteAsync(async (collection, token) =>
         {
-            var filter = Builders<TDocument>.Filter.Where(expression);
-           
-
             var collectionOptions = GetOptions();
+
+            var filter = Builders<TDocument>.Filter.Where(expression);
 
             if (collectionOptions.SoftDeleteDisabled)
             {
@@ -178,7 +178,8 @@ internal class GenericMongoDbRepository<TDocument>(Action<GetCollectionOptions<T
     
     private static async Task<Result<bool>> SoftDeleteOneAsync(IMongoCollection<TDocument> collection, FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
     {
-        var update = Builders<TDocument>.Update.Set(x => x.IsDeleted, true);
+        var update = Builders<TDocument>.Update.Set(x => x.IsDeleted, true)
+            .Set(x => x.ETag, DocumentDbHelper.GenerateEtag());
 
         var result = await collection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
         

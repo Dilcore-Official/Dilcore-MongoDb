@@ -99,6 +99,49 @@ public class MongoCollectionProviderTests
         collectionIndexes.Should().Contain(x => x.GetValue("name") == expectedIndexName);
     }
 
+    [Test]
+    public async Task MongoCollectionProvider_UseTimeToLeaveIndex()
+    {
+        var services = new ServiceCollection();
+        var connectionString = _mongoDbContainer.GetConnectionString();
+        
+        services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
+            {
+                builder.AddDatabase("TestDB1", 
+                    db =>
+                    {
+                        db.AddMongoCollection<TestEntity1>(options =>
+                        {
+                            options.WithCollectionName("testEntity1")
+                                .WithDatabaseName("TestDB1")
+                                .WithCollectionItemsTimeToLive(TimeSpan.FromSeconds(5), x => x.ExpireAt);
+                        });
+                    });
+            })
+            .AddScoped<CustomRepository>();
+        
+        var serviceProvider = services.BuildServiceProvider();
+        
+        var repository = serviceProvider.GetRequiredService<CustomRepository>();
+        
+        var result = await repository.CreateWithExpiration(TimeSpan.FromSeconds(5));
+        result.Should().BeSuccess();
+        result.ValueOrDefault.Should().NotBeNull();
+
+        var createdEntity = await repository.GetAsync(result.ValueOrDefault.Id);
+        createdEntity.Should().BeSuccess();
+        createdEntity.ValueOrDefault.Should().NotBeNull();
+        
+        var act = async () =>
+        {
+            var sut = await repository.GetAsync(result.ValueOrDefault.Id);
+            sut.Should().BeSuccess();
+            sut.ValueOrDefault.Should().BeNull();
+        };
+
+        await act.Should().NotThrowAfterAsync(TimeSpan.FromSeconds(65), TimeSpan.FromSeconds(5));
+    }
+    
     [OneTimeTearDown]
     public Task TearDown()
     {
@@ -145,6 +188,43 @@ public class MongoCollectionProviderTests
             
             return await collectionResult.ValueOrDefault.Find(FilterDefinition<TestEntity1>.Empty)
                 .FirstOrDefaultAsync(cancellationToken);
+        }
+        
+        public async Task<Result<TestEntity1>> GetAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var collectionResult = await collectionProvider.GetCollectionAsync<TestEntity1>("TestDB1", cancellationToken);
+
+            if (collectionResult.IsFailed)
+            {
+                return collectionResult.ToResult();
+            }
+
+            var filter = Builders<TestEntity1>.Filter.Eq(x => x.Id, id);
+            
+            return await collectionResult.ValueOrDefault.Find(filter)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public async Task<Result<TestEntity1>> CreateWithExpiration(TimeSpan expireAfter)
+        {
+            var collectionResult = await collectionProvider.GetCollectionAsync<TestEntity1>("TestDB1", CancellationToken.None);
+            
+            if (collectionResult.IsFailed)
+            {
+                return collectionResult.ToResult();
+            }
+            
+            var entity = new TestEntity1
+            {
+                Id = Guid.NewGuid(),
+                ETag = 1,
+                UpdateAt = DateTime.UtcNow,
+                Value = 1,
+                ExpireAt = DateTime.UtcNow.Add(expireAfter)
+            };
+            
+            await collectionResult.ValueOrDefault.InsertOneAsync(entity, cancellationToken: CancellationToken.None);
+            return Result.Ok(entity);
         }
     }
 }
