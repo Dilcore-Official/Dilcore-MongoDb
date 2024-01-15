@@ -22,6 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dilcore.DocumentDb.MongoDb.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dilcore.DocumentDb.Abstractions.UnitTests", "test\UnitTests\Dilcore.DocumentDb.Abstractions.UnitTests.csproj", "{7EE50092-E029-4B26-907E-AC5B70442BA1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MongoDb.WebApi.Sample", "samples\MongoDb.WebApi.Sample\MongoDb.WebApi.Sample.csproj", "{97297AFC-6DAF-49C1-BD4A-C94673030567}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -35,6 +37,7 @@ Global
 		{C5C90855-F39A-4947-878E-595E485EEB30} = {6873E6F9-CE49-40A4-97AB-987460196324}
 		{1CFCDB49-97E4-48CA-AC6B-0B94623F6F6E} = {A872A311-55A9-4DEF-B3E5-F9DECC4D9270}
 		{7EE50092-E029-4B26-907E-AC5B70442BA1} = {A872A311-55A9-4DEF-B3E5-F9DECC4D9270}
+		{97297AFC-6DAF-49C1-BD4A-C94673030567} = {41DCC33D-7B04-41A3-8A5D-677A8FAF4A2F}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{5BDC3667-60FB-4A10-8F07-85ED0B9786FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -65,5 +68,9 @@ Global
 		{7EE50092-E029-4B26-907E-AC5B70442BA1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7EE50092-E029-4B26-907E-AC5B70442BA1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7EE50092-E029-4B26-907E-AC5B70442BA1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{97297AFC-6DAF-49C1-BD4A-C94673030567}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97297AFC-6DAF-49C1-BD4A-C94673030567}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97297AFC-6DAF-49C1-BD4A-C94673030567}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{97297AFC-6DAF-49C1-BD4A-C94673030567}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
