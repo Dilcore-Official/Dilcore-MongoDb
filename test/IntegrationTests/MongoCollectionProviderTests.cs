@@ -1,27 +1,18 @@
 ﻿using Dilcore.DocumentDb.Abstractions;
 using Dilcore.DocumentDb.MongoDb.Extensions;
+using Dilcore.DocumentDb.MongoDb.IntegrationTests.Infrastructure;
 using FluentResults;
 using MongoDB.Driver;
-using Testcontainers.MongoDb;
 
 namespace Dilcore.DocumentDb.MongoDb.IntegrationTests;
 
-public class MongoCollectionProviderTests
+public class MongoCollectionProviderTests : BaseIntegrationTests
 {
-    private readonly Testcontainers.MongoDb.MongoDbContainer _mongoDbContainer =
-        new MongoDbBuilder().Build();
-
-    [OneTimeSetUp]
-    public async Task InitializeAsync()
-    {
-        await _mongoDbContainer.StartAsync();
-    }
-    
     [Test]
     public async Task MongoCollectionProvider_UseRegularCollection()
     {
         var services = new ServiceCollection();
-        var connectionString = _mongoDbContainer.GetConnectionString();
+        var connectionString = MongoDbContainer.GetConnectionString();
         
         services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
         {
@@ -50,7 +41,7 @@ public class MongoCollectionProviderTests
     public async Task MongoCollectionProvider_UseRegularCollectionWithIndexes(string sortDirection, string expectedIndexName)
     {
         var services = new ServiceCollection();
-        var connectionString = _mongoDbContainer.GetConnectionString();
+        var connectionString = MongoDbContainer.GetConnectionString();
 
         services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
             {
@@ -100,7 +91,7 @@ public class MongoCollectionProviderTests
     public async Task MongoCollectionProvider_UseTimeToLeaveIndex()
     {
         var services = new ServiceCollection();
-        var connectionString = _mongoDbContainer.GetConnectionString();
+        var connectionString = MongoDbContainer.GetConnectionString();
         
         services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
             {
@@ -142,7 +133,7 @@ public class MongoCollectionProviderTests
     [OneTimeTearDown]
     public Task TearDown()
     {
-        return _mongoDbContainer.DisposeAsync().AsTask();
+        return MongoDbContainer.DisposeAsync().AsTask();
     }
     
     public class TestEntity1 : IDocumentEntity

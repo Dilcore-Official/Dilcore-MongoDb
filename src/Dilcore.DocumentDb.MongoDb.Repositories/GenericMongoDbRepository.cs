@@ -73,23 +73,23 @@ internal class GenericMongoDbRepository<TDocument>(
             }, cancellationToken);
 
     public Task<Result<bool>> DeleteAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
-        => ExecuteAsync(async (collection, token) =>
+        => ExecuteAsync((collection, token) =>
         {
             var collectionOptions = GetOptions();
             
             if (collectionOptions.SoftDeleteDisabled)
             {
-                return await PermanentDeleteOneAsync(collection, filter, token);
+                return PermanentDeleteOneAsync(collection, filter, token);
             }
 
             filter = ApplyNotDeleteFilter(filter);
-            return await SoftDeleteOneAsync(collection, filter, token);
+            return SoftDeleteOneAsync(collection, filter, token);
 
         }, cancellationToken);
 
     #region Store
 
-    private async Task<Result<TDocument>> StoreEntityAsync(TDocument entity,
+    private Task<Result<TDocument>> StoreEntityAsync(TDocument entity,
         IMongoCollection<TDocument> collection, CancellationToken cancellationToken = default)
     {
         var currentEtag = entity.ETag;
@@ -98,22 +98,13 @@ internal class GenericMongoDbRepository<TDocument>(
 
         if (entity.IsNew())
         {
-            await CreateAsync(entity, collection, cancellationToken);
-        }
-        else
-        {
-            var success = await UpdateAsync(entity, currentEtag, collection, cancellationToken);
-
-            if (!success)
-            {
-                return Result.Fail($"Failed to update entity '{collection.CollectionNamespace}' with id {entity.Id}");
-            }
+            return CreateAsync(entity, collection, cancellationToken);
         }
 
-        return Result.Ok(entity);
+        return UpdateAsync(entity, currentEtag, collection, cancellationToken);
     }
 
-    private static async Task CreateAsync(TDocument entity, IMongoCollection<TDocument> collection,
+    private static async Task<Result<TDocument>> CreateAsync(TDocument entity, IMongoCollection<TDocument> collection,
         CancellationToken cancellationToken)
     {
         if (entity.IsIdEmpty())
@@ -124,9 +115,10 @@ internal class GenericMongoDbRepository<TDocument>(
         entity.GenerateETag();
 
         await collection.InsertOneAsync(entity, new InsertOneOptions(), cancellationToken);
+        return Result.Ok(entity);
     }
 
-    private async Task<bool> UpdateAsync(TDocument entity, long currentEtag,
+    private async Task<Result<TDocument>> UpdateAsync(TDocument entity, long currentEtag,
         IMongoCollection<TDocument> collection, CancellationToken cancellationToken)
     {
         var filter = Builders<TDocument>.Filter.Eq(x => x.Id, entity.Id);
@@ -141,7 +133,8 @@ internal class GenericMongoDbRepository<TDocument>(
         var updateResult =
             await collection.UpdateOneAsync(filter, updateDocument, cancellationToken: cancellationToken);
 
-        return updateResult.ModifiedCount == 1;
+        return updateResult.ModifiedCount == 1 ? Result.Ok(entity) 
+            : Result.Fail($"Failed to update entity '{collection.CollectionNamespace}' with id {entity.Id}");
     }
 
     #endregion
