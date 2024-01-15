@@ -4,7 +4,7 @@ using FluentResults;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 
-namespace Dilcore.DocumentDb.MongoDb.Repositories.Extensions;
+namespace Dilcore.DocumentDb.MongoDb.Repositories;
 
 public static class MongoDatabaseContainerExtensions
 {

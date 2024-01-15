@@ -2,7 +2,6 @@
 using Dilcore.DocumentDb.Abstractions;
 using Dilcore.DocumentDb.MongoDb.Extensions;
 using Dilcore.DocumentDb.MongoDb.Repositories.Abstractions;
-using Dilcore.DocumentDb.MongoDb.Repositories.Extensions;
 using Dilcore.DocumentDb.MongoDb.Repositories.IntegrationTests.Infrastructure;
 using FluentAssertions;
 using FluentResults.Extensions.FluentAssertions;
@@ -296,7 +295,7 @@ public class GenericRepositoryTests : BaseIntegrationTests
         var createResult = await _repository!.StoreAsync(entity);
         createResult.Should().BeSuccess();
         
-        var derivedEntityResult = await _repository!.GetAsync<DerivedTestEntity1>(createResult.ValueOrDefault.Id);
+        var derivedEntityResult = await _repository!.GetAsync<TestEntity1, DerivedTestEntity1>(createResult.ValueOrDefault.Id);
         derivedEntityResult.Should().BeSuccess();
         
         var derivedEntity = derivedEntityResult.ValueOrDefault;
@@ -328,15 +327,18 @@ public class GenericRepositoryTests : BaseIntegrationTests
             .Without(x => x.ETag)
             .Without(x => x.Id)
             .Without(x => x.IsDeleted)
-            .CreateMany(5);
+            .CreateMany(5).ToArray();
         
         foreach (var entity in entities)
         {
             var createResult = await _repository!.StoreAsync(entity);
             createResult.Should().BeSuccess();
         }
+
+        var ids = entities.Select(x => x.Id).Concat(derivedEntities.Select(x => x.Id)).ToArray();
         
-        var derivedEntityResult = await _repository!.GetListAsync<DerivedTestEntity1>(x => true);
+        var derivedEntityResult =
+            await _repository!.GetListAsync<TestEntity1, DerivedTestEntity1>(x => ids.Contains(x.Id));
         derivedEntityResult.Should().BeSuccess();
         
         var derivedEntitiesFromDb = derivedEntityResult.ValueOrDefault;

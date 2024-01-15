@@ -18,21 +18,19 @@ internal class GenericMongoDbRepository<TDocument>(
     public Task<Result<TDocument>> StoreAsync(TDocument entity, CancellationToken cancellationToken = default)
         => ExecuteAsync((collection, ct) => StoreEntityAsync(entity, collection, ct), cancellationToken);
 
-    public Task<Result<TDocument>> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
-        ExecuteAsync(async (collection, token) =>
+    public Task<Result<TDocument>> GetAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default) 
+        => ExecuteAsync(async (collection, token) =>
         {
-            var filter = Builders<TDocument>.Filter.Eq(x => x.Id, id);
             filter = ApplyNotDeleteFilter(filter);
 
             var entity = await collection.Find(filter).FirstOrDefaultAsync(token);
             return Result.Ok(entity);
         }, cancellationToken);
 
-    public Task<Result<TDerived>> GetAsync<TDerived>(Guid id, CancellationToken cancellationToken = default)
+    public Task<Result<TDerived>> GetAsync<TDerived>(FilterDefinition<TDerived> filter, CancellationToken cancellationToken = default) 
         where TDerived : class, TDocument
         => ExecuteAsync(async (collection, token) =>
         {
-            var filter = Builders<TDerived>.Filter.Eq(x => x.Id, id);
             filter = ApplyNotDeleteFilter(filter);
 
             var entity = await collection.OfType<TDerived>()
@@ -63,11 +61,9 @@ internal class GenericMongoDbRepository<TDocument>(
             return Result.Ok<IReadOnlyList<TDocument>>(entities);
         }, cancellationToken);
 
-    public Task<Result<IReadOnlyList<TDocument>>> GetListAsync(Expression<Func<TDocument, bool>> expression,
-        CancellationToken cancellationToken = default) =>
-        ExecuteAsync(async (collection, token) =>
+    public Task<Result<IReadOnlyList<TDocument>>> GetListAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
+        => ExecuteAsync(async (collection, token) =>
         {
-            var filter = Builders<TDocument>.Filter.Where(expression);
             filter = ApplyNotDeleteFilter(filter);
 
             var entities = await collection.Find(filter).ToListAsync(token);
@@ -75,13 +71,12 @@ internal class GenericMongoDbRepository<TDocument>(
             return Result.Ok<IReadOnlyList<TDocument>>(entities);
         }, cancellationToken);
 
-    public Task<Result<IReadOnlyList<TDerived>>> GetListAsync<TDerived>(Expression<Func<TDerived, bool>> expression,
-        CancellationToken cancellationToken = default)
+    public Task<Result<IReadOnlyList<TDerived>>> GetListAsync<TDerived>(FilterDefinition<TDerived> filter,
+        CancellationToken cancellationToken = default) 
         where TDerived : class, TDocument
         =>
             ExecuteAsync(async (collection, token) =>
             {
-                var filter = Builders<TDerived>.Filter.Where(expression);
                 filter = ApplyNotDeleteFilter(filter);
 
                 var entities = await collection.OfType<TDerived>().Find(filter).ToListAsync(token);
@@ -89,14 +84,11 @@ internal class GenericMongoDbRepository<TDocument>(
                 return Result.Ok<IReadOnlyList<TDerived>>(entities);
             }, cancellationToken);
 
-    public Task<Result<bool>> DeleteAsync(Guid id, long eTag, CancellationToken cancellationToken = default) =>
-        ExecuteAsync(async (collection, token) =>
+    public Task<Result<bool>> DeleteAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
+        => ExecuteAsync(async (collection, token) =>
         {
             var collectionOptions = GetOptions();
-
-            var filter = Builders<TDocument>.Filter.Eq(x => x.Id, id);
-            filter &= Builders<TDocument>.Filter.Eq(x => x.ETag, eTag);
-
+            
             if (collectionOptions.SoftDeleteDisabled)
             {
                 return await PermanentDeleteOneAsync(collection, filter, token);
@@ -106,6 +98,8 @@ internal class GenericMongoDbRepository<TDocument>(
             return await SoftDeleteOneAsync(collection, filter, token);
 
         }, cancellationToken);
+
+    
 
     public Task<Result<bool>> DeleteAsync(Expression<Func<TDocument, bool>> expression,
         CancellationToken cancellationToken = default) =>

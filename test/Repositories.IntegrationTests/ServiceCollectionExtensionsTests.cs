@@ -1,7 +1,7 @@
 ﻿using Dilcore.DocumentDb.Abstractions;
 using Dilcore.DocumentDb.MongoDb.Extensions;
 using Dilcore.DocumentDb.MongoDb.Repositories.Abstractions;
-using Dilcore.DocumentDb.MongoDb.Repositories.Extensions;
+using Dilcore.DocumentDb.MongoDb.Repositories;
 using Dilcore.DocumentDb.MongoDb.Repositories.IntegrationTests.Infrastructure;
 using FluentAssertions;
 using FluentResults;
