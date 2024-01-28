@@ -88,7 +88,7 @@ stages:
             displayName: "Nuget Pack"
             inputs:
               command: 'pack'
-              packagesToPack: '*/src/**/*.csproj;!**/*.*[Tt]est.csproj;!**/*.*Sample.csproj;'
+              packagesToPack: 'src/**/**.csproj'
               versioningScheme: 'byEnvVar'
               versionEnvVar: 'packageVersion'
           - task: DotNetCoreCLI@2

@@ -2,6 +2,7 @@
 using Dilcore.DocumentDb.MongoDb.Extensions;
 using Dilcore.DocumentDb.MongoDb.IntegrationTests.Infrastructure;
 using FluentResults;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Dilcore.DocumentDb.MongoDb.IntegrationTests;
@@ -128,6 +129,45 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
         };
 
         await act.Should().NotThrowAfterAsync(TimeSpan.FromSeconds(65), TimeSpan.FromSeconds(5));
+    }
+    
+    [Test]
+    public async Task MongoCollectionProvider_UseRegularCollection_Showcase()
+    {
+        var services = new ServiceCollection();
+        var connectionString = MongoDbContainer.GetConnectionString();
+        
+        services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
+            {
+                builder.AddDatabase("TestDB1", _ => {});
+            });
+        
+        var serviceProvider = services.BuildServiceProvider();
+        
+        var collectionFactory = serviceProvider.GetRequiredService<IMongoDbCollectionFactory>();
+        
+        var collectionResult = await collectionFactory.GetCollectionAsync<TestEntity1>("TestDB1", options =>
+        {
+            options.WithCollectionName("testEntity1")
+                .WithDatabaseName("TestDB1");
+        });
+
+        collectionResult.Should().BeSuccess();
+        
+        var collection = collectionResult.ValueOrDefault;
+        var entity = new TestEntity1
+        {
+            Id = Guid.NewGuid(),
+            ETag = 1,
+            UpdateAt = DateTime.UtcNow,
+            Value = 1
+        };
+        
+        await collection.InsertOneAsync(entity, cancellationToken: CancellationToken.None);
+        
+        var filter = Builders<TestEntity1>.Filter.Eq(x => x.Id, entity.Id);
+        
+        var sut = await collection.Find(filter).FirstOrDefaultAsync();
     }
     
     [OneTimeTearDown]
