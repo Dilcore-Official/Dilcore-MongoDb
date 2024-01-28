@@ -98,7 +98,6 @@ stages:
               packagesToPack: 'src/**/**.csproj'
               versioningScheme: 'byEnvVar'
               versionEnvVar: 'packageVersion'
-              buildProperties: '--no-restore'
           - task: DotNetCoreCLI@2
             displayName: "NuGet Push"
             inputs:
