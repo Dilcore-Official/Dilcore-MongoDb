@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <InvariantGlobalization>true</InvariantGlobalization>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.1"/>
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+        <PackageReference Include="Testcontainers.MongoDb" Version="3.7.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\Dilcore.DocumentDb.MongoDb.Repositories\Dilcore.DocumentDb.MongoDb.Repositories.csproj" />
+      <ProjectReference Include="..\..\src\Dilcore.DocumentDb.MongoDb\Dilcore.DocumentDb.MongoDb.csproj" />
+    </ItemGroup>
+
+</Project>

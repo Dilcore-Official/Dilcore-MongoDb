@@ -66,8 +66,8 @@ stages:
         - task: DotNetCoreCLI@2
           inputs:
             command: 'test'
-            projects: '**.sln'
-            arguments: '--configuration $(BuildConfiguration) --logger trx'
+            projects: '*.sln'
+            arguments: '--configuration $(BuildConfiguration) --no-restore --logger trx'
         - task: PublishTestResults@2
           inputs:
             testRunner: VSTest
@@ -85,10 +85,24 @@ stages:
               versionSpec: 
               checkLatest: true
           - task: DotNetCoreCLI@2
+            displayName: 'Restore Nuget Packages'
+            inputs:
+              command: 'restore'
+              projects: 'src/**/**.csproj'
+              feedsToUse: 'select'
+              vstsFeed: '77bf910c-edc3-46f5-ac83-ee65eb22a5d9'
+          - task: DotNetCoreCLI@2
+            displayName: '.NET Build'
+            inputs:
+              command: 'build'
+              projects: 'src/**/**.csproj'
+              arguments: '--no-restore --configuration $(BuildConfiguration)'
+          - task: DotNetCoreCLI@2
             displayName: "Nuget Pack"
             inputs:
               command: 'pack'
-              packagesToPack: '**/*.csproj;!**/*.*[Tt]est.csproj;!sample/*.csproj'
+              packagesToPack: 'src/**/**.csproj'
+              nobuild: true
               versioningScheme: 'byEnvVar'
               versionEnvVar: 'packageVersion'
           - task: DotNetCoreCLI@2
