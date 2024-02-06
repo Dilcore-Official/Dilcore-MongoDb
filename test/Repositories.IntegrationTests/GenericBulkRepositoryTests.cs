@@ -39,7 +39,7 @@ public class GenericBulkRepositoryTests : BaseIntegrationTests
     {
         var entities = Fixture.Build<TestEntity1>()
             .With(x => x.IsDeleted, false)
-            .With(x => x.UpdateAt, DateTime.UtcNow)
+            .With(x => x.UpdatedAt, DateTime.UtcNow)
             .Without(x => x.ETag)
             .CreateMany(20).ToList();
 
@@ -56,7 +56,7 @@ public class GenericBulkRepositoryTests : BaseIntegrationTests
             x.Id.Should().NotBeEmpty();
             x.ETag.Should().NotBe(0);
             x.IsDeleted.Should().BeFalse();
-            x.UpdateAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(10));
+            x.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(10));
         });
     }
     
@@ -67,7 +67,7 @@ public class GenericBulkRepositoryTests : BaseIntegrationTests
         
         var entities = Fixture.Build<TestEntity1>()
             .With(x => x.IsDeleted, false)
-            .With(x => x.UpdateAt, DateTime.UtcNow)
+            .With(x => x.UpdatedAt, DateTime.UtcNow)
             .Without(x => x.ETag)
             .CreateMany(20).ToList();
 
@@ -91,7 +91,7 @@ public class GenericBulkRepositoryTests : BaseIntegrationTests
         
         entities = Fixture.Build<TestEntity1>()
             .With(x => x.IsDeleted, false)
-            .With(x => x.UpdateAt, DateTime.UtcNow)
+            .With(x => x.UpdatedAt, DateTime.UtcNow)
             .With(x => x.Name, "New")
             .Without(x => x.ETag)
             .CreateMany(10).ToList();
@@ -140,7 +140,7 @@ public class GenericBulkRepositoryTests : BaseIntegrationTests
         
         var entities = Fixture.Build<TestEntity1>()
             .With(x => x.IsDeleted, false)
-            .With(x => x.UpdateAt, DateTime.UtcNow)
+            .With(x => x.UpdatedAt, DateTime.UtcNow)
             .Without(x => x.ETag)
             .CreateMany(20).ToList();
 
@@ -187,7 +187,8 @@ public class GenericBulkRepositoryTests : BaseIntegrationTests
         public Guid Id { get; set; }
         public long ETag { get; set; }
         public bool IsDeleted { get; set; }
-        public DateTime UpdateAt { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
         
         public string Name { get; set; }
         public string Value { get; set; }

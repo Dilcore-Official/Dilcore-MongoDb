@@ -112,6 +112,7 @@ internal class GenericMongoDbRepository<TDocument>(
             entity.NewId();
         }
 
+        entity.CreatedNow();
         entity.GenerateETag();
 
         await collection.InsertOneAsync(entity, new InsertOneOptions(), cancellationToken);

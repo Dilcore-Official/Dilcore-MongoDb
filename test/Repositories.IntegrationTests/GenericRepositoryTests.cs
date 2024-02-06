@@ -125,7 +125,7 @@ public class GenericRepositoryTests : BaseIntegrationTests
         entity.ETag.Should().Be(createResult.ValueOrDefault.ETag);
         entity.Name.Should().Be(createResult.ValueOrDefault.Name);
         entity.Value.Should().Be(createResult.ValueOrDefault.Value);
-        entity.UpdateAt.Should().BeSameDateAs(createResult.ValueOrDefault.UpdateAt);
+        entity.UpdatedAt.Should().BeSameDateAs(createResult.ValueOrDefault.UpdatedAt);
     }
 
     [Test]
@@ -163,7 +163,7 @@ public class GenericRepositoryTests : BaseIntegrationTests
         entity.ETag.Should().Be(createResult.ValueOrDefault.ETag);
         entity.Name.Should().Be(createResult.ValueOrDefault.Name);
         entity.Value.Should().Be(createResult.ValueOrDefault.Value);
-        entity.UpdateAt.Should().BeSameDateAs(createResult.ValueOrDefault.UpdateAt);
+        entity.UpdatedAt.Should().BeSameDateAs(createResult.ValueOrDefault.UpdatedAt);
     }
 
     [Test]
@@ -464,7 +464,8 @@ public class GenericRepositoryTests : BaseIntegrationTests
         public Guid Id { get; set; }
         public long ETag { get; set; }
         public bool IsDeleted { get; set; }
-        public DateTime UpdateAt { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
 
         public string Name { get; set; }
         public string Value { get; set; }

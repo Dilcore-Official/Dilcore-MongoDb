@@ -10,9 +10,14 @@ public static class DocumentEntityExtensions
         document.ETag = DocumentDbHelper.GenerateEtag();
     }
 
+    public static void CreatedNow(this IDocumentEntity document)
+    {
+        document.CreatedAt = DateTime.UtcNow;
+    }
+    
     public static void UpdatedNow(this IDocumentEntity document)
     {
-        document.UpdateAt = DateTime.UtcNow;
+        document.UpdatedAt = DateTime.UtcNow;
     }
 
     public static void NewId(this IDocumentEntity document)

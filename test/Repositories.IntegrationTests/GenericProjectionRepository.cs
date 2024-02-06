@@ -41,7 +41,7 @@ public class GenericProjectionRepository : BaseIntegrationTests
     {
         var entities = Fixture.Build<TestEntity1>()
             .With(x => x.IsDeleted, false)
-            .With(x => x.UpdateAt, DateTime.UtcNow)
+            .With(x => x.UpdatedAt, DateTime.UtcNow)
             .Without(x => x.ETag)
             .CreateMany(20).ToList();
 
@@ -71,7 +71,7 @@ public class GenericProjectionRepository : BaseIntegrationTests
     {
         var entities = Fixture.Build<TestEntity1>()
             .With(x => x.IsDeleted, false)
-            .With(x => x.UpdateAt, DateTime.UtcNow)
+            .With(x => x.UpdatedAt, DateTime.UtcNow)
             .Without(x => x.ETag)
             .CreateMany(20).ToList();
 
@@ -102,7 +102,8 @@ public class GenericProjectionRepository : BaseIntegrationTests
         public Guid Id { get; set; }
         public long ETag { get; set; }
         public bool IsDeleted { get; set; }
-        public DateTime UpdateAt { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
         
         public string Name { get; set; }
         public string Value { get; set; }

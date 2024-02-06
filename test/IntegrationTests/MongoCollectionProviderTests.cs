@@ -159,7 +159,7 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
         {
             Id = Guid.NewGuid(),
             ETag = 1,
-            UpdateAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
             Value = 1
         };
         
@@ -181,7 +181,8 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
         public Guid Id { get; set; }
         public long ETag { get; set; }
         public bool IsDeleted { get; set; }
-        public DateTime UpdateAt { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
         public DateTime? ExpireAt { get; set; }
         
         public int Value { get; set; }
@@ -246,7 +247,7 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
             {
                 Id = Guid.NewGuid(),
                 ETag = 1,
-                UpdateAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
                 Value = 1,
                 ExpireAt = DateTime.UtcNow.Add(expireAfter)
             };

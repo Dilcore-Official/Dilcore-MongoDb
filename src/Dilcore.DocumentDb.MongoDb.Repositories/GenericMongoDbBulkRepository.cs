@@ -91,7 +91,9 @@ public class GenericMongoDbBulkRepository<TDocument>(
                 }
 
                 entity.GenerateETag();
+                entity.CreatedNow();
                 entity.UpdatedNow();
+                
                 yield return new InsertOneModel<TDocument>(entity);
                 continue;
             }

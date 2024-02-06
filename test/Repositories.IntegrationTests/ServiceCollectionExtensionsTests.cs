@@ -495,7 +495,8 @@ public class ServiceCollectionExtensionsTests : BaseIntegrationTests
         public Guid Id { get; set; }
         public long ETag { get; set; }
         public bool IsDeleted { get; set; }
-        public DateTime UpdateAt { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
         public DateTime? ExpireAt { get; set; }
         
         public int Value { get; set; }
@@ -506,7 +507,8 @@ public class ServiceCollectionExtensionsTests : BaseIntegrationTests
         public Guid Id { get; set; }
         public long ETag { get; set; }
         public bool IsDeleted { get; set; }
-        public DateTime UpdateAt { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
         public DateTime? ExpireAt { get; set; }
         
         public string Value { get; set; }
@@ -517,7 +519,8 @@ public class ServiceCollectionExtensionsTests : BaseIntegrationTests
         public Guid Id { get; set; }
         public long ETag { get; set; }
         public bool IsDeleted { get; set; }
-        public DateTime UpdateAt { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
         public DateTime? ExpireAt { get; set; }
         
         public decimal Value { get; set; }

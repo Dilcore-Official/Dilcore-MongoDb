@@ -13,7 +13,7 @@ public class DocumentEntityExtensionsTests
         var entity = new TestEntity();
         entity.UpdatedNow();
 
-        entity.UpdateAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+        entity.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
     
     [Test]
@@ -79,7 +79,8 @@ public class DocumentEntityExtensionsTests
         public Guid Id { get; set; }
         public long ETag { get; set; }
         public bool IsDeleted { get; set; }
-        public DateTime UpdateAt { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
         
         public string Value { get; set; }
     }
