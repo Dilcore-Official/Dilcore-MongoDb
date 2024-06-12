@@ -96,12 +96,9 @@ internal class GenericMongoDbRepository<TDocument>(
 
         entity.UpdatedNow();
 
-        if (entity.IsNew())
-        {
-            return CreateAsync(entity, collection, cancellationToken);
-        }
-
-        return UpdateAsync(entity, currentEtag, collection, cancellationToken);
+        return entity.IsNew()
+            ? CreateAsync(entity, collection, cancellationToken)
+            : UpdateAsync(entity, currentEtag, collection, cancellationToken);
     }
 
     private static async Task<Result<TDocument>> CreateAsync(TDocument entity, IMongoCollection<TDocument> collection,
