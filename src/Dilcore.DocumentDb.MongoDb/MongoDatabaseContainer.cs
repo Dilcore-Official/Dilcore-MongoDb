@@ -33,21 +33,21 @@ public class MongoDatabaseContainer
     public MongoDatabaseContainer AddMongoCollection<TDocument>(Action<GetCollectionOptions<TDocument>> action)
         where TDocument : class, IDocumentEntity
     {
-        Services.AddKeyedSingleton(DbName, action);
+        Services.AddKeyedScoped(DbName, (_, _) => action);
         return this;
     }
     
     private MongoDatabaseContainer AddDefaultPrefixProviders()
     {
-        Services.AddKeyedSingleton<IDocumentDatabasePrefixProvider, DefaultDocumentDatabasePrefixProvider>(DbName);
-        Services.AddKeyedSingleton<IDocumentCollectionPrefixProvider, DefaultDocumentCollectionPrefixProvider>(DbName);
+        Services.AddKeyedScoped<IDocumentDatabasePrefixProvider, DefaultDocumentDatabasePrefixProvider>(DbName);
+        Services.AddKeyedScoped<IDocumentCollectionPrefixProvider, DefaultDocumentCollectionPrefixProvider>(DbName);
         
         return this;
     }
     
     private MongoDatabaseContainer AddDatabaseProvider()
     {
-        Services.AddKeyedSingleton<IMongoDatabaseProvider>(DbName, (provider, _) =>
+        Services.AddKeyedScoped<IMongoDatabaseProvider>(DbName, (provider, _) =>
         {
             var prefixProvider = provider.GetRequiredKeyedService<IDocumentDatabasePrefixProvider>(DbName);
             
@@ -60,7 +60,7 @@ public class MongoDatabaseContainer
 
     private MongoDatabaseContainer AddCollectionProvider()
     {
-        Services.AddKeyedSingleton<IMongoDbCollectionProvider>(DbName, (provider, _) =>
+        Services.AddKeyedScoped<IMongoDbCollectionProvider>(DbName, (provider, _) =>
         {
             var mongoDatabaseProvider = provider.GetRequiredKeyedService<IMongoDatabaseProvider>(DbName);
             var collectionPrefixProvider = provider.GetRequiredKeyedService<IDocumentCollectionPrefixProvider>(DbName);
