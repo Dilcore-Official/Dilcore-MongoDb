@@ -2,7 +2,6 @@
 using Dilcore.DocumentDb.MongoDb.Extensions;
 using Dilcore.DocumentDb.MongoDb.IntegrationTests.Infrastructure;
 using FluentResults;
-using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Dilcore.DocumentDb.MongoDb.IntegrationTests;
@@ -86,6 +85,8 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
         collectionIndexes.Should().HaveCount(2);
         collectionIndexes.Should().Contain(x => x.GetValue("name") == "_id_");
         collectionIndexes.Should().Contain(x => x.GetValue("name") == expectedIndexName);
+
+        await collection.Indexes.DropAllAsync();
     }
 
     [Test]

@@ -72,7 +72,6 @@ internal class MongoCollectionProvider(
 
         if (options.Indices != null && options.Indices.Any())
         {
-            await collection.Indexes.DropAllAsync(cancellationToken);
             await collection.Indexes.CreateManyAsync(options.Indices, cancellationToken);
         }
                 
