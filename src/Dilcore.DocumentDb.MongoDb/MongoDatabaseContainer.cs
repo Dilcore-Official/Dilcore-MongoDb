@@ -60,10 +60,16 @@ public class MongoDatabaseContainer
 
     private MongoDatabaseContainer AddCollectionProvider()
     {
-        Services.AddKeyedScoped<IMongoDbCollectionProvider>(DbName, (provider, _) =>
+        Services.AddKeyedSingleton<IMongoDbCollectionProvider>(DbName, (provider, _) =>
         {
             var mongoDatabaseProvider = provider.GetRequiredKeyedService<IMongoDatabaseProvider>(DbName);
-            var collectionPrefixProvider = provider.GetRequiredKeyedService<IDocumentCollectionPrefixProvider>(DbName);
+
+            // get service scope factory (you could also pass this instead of the service provider)
+            var serviceScopeFactory = provider.GetService<IServiceScopeFactory>();
+            
+            using var scope = serviceScopeFactory.CreateScope();
+            
+            var collectionPrefixProvider = scope.ServiceProvider.GetRequiredKeyedService<IDocumentCollectionPrefixProvider>(DbName);
 
             return new MongoCollectionProvider(mongoDatabaseProvider, collectionPrefixProvider);
         });
