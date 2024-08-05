@@ -11,7 +11,7 @@ public static class ServiceCollectionExtensions
         var mongoContainer = MongoDbContainer.Create(services, configure);
         action(mongoContainer);
 
-        services.AddScoped<IMongoDbCollectionFactory, MongoDbCollectionFactory>();
+        services.AddSingleton<IMongoDbCollectionFactory, MongoDbCollectionFactory>();
         
         return services;
     }
