@@ -33,7 +33,7 @@ public class MongoDatabaseContainer
     public MongoDatabaseContainer AddMongoCollection<TDocument>(Action<GetCollectionOptions<TDocument>> action)
         where TDocument : class, IDocumentEntity
     {
-        Services.AddKeyedScoped(DbName, (_, _) => action);
+        Services.AddKeyedSingleton(DbName, (_, _) => action);
         return this;
     }
     
