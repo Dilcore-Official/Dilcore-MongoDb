@@ -19,14 +19,14 @@ public class MongoDatabaseContainer
     public MongoDatabaseContainer AddCustomDatabasePrefixResolver<T>() 
         where T : class, IDocumentDatabasePrefixProvider
     {
-        Services.AddKeyedSingleton<IDocumentDatabasePrefixProvider, T>(DbName);
+        Services.AddKeyedScoped<IDocumentDatabasePrefixProvider, T>(DbName);
         return this;
     }
     
     public MongoDatabaseContainer AddCustomCollectionPrefixResolver<T>() 
         where T : class, IDocumentCollectionPrefixProvider
     {
-        Services.AddKeyedSingleton<IDocumentCollectionPrefixProvider, T>(DbName);
+        Services.AddKeyedScoped<IDocumentCollectionPrefixProvider, T>(DbName);
         return this;
     }
 
