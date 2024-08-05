@@ -19,14 +19,14 @@ public class MongoDatabaseContainer
     public MongoDatabaseContainer AddCustomDatabasePrefixResolver<T>() 
         where T : class, IDocumentDatabasePrefixProvider
     {
-        Services.AddKeyedScoped<IDocumentDatabasePrefixProvider, T>(DbName);
+        Services.AddKeyedSingleton<IDocumentDatabasePrefixProvider, T>(DbName);
         return this;
     }
     
     public MongoDatabaseContainer AddCustomCollectionPrefixResolver<T>() 
         where T : class, IDocumentCollectionPrefixProvider
     {
-        Services.AddKeyedScoped<IDocumentCollectionPrefixProvider, T>(DbName);
+        Services.AddKeyedSingleton<IDocumentCollectionPrefixProvider, T>(DbName);
         return this;
     }
 
@@ -39,15 +39,15 @@ public class MongoDatabaseContainer
     
     private MongoDatabaseContainer AddDefaultPrefixProviders()
     {
-        Services.AddKeyedScoped<IDocumentDatabasePrefixProvider, DefaultDocumentDatabasePrefixProvider>(DbName);
-        Services.AddKeyedScoped<IDocumentCollectionPrefixProvider, DefaultDocumentCollectionPrefixProvider>(DbName);
+        Services.AddKeyedSingleton<IDocumentDatabasePrefixProvider, DefaultDocumentDatabasePrefixProvider>(DbName);
+        Services.AddKeyedSingleton<IDocumentCollectionPrefixProvider, DefaultDocumentCollectionPrefixProvider>(DbName);
         
         return this;
     }
     
     private MongoDatabaseContainer AddDatabaseProvider()
     {
-        Services.AddKeyedScoped<IMongoDatabaseProvider>(DbName, (provider, _) =>
+        Services.AddKeyedSingleton<IMongoDatabaseProvider>(DbName, (provider, _) =>
         {
             var prefixProvider = provider.GetRequiredKeyedService<IDocumentDatabasePrefixProvider>(DbName);
             
@@ -64,12 +64,7 @@ public class MongoDatabaseContainer
         {
             var mongoDatabaseProvider = provider.GetRequiredKeyedService<IMongoDatabaseProvider>(DbName);
 
-            // get service scope factory (you could also pass this instead of the service provider)
-            var serviceScopeFactory = provider.GetService<IServiceScopeFactory>();
-            
-            using var scope = serviceScopeFactory.CreateScope();
-            
-            var collectionPrefixProvider = scope.ServiceProvider.GetRequiredKeyedService<IDocumentCollectionPrefixProvider>(DbName);
+            var collectionPrefixProvider = provider.GetRequiredKeyedService<IDocumentCollectionPrefixProvider>(DbName);
 
             return new MongoCollectionProvider(mongoDatabaseProvider, collectionPrefixProvider);
         });
