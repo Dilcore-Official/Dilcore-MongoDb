@@ -397,6 +397,136 @@ public class GenericRepositoryTests : BaseIntegrationTests
             derivedEntity.Value.Should().NotBeNullOrEmpty();
         });
     }
+
+    [Test]
+    public async Task GenericRepository_Collection_Should_NotHaveCount()
+    {
+        // Arrange
+        var entities = Fixture.Build<TestEntity1>()
+            .Without(x => x.ETag)
+            .Without(x => x.Id)
+            .Without(x => x.IsDeleted)
+            .CreateMany(5);
+        
+        foreach (var entity in entities)
+        {
+            var createResult = await _repository!.StoreAsync(entity);
+            createResult.Should().BeSuccess();
+        }
+        
+        var filter = Builders<TestEntity1>.Filter.Eq(x => x.Id, Guid.NewGuid());
+        
+        // Act
+        var countResult = await _repository!.CountAsync(filter);
+        
+        // Assert
+        countResult.Should().BeSuccess();
+        
+        countResult.ValueOrDefault.Should().Be(0);
+    }
+    
+    [Test]
+    public async Task GenericRepository_Collection_Should_HaveCount()
+    {
+        // Arrange
+        var name = Fixture.Create<string>();
+        
+        var entities = Fixture.Build<TestEntity1>()
+            .Without(x => x.ETag)
+            .Without(x => x.Id)
+            .Without(x => x.IsDeleted)
+            .With(x => x.Name, name)
+            .CreateMany(5).ToList();
+        
+        var otherEntities = Fixture.Build<TestEntity1>()
+            .Without(x => x.ETag)
+            .Without(x => x.Id)
+            .Without(x => x.IsDeleted)
+            .CreateMany(5).ToArray();
+        
+        entities.AddRange(otherEntities);
+        
+        foreach (var entity in entities)
+        {
+            var createResult = await _repository!.StoreAsync(entity);
+            createResult.Should().BeSuccess();
+        }
+        
+        var filter = Builders<TestEntity1>.Filter.Eq(x => x.Name, name);
+        
+        // Act
+        var countResult = await _repository!.CountAsync(filter);
+        
+        // Assert
+        countResult.Should().BeSuccess();
+        
+        countResult.ValueOrDefault.Should().Be(5);
+    }
+    
+    [Test]
+    public async Task GenericRepository_Collection_Should_NotHaveAny()
+    {
+        // Arrange
+        var entities = Fixture.Build<TestEntity1>()
+            .Without(x => x.ETag)
+            .Without(x => x.Id)
+            .Without(x => x.IsDeleted)
+            .CreateMany(5);
+        
+        foreach (var entity in entities)
+        {
+            var createResult = await _repository!.StoreAsync(entity);
+            createResult.Should().BeSuccess();
+        }
+        
+        var filter = Builders<TestEntity1>.Filter.Eq(x => x.Id, Guid.NewGuid());
+        
+        // Act
+        var countResult = await _repository!.HasAnyAsync(filter);
+        
+        // Assert
+        countResult.Should().BeSuccess();
+        
+        countResult.ValueOrDefault.Should().BeFalse();
+    }
+    
+    [Test]
+    public async Task GenericRepository_Collection_Should_HaveAny()
+    {
+        // Arrange
+        const string name = "TestName";
+        
+        var entities = Fixture.Build<TestEntity1>()
+            .Without(x => x.ETag)
+            .Without(x => x.Id)
+            .Without(x => x.IsDeleted)
+            .With(x => x.Name, name)
+            .CreateMany(5).ToList();
+        
+        var otherEntities = Fixture.Build<TestEntity1>()
+            .Without(x => x.ETag)
+            .Without(x => x.Id)
+            .Without(x => x.IsDeleted)
+            .CreateMany(5).ToArray();
+        
+        entities.AddRange(otherEntities);
+        
+        foreach (var entity in entities)
+        {
+            var createResult = await _repository!.StoreAsync(entity);
+            createResult.Should().BeSuccess();
+        }
+        
+        var filter = Builders<TestEntity1>.Filter.Eq(x => x.Name, name);
+        
+        // Act
+        var countResult = await _repository!.HasAnyAsync(filter);
+        
+        // Assert
+        countResult.Should().BeSuccess();
+        
+        countResult.ValueOrDefault.Should().BeTrue();
+    }
     
     [TestCase(true)]
     [TestCase(false)]

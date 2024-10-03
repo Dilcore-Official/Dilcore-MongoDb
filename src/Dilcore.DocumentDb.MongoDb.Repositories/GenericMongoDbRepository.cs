@@ -72,6 +72,8 @@ internal class GenericMongoDbRepository<TDocument>(
                 return Result.Ok<IReadOnlyList<TDerived>>(entities);
             }, cancellationToken);
 
+    
+    
     public Task<Result<bool>> DeleteAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
         => ExecuteAsync((collection, token) =>
         {
@@ -84,7 +86,20 @@ internal class GenericMongoDbRepository<TDocument>(
 
             filter = ApplyNotDeleteFilter(filter);
             return SoftDeleteOneAsync(collection, filter, token);
+        }, cancellationToken);
 
+    public Task<Result<bool>> HasAnyAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
+        => ExecuteAsync(async (collection, token) =>
+        {
+            var any = await collection.Find(filter).AnyAsync(cancellationToken: token);
+            return Result.Ok(any);
+        }, cancellationToken);
+
+    public Task<Result<long>> CountAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
+        => ExecuteAsync(async (collection, token) =>
+        {
+            var count = await collection.CountDocumentsAsync(filter, cancellationToken: token);
+            return Result.Ok(count);
         }, cancellationToken);
 
     #region Store
