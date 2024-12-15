@@ -1,5 +1,6 @@
 ﻿using Dilcore.DocumentDb.Abstractions;
 using Dilcore.DocumentDb.MongoDb.Defaults;
+using Dilcore.DocumentDb.MongoDb.Extensions;
 using Dilcore.DocumentDb.MongoDb.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -34,6 +35,20 @@ public class MongoDatabaseContainer
         where TDocument : class, IDocumentEntity
     {
         Services.AddKeyedSingleton(DbName, (_, _) => action);
+        return this;
+    }
+    
+    public MongoDatabaseContainer AddBsonDocumentCollectionFactory()
+    {
+        Services.AddBsonDocumentCollectionFactory();
+        return this;
+    }
+
+    public MongoDatabaseContainer AddBsonDocumentRepository<TInterface, TImplementation>()
+        where TInterface : class, IBsonDocumentRepository
+        where TImplementation : BsonDocumentRepository, TInterface
+    {
+        Services.AddBsonDocumentRepository<TInterface, TImplementation>(DbName);
         return this;
     }
     

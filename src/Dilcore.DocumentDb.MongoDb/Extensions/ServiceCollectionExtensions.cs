@@ -15,4 +15,23 @@ public static class ServiceCollectionExtensions
         
         return services;
     }
+
+    internal static IServiceCollection AddBsonDocumentRepository<TInterface, TImplementation>(this IServiceCollection services, string dbName)
+        where TInterface : class, IBsonDocumentRepository
+        where TImplementation : BsonDocumentRepository, TInterface
+    {
+        services.AddScoped<TInterface, TImplementation>(sp =>
+        {
+            var parameters = new object[] { dbName };
+            var instance = ActivatorUtilities.CreateInstance<TImplementation>(sp, parameters);
+            return instance;
+        });
+        
+        return services;
+    }
+    
+    internal static IServiceCollection AddBsonDocumentCollectionFactory(this IServiceCollection services)
+    {
+        return services.AddSingleton<IBsonDocumentCollectionFactory, BsonDocumentCollectionFactory>();
+    }
 }

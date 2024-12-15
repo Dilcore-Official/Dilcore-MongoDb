@@ -1,7 +1,6 @@
 ﻿using Dilcore.DocumentDb.Abstractions;
 using Dilcore.DocumentDb.MongoDb.Extensions;
 using Dilcore.DocumentDb.MongoDb.Repositories.Abstractions;
-using Dilcore.DocumentDb.MongoDb.Repositories.IntegrationTests.Infrastructure;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 

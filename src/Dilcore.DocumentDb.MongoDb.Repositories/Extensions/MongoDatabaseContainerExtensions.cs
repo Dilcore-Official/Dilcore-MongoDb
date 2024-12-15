@@ -48,7 +48,7 @@ public static class MongoDatabaseContainerExtensions
 
         return databaseContainer;
     }
-
+    
     private static Task<Result<IMongoCollection<TDocument>>> GetCollectionAsync<TDocument>(
         IMongoDbCollectionFactory collectionFactory,
         string dbName, CancellationToken token)

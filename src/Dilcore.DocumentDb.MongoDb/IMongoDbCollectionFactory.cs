@@ -1,6 +1,7 @@
 ﻿using Dilcore.DocumentDb.Abstractions;
 using FluentResults;
 using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Dilcore.DocumentDb.MongoDb;
@@ -27,5 +28,14 @@ internal class MongoDbCollectionFactory(IServiceProvider keyedServiceProvider) :
             ? Task.FromResult<Result<IMongoCollection<TDocument>>>(
                 Result.Fail($"Cannot find a collection for database {dbName}"))
             : provider.GetCollectionAsync(optionsAction, cancellationToken);
+    }
+
+    public async Task<Result<IMongoCollection<BsonDocument>>> GetCollectionAsync(string dbName, string collectionName, CancellationToken cancellationToken = default)
+    {
+        var provider = keyedServiceProvider.GetKeyedService<IMongoDbCollectionProvider>(dbName);
+
+        return provider is null
+            ? Result.Fail<IMongoCollection<BsonDocument>>($"Cannot find a collection for database {dbName}")
+            : await provider.GetCollectionAsync(dbName, collectionName, cancellationToken);
     }
 }

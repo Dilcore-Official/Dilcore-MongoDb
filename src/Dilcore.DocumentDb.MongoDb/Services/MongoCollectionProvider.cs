@@ -28,24 +28,57 @@ internal class MongoCollectionProvider(
             return databaseResult.ToResult<IMongoCollection<TDocument>>();
         }
         
+        var collectionNameResult = await GetCollectionNameAsync(options.CollectionName, cancellationToken);
+
+        if(collectionNameResult.IsFailed)
+        {
+            return collectionNameResult.ToResult<IMongoCollection<TDocument>>();
+        }
+        
+        options.WithCollectionName(collectionNameResult.ValueOrDefault);
+        
+        var database = databaseResult.ValueOrDefault;
+        
+        return await GetCollectionAsync(database, options, cancellationToken);
+    }
+
+    public async Task<Result<IMongoCollection<BsonDocument>>> GetCollectionAsync(string databaseName, string collectionName, CancellationToken cancellationToken = default)
+    {
+        var databaseResult = await mongoDatabaseProvider.GetDatabaseAsync(databaseName, cancellationToken);
+        
+        if (databaseResult.IsFailed)
+        {
+            return databaseResult.ToResult<IMongoCollection<BsonDocument>>();
+        }
+        
+        var collectionNameResult = await GetCollectionNameAsync(collectionName, cancellationToken);
+        
+        if(collectionNameResult.IsFailed)
+        {
+            return collectionNameResult.ToResult<IMongoCollection<BsonDocument>>();
+        }
+        
+        var database = databaseResult.ValueOrDefault;
+        
+        return Result.Ok(database.GetCollection<BsonDocument>(collectionNameResult.ValueOrDefault));
+    }
+
+    private async Task<Result<string>> GetCollectionNameAsync(string collectionName, CancellationToken cancellationToken)
+    {
         var collectionPrefixResult = await collectionPrefixProvider.ResolveAsync(cancellationToken);
         
         if (collectionPrefixResult.IsFailed)
         {
-            return collectionPrefixResult.ToResult<IMongoCollection<TDocument>>();
+            return collectionPrefixResult;
         }
 
-        var database = databaseResult.ValueOrDefault;
-        
         var collectionPrefix = collectionPrefixResult.ValueOrDefault;
         
-        var collectionName = string.IsNullOrWhiteSpace(collectionPrefix) 
-            ? options.CollectionName 
-            : $"{collectionPrefix}_{options.CollectionName}";
+        collectionName = string.IsNullOrWhiteSpace(collectionPrefix) 
+            ? collectionName 
+            : $"{collectionPrefix}_{collectionName}";
         
-        options.WithCollectionName(collectionName);
-        
-        return await GetCollectionAsync(database, options, cancellationToken);
+        return collectionName;
     }
     
     private static async Task<Result<IMongoCollection<TDocument>>> GetCollectionAsync<TDocument>(IMongoDatabase database,
