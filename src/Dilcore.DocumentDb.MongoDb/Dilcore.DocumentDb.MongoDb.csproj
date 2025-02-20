@@ -13,10 +13,10 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Dilcore.Configuration.Abstractions" Version="1.0.5" />
-      <PackageReference Include="FluentValidation" Version="11.10.0" />
-      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
-      <PackageReference Include="MongoDB.Driver" Version="2.29.0" />
+      <PackageReference Include="Dilcore.Configuration.Abstractions" />
+      <PackageReference Include="FluentValidation" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+      <PackageReference Include="MongoDB.Driver" />
     </ItemGroup>
 
     <ItemGroup>

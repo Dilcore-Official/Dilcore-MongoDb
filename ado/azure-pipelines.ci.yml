@@ -1,0 +1,36 @@
+# ASP.NET Core
+# Build and test ASP.NET Core projects targeting .NET Core.
+# Add steps that run tests, create a NuGet package, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+trigger:
+  - main
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+resources:
+ repositories:
+   - repository: 'yaml-templates'
+     type: git
+     name: 'Common Development/Yaml-Templates'
+
+variables:
+  - template: 'variables/ci-variables.yaml'
+  - template: 'variables/global.yml@yaml-templates'
+  - template: 'variables/environments.yml@yaml-templates'
+  - group: docker-build-and-depoy
+
+extends:
+  template: dotnet/stages/dotnet-ci-azure.yml@yaml-templates
+  parameters:
+    buildConfiguration: $(buildConfiguration) # from variables/ci-variables.yaml
+    dotnetVersion: $(dotnetVersion) # from variables/ci-variables.yaml
+    projectPath: $(projectPath) # from variables/ci-variables.yaml
+    azureConnectionString: $(azureConnectionString) # from variables/ci-variables.yaml
+    azureSubscription: $(env_dev) # from variables/environments.yml@yaml-templates

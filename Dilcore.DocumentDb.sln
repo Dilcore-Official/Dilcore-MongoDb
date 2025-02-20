@@ -5,6 +5,10 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{A872A311-55A9-4DEF-B3E5-F9DECC4D9270}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ado", "ado", "{C91A4E31-72D9-42D5-92BA-CB8672BB676A}"
+	ProjectSection(SolutionItems) = preProject
+		ado\azure-pipelines.nuget.yml = ado\azure-pipelines.nuget.yml
+		ado\azure-pipelines.ci.yml = ado\azure-pipelines.ci.yml
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{41DCC33D-7B04-41A3-8A5D-677A8FAF4A2F}"
 EndProject
@@ -24,6 +28,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dilcore.DocumentDb.Abstract
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MongoDb.WebApi.Sample", "samples\MongoDb.WebApi.Sample\MongoDb.WebApi.Sample.csproj", "{97297AFC-6DAF-49C1-BD4A-C94673030567}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "variables", "variables", "{94F972BD-C74D-4D7F-829F-B0C3DACBDE6B}"
+	ProjectSection(SolutionItems) = preProject
+		ado\variables\ci-variables.yaml = ado\variables\ci-variables.yaml
+		ado\variables\nuget.variables.yml = ado\variables\nuget.variables.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,6 +48,7 @@ Global
 		{1CFCDB49-97E4-48CA-AC6B-0B94623F6F6E} = {A872A311-55A9-4DEF-B3E5-F9DECC4D9270}
 		{7EE50092-E029-4B26-907E-AC5B70442BA1} = {A872A311-55A9-4DEF-B3E5-F9DECC4D9270}
 		{97297AFC-6DAF-49C1-BD4A-C94673030567} = {41DCC33D-7B04-41A3-8A5D-677A8FAF4A2F}
+		{94F972BD-C74D-4D7F-829F-B0C3DACBDE6B} = {C91A4E31-72D9-42D5-92BA-CB8672BB676A}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{5BDC3667-60FB-4A10-8F07-85ED0B9786FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
