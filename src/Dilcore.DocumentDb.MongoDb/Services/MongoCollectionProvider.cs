@@ -63,7 +63,7 @@ internal class MongoCollectionProvider(
         return Result.Ok(database.GetCollection<BsonDocument>(collectionNameResult.ValueOrDefault));
     }
 
-    private async Task<Result<string>> GetCollectionNameAsync(string collectionName, CancellationToken cancellationToken)
+    public async Task<Result<string>> GetCollectionNameAsync(string collectionName, CancellationToken cancellationToken)
     {
         var collectionPrefixResult = await collectionPrefixProvider.ResolveAsync(cancellationToken);
         

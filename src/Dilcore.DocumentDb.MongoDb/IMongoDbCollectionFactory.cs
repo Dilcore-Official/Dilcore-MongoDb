@@ -38,4 +38,13 @@ internal class MongoDbCollectionFactory(IServiceProvider keyedServiceProvider) :
             ? Result.Fail<IMongoCollection<BsonDocument>>($"Cannot find a collection for database {dbName}")
             : await provider.GetCollectionAsync(dbName, collectionName, cancellationToken);
     }
+
+    public Task<Result<string>> GetCollectionNameAsync(string dbName, string collectionName, CancellationToken cancellationToken = default)
+    {
+        var provider = keyedServiceProvider.GetKeyedService<IMongoDbCollectionProvider>(dbName);
+        
+        return provider is null
+            ? Task.FromResult(Result.Fail<string>($"Cannot find a collection for database {dbName}"))
+            : provider.GetCollectionNameAsync(collectionName, cancellationToken);
+    }
 }

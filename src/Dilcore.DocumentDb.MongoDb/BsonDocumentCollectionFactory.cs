@@ -19,4 +19,9 @@ public class BsonDocumentCollectionFactory(IMongoDbCollectionFactory mongoDbColl
 
         return collection;
     }
+
+    public Task<Result<string>> GetCollectionNameAsync(string dbName, string collectionName, CancellationToken cancellationToken = default)
+    {
+        return mongoDbCollectionFactory.GetCollectionNameAsync(dbName, collectionName, cancellationToken);
+    }
 }

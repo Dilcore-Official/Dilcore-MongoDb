@@ -14,4 +14,6 @@ public interface IMongoDbCollectionProvider
     
     Task<Result<IMongoCollection<BsonDocument>>> GetCollectionAsync(
         string databaseName, string collectionName, CancellationToken cancellationToken = default);
+
+    Task<Result<string>> GetCollectionNameAsync(string collectionName, CancellationToken cancellationToken);
 }
