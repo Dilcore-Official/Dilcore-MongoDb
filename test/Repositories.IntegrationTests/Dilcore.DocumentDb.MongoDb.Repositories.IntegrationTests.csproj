@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>disable</Nullable>
 
@@ -12,7 +12,7 @@
 
     <ItemGroup>
         <PackageReference Include="AutoFixture" />
-        <PackageReference Include="AutoFixture.NUnit3" />
+        <PackageReference Include="AutoFixture.NUnit4" />
         <PackageReference Include="FluentAssertions" />
         <PackageReference Include="FluentResults.Extensions.FluentAssertions" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />

@@ -35,5 +35,6 @@ extends:
     major: $(major)
     minor: $(minor)
     revision: $(revision)
+    dotnetVersion: $(dotnetVersion)
     projects:
       - 'src/**/*.csproj'

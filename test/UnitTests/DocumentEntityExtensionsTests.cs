@@ -1,4 +1,4 @@
-using AutoFixture.NUnit3;
+using AutoFixture.NUnit4;
 using Dilcore.DocumentDb.Abstractions.Exceptions;
 using Dilcore.DocumentDb.Abstractions.Extensions;
 using Dilcore.DocumentDb.Abstractions.Helpers;

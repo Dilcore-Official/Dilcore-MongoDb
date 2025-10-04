@@ -5,27 +5,27 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="AutoFixture" Version="4.18.1" />
-    <PackageVersion Include="AutoFixture.NUnit3" Version="4.18.1" />
+    <PackageVersion Include="AutoFixture.NUnit4" Version="4.19.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
-    <PackageVersion Include="Dilcore.Configuration.Abstractions" Version="1.1.2" />
-    <PackageVersion Include="FluentAssertions" Version="[7.2.0]" />
-    <PackageVersion Include="FluentResults" Version="3.16.0" />
-    <PackageVersion Include="FluentResults.Extensions.FluentAssertions" Version="2.1.2" />
-    <PackageVersion Include="FluentValidation" Version="11.11.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="8.0.8" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
-    <PackageVersion Include="MongoDB.Driver" Version="2.29.0" />
-    <PackageVersion Include="NUnit" Version="4.3.2" />
-    <PackageVersion Include="NUnit.Analyzers" Version="4.6.0">
+    <PackageVersion Include="Dilcore.Configuration.Abstractions" Version="2.0.5" />
+    <PackageVersion Include="FluentAssertions" Version="6.7.0" />
+    <PackageVersion Include="FluentResults" Version="4.0.0" />
+    <PackageVersion Include="FluentResults.Extensions.FluentAssertions" Version="2.2.1" />
+    <PackageVersion Include="FluentValidation" Version="12.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.5.0" />
+    <PackageVersion Include="NUnit" Version="4.4.0" />
+    <PackageVersion Include="NUnit.Analyzers" Version="4.10.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
-    <PackageVersion Include="NUnit3TestAdapter" Version="5.0.0" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="7.2.0" />
-    <PackageVersion Include="Testcontainers.MongoDb" Version="4.2.0" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="5.1.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="9.0.6" />
+    <PackageVersion Include="Testcontainers.MongoDb" Version="4.7.0" />
   </ItemGroup>
 </Project>

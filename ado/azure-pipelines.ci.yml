@@ -33,4 +33,4 @@ extends:
     dotnetVersion: $(dotnetVersion) # from variables/ci-variables.yaml
     projectPath: $(projectPath) # from variables/ci-variables.yaml
     azureConnectionString: $(azureConnectionString) # from variables/ci-variables.yaml
-    azureSubscription: $(env_dev) # from variables/environments.yml@yaml-templates
+    azureSubscription: $(env_service_connection_dev) # from variables/environments.yml@yaml-templates
