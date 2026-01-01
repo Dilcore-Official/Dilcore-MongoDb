@@ -1,10 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>disable</Nullable>
-        <LangVersion>latest</LangVersion>
+        <PackageDescription>Core abstractions and interfaces for Dilcore DocumentDb library</PackageDescription>
     </PropertyGroup>
 
     <ItemGroup>

@@ -1,8 +1,0 @@
-variables:
-  # Build Configuration
-  buildConfiguration: 'Release'
-  dotnetVersion: '9.x'
-  projectPath: '**/*.csproj'
-
-  # Azure Configuration
-  azureConnectionString: '$(AzureServicesAuthConnectionString)'

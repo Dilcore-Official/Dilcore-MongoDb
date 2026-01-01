@@ -1,10 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>disable</Nullable>
-        <LangVersion>latest</LangVersion>
+        <PackageDescription>Repository pattern implementations for MongoDB using Dilcore DocumentDb</PackageDescription>
     </PropertyGroup>
 
     <ItemGroup>

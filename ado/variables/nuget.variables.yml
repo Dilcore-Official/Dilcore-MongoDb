@@ -1,6 +1,0 @@
-variables:
-  major: 2
-  minor: 0
-  dotnetVersion: '9.x'
-  versionPart: '$(major).$(minor)'
-  revision: $[counter(variables['versionPart'], 1)]

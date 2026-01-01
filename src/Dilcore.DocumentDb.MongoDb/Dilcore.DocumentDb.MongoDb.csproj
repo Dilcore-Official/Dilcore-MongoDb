@@ -1,10 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>disable</Nullable>
-        <LangVersion>latest</LangVersion>
+        <PackageDescription>MongoDB implementation for Dilcore DocumentDb with configuration and dependency injection support</PackageDescription>
     </PropertyGroup>
 
     <ItemGroup>
@@ -13,7 +10,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Dilcore.Configuration.Abstractions" />
       <PackageReference Include="FluentValidation" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
       <PackageReference Include="MongoDB.Driver" />
@@ -26,4 +22,5 @@
     <ItemGroup>
       <Folder Include="Configuration\Database\" />
     </ItemGroup>
+
 </Project>
