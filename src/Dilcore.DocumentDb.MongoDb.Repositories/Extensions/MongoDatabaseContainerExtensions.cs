@@ -14,7 +14,7 @@ public static class MongoDatabaseContainerExtensions
         where TDocument : class, IDocumentEntity
     {
         databaseContainer.AddMongoCollection(options);
-        databaseContainer.Services.AddSingleton<IGenericRepository<TDocument>, GenericMongoDbRepository<TDocument>>(
+        databaseContainer.Services.AddScoped<IGenericRepository<TDocument>, GenericMongoDbRepository<TDocument>>(
             provider =>
                 GetRepository(provider, databaseContainer, options));
 
@@ -33,7 +33,7 @@ public static class MongoDatabaseContainerExtensions
         if (repositoryOptions.RegisterBulkRepository)
         {
             databaseContainer.Services
-                .AddSingleton<IGenericBulkRepository<TDocument>, GenericMongoDbBulkRepository<TDocument>>(
+                .AddScoped<IGenericBulkRepository<TDocument>, GenericMongoDbBulkRepository<TDocument>>(
                     provider =>
                         GetBulkRepository(provider, databaseContainer, options));
         }
@@ -41,14 +41,14 @@ public static class MongoDatabaseContainerExtensions
         if (repositoryOptions.RegisterProjectionRepository)
         {
             databaseContainer.Services
-                .AddSingleton<IGenericProjectionRepository<TDocument>, GenericMongoDbProjectionRepository<TDocument>>(
+                .AddScoped<IGenericProjectionRepository<TDocument>, GenericMongoDbProjectionRepository<TDocument>>(
                     provider =>
                         GetProjectionRepository(provider, databaseContainer, options));
         }
 
         return databaseContainer;
     }
-    
+
     private static Task<Result<IMongoCollection<TDocument>>> GetCollectionAsync<TDocument>(
         IMongoDbCollectionFactory collectionFactory,
         string dbName, CancellationToken token)

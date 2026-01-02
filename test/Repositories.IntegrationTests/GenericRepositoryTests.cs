@@ -610,6 +610,15 @@ public class GenericRepositoryTests : BaseIntegrationTests
     [Test]
     public async Task GenericRepository_GetAsyncEnumerable_ShouldEnumerate()
     {
+        var existingResult = await _repository.GetListAsync();
+        if (existingResult.IsSuccess)
+        {
+            foreach (var existing in existingResult.Value)
+            {
+                await _repository.DeleteAsync(Builders<TestEntity1>.Filter.Eq(x => x.Id, existing.Id));
+            }
+        }
+
         var entities = Fixture.Build<TestEntity1>()
             .Without(x => x.ETag)
             .Without(x => x.Id)

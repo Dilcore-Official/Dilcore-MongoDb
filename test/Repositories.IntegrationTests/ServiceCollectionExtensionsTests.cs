@@ -556,4 +556,43 @@ public class ServiceCollectionExtensionsTests : BaseIntegrationTests
             return Task.FromResult(Result.Ok("collectionPrefix"));
         }
     }
+
+    [Test]
+    public void VerifyRepositoryLifetimes_ShouldBeCorrect()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var connectionString = MongoDbContainer.GetConnectionString();
+
+        services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
+        {
+            builder.AddDatabase("TestDB1",
+                db =>
+                {
+                    db.AddGenericRepository<TestEntity1>(registerOptions => registerOptions.WithBulkRepository().WithProjectionRepository(),
+                        options => options.WithCollectionName("testEntity1").WithDatabaseName("TestDB1"));
+                });
+        });
+
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Act & Assert
+        VerifyScoped<IGenericRepository<TestEntity1>>(serviceProvider);
+        VerifyScoped<IGenericBulkRepository<TestEntity1>>(serviceProvider);
+        VerifyScoped<IGenericProjectionRepository<TestEntity1>>(serviceProvider);
+    }
+
+    private static void VerifyScoped<T>(ServiceProvider rootProvider) where T : class
+    {
+        using var scope1 = rootProvider.CreateScope();
+        using var scope2 = rootProvider.CreateScope();
+
+        var instance1 = scope1.ServiceProvider.GetRequiredService<T>();
+        var instance2 = scope2.ServiceProvider.GetRequiredService<T>();
+
+        instance1.ShouldNotBe(instance2);
+
+        var instance1_2 = scope1.ServiceProvider.GetRequiredService<T>();
+        instance1.ShouldBe(instance1_2);
+    }
 }
