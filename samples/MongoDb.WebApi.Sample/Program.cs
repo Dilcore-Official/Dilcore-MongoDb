@@ -12,7 +12,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var mongoDbContainer =
-    new MongoDbBuilder().Build();
+    new MongoDbBuilder("mongo:latest").Build();
 
 await mongoDbContainer.StartAsync();
 
@@ -78,26 +78,24 @@ app.MapGet("/weather-forecasts", async (IGenericRepository<WeatherForecast> gene
 
         if (result.IsSuccess)
         {
-            return Results.Ok(result.ValueOrDefault); 
+            return Results.Ok(result.ValueOrDefault);
         }
 
         return Results.BadRequest(result.Errors);
     })
-    .WithName("GetWeatherForecast")
-    .WithOpenApi();
+    .WithName("GetWeatherForecast");
 app.MapPost("/weather-forecasts", async (IGenericRepository<WeatherForecast> genericRepository, WeatherForecast weatherForecast) =>
     {
         var result = await genericRepository.StoreAsync(weatherForecast);
 
         if (result.IsSuccess)
         {
-            return Results.Ok(result.ValueOrDefault); 
+            return Results.Ok(result.ValueOrDefault);
         }
 
         return Results.BadRequest(result.Errors);
     })
-    .WithName("CreateWeatherForecast")
-    .WithOpenApi();
+    .WithName("CreateWeatherForecast");
 
 app.Run();
 
@@ -108,6 +106,6 @@ record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary) : IDocu
     public bool IsDeleted { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    
+
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }

@@ -13,10 +13,10 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
     {
         var services = new ServiceCollection();
         var connectionString = MongoDbContainer.GetConnectionString();
-        
+
         services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
         {
-            builder.AddDatabase("TestDB1", 
+            builder.AddDatabase("TestDB1",
                 db =>
                 {
                     db.AddMongoCollection<TestEntity1>(options =>
@@ -27,13 +27,13 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
                 });
         })
         .AddScoped<CustomRepository>();
-        
+
         var serviceProvider = services.BuildServiceProvider();
-        
+
         var repository = serviceProvider.GetRequiredService<CustomRepository>();
         var result = await repository.GetAsync();
 
-        result.Should().BeSuccess();
+        result.ShouldBeSuccess();
     }
 
     [TestCase("asc", "value_1")]
@@ -52,19 +52,19 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
                             {
                                 options.WithCollectionName("testEntity1")
                                     .WithDatabaseName("TestDB1");
-                                    
-                                    if(sortDirection == "asc")
-                                    {
-                                        options.WithIndexes(
-                                            new CreateIndexModel<TestEntity1>(
-                                                Builders<TestEntity1>.IndexKeys.Ascending(x => x.Value)));
-                                    }
-                                    else
-                                    {
-                                        options.WithIndexes(
-                                            new CreateIndexModel<TestEntity1>(
-                                                Builders<TestEntity1>.IndexKeys.Descending(x => x.Value)));
-                                    }
+
+                                if (sortDirection == "asc")
+                                {
+                                    options.WithIndexes(
+                                        new CreateIndexModel<TestEntity1>(
+                                            Builders<TestEntity1>.IndexKeys.Ascending(x => x.Value)));
+                                }
+                                else
+                                {
+                                    options.WithIndexes(
+                                        new CreateIndexModel<TestEntity1>(
+                                            Builders<TestEntity1>.IndexKeys.Descending(x => x.Value)));
+                                }
                             }).AddCustomDatabasePrefixResolver<TestDbPrefixProvider>()
                             .AddCustomCollectionPrefixResolver<TestCollectionProvider>();
                     });
@@ -77,14 +77,14 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
 
         var collectionResult =
             await collectionFactory.GetCollectionAsync<TestEntity1>("TestDB1", CancellationToken.None);
-        collectionResult.Should().BeSuccess();
+        collectionResult.ShouldBeSuccess();
 
         var collection = collectionResult.ValueOrDefault;
         var collectionIndexes = await (await collection.Indexes.ListAsync(CancellationToken.None)).ToListAsync();
 
-        collectionIndexes.Should().HaveCount(2);
-        collectionIndexes.Should().Contain(x => x.GetValue("name") == "_id_");
-        collectionIndexes.Should().Contain(x => x.GetValue("name") == expectedIndexName);
+        collectionIndexes.Count.ShouldBe(2);
+        collectionIndexes.ShouldContain(x => x.GetValue("name") == "_id_");
+        collectionIndexes.ShouldContain(x => x.GetValue("name") == expectedIndexName);
 
         await collection.Indexes.DropAllAsync();
     }
@@ -94,10 +94,10 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
     {
         var services = new ServiceCollection();
         var connectionString = MongoDbContainer.GetConnectionString();
-        
+
         services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
             {
-                builder.AddDatabase("TestDB1", 
+                builder.AddDatabase("TestDB1",
                     db =>
                     {
                         db.AddMongoCollection<TestEntity1>(options =>
@@ -109,52 +109,66 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
                     });
             })
             .AddScoped<CustomRepository>();
-        
+
         var serviceProvider = services.BuildServiceProvider();
-        
+
         var repository = serviceProvider.GetRequiredService<CustomRepository>();
-        
+
         var result = await repository.CreateWithExpiration(TimeSpan.FromSeconds(5));
-        result.Should().BeSuccess();
-        result.ValueOrDefault.Should().NotBeNull();
+        result.ShouldBeSuccess();
+        result.ValueOrDefault.ShouldNotBeNull();
 
         var createdEntity = await repository.GetAsync(result.ValueOrDefault.Id);
-        createdEntity.Should().BeSuccess();
-        createdEntity.ValueOrDefault.Should().NotBeNull();
-        
+        createdEntity.ShouldBeSuccess();
+        createdEntity.ValueOrDefault.ShouldNotBeNull();
+
         var act = async () =>
         {
             var sut = await repository.GetAsync(result.ValueOrDefault.Id);
-            sut.Should().BeSuccess();
-            sut.ValueOrDefault.Should().BeNull();
+            sut.ShouldBeSuccess();
+            sut.ValueOrDefault.ShouldBeNull();
         };
 
-        await act.Should().NotThrowAfterAsync(TimeSpan.FromSeconds(65), TimeSpan.FromSeconds(5));
+        // Shouldly does not have direct NotThrowAfterAsync equivalent with polling.
+        // We will implement a custom wait loop.
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (sw.Elapsed < TimeSpan.FromSeconds(65))
+        {
+            var sut = await repository.GetAsync(result.ValueOrDefault.Id);
+            if (sut.IsSuccess && sut.ValueOrDefault == null)
+            {
+                break;
+            }
+            await Task.Delay(TimeSpan.FromSeconds(5));
+        }
+
+        // Final assertion
+        await act();
     }
-    
+
     [Test]
     public async Task MongoCollectionProvider_UseRegularCollection_Showcase()
     {
         var services = new ServiceCollection();
         var connectionString = MongoDbContainer.GetConnectionString();
-        
+
         services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
             {
-                builder.AddDatabase("TestDB1", _ => {});
+                builder.AddDatabase("TestDB1", _ => { });
             });
-        
+
         var serviceProvider = services.BuildServiceProvider();
-        
+
         var collectionFactory = serviceProvider.GetRequiredService<IMongoDbCollectionFactory>();
-        
+
         var collectionResult = await collectionFactory.GetCollectionAsync<TestEntity1>("TestDB1", options =>
         {
             options.WithCollectionName("testEntity1")
                 .WithDatabaseName("TestDB1");
         });
 
-        collectionResult.Should().BeSuccess();
-        
+        collectionResult.ShouldBeSuccess();
+
         var collection = collectionResult.ValueOrDefault;
         var entity = new TestEntity1
         {
@@ -163,20 +177,20 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
             UpdatedAt = DateTime.UtcNow,
             Value = 1
         };
-        
+
         await collection.InsertOneAsync(entity, cancellationToken: CancellationToken.None);
-        
+
         var filter = Builders<TestEntity1>.Filter.Eq(x => x.Id, entity.Id);
-        
+
         var sut = await collection.Find(filter).FirstOrDefaultAsync();
     }
-    
+
     [OneTimeTearDown]
     public Task TearDown()
     {
         return MongoDbContainer.DisposeAsync().AsTask();
     }
-    
+
     public class TestEntity1 : IDocumentEntity
     {
         public Guid Id { get; set; }
@@ -184,11 +198,11 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
         public bool IsDeleted { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public DateTime? ExpireAt { get; set; }
-        
+        public DateTime ExpireAt { get; set; }
+
         public int Value { get; set; }
     }
-    
+
     private class TestDbPrefixProvider : IDocumentDatabasePrefixProvider
     {
         public Task<Result<string>> ResolveAsync(CancellationToken cancellationToken = default)
@@ -196,7 +210,7 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
             return Task.FromResult(Result.Ok("db_prefix"));
         }
     }
-    
+
     private class TestCollectionProvider : IDocumentCollectionPrefixProvider
     {
         public Task<Result<string>> ResolveAsync(CancellationToken cancellationToken = default)
@@ -204,7 +218,7 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
             return Task.FromResult(Result.Ok("collection_Prefix"));
         }
     }
-    
+
     private class CustomRepository(IMongoDbCollectionFactory collectionProvider)
     {
         public async Task<Result<TestEntity1>> GetAsync(CancellationToken cancellationToken = default)
@@ -215,11 +229,11 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
             {
                 return collectionResult.ToResult();
             }
-            
+
             return await collectionResult.ValueOrDefault.Find(FilterDefinition<TestEntity1>.Empty)
                 .FirstOrDefaultAsync(cancellationToken);
         }
-        
+
         public async Task<Result<TestEntity1>> GetAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var collectionResult = await collectionProvider.GetCollectionAsync<TestEntity1>("TestDB1", cancellationToken);
@@ -230,7 +244,7 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
             }
 
             var filter = Builders<TestEntity1>.Filter.Eq(x => x.Id, id);
-            
+
             return await collectionResult.ValueOrDefault.Find(filter)
                 .FirstOrDefaultAsync(cancellationToken);
         }
@@ -238,12 +252,12 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
         public async Task<Result<TestEntity1>> CreateWithExpiration(TimeSpan expireAfter)
         {
             var collectionResult = await collectionProvider.GetCollectionAsync<TestEntity1>("TestDB1", CancellationToken.None);
-            
+
             if (collectionResult.IsFailed)
             {
                 return collectionResult.ToResult();
             }
-            
+
             var entity = new TestEntity1
             {
                 Id = Guid.NewGuid(),
@@ -252,7 +266,7 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
                 Value = 1,
                 ExpireAt = DateTime.UtcNow.Add(expireAfter)
             };
-            
+
             await collectionResult.ValueOrDefault.InsertOneAsync(entity, cancellationToken: CancellationToken.None);
             return Result.Ok(entity);
         }

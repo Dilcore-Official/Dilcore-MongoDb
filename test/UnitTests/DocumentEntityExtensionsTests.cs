@@ -13,9 +13,9 @@ public class DocumentEntityExtensionsTests
         var entity = new TestEntity();
         entity.UpdatedNow();
 
-        entity.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+        entity.UpdatedAt.ShouldBe(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
-    
+
     [Test]
     public void DocumentEntity_WithETag()
     {
@@ -23,44 +23,44 @@ public class DocumentEntityExtensionsTests
         entity.GenerateETag();
 
         var expected = DocumentDbHelper.GenerateEtag();
-        entity.ETag.Should().BeInRange(expected - 100, expected + 100);
+        entity.ETag.ShouldBeInRange(expected - 100, expected + 100);
     }
-    
+
     [Test]
     public void DocumentEntity_WithNewId()
     {
         var entity = new TestEntity();
         entity.NewId();
 
-        entity.Id.Should().NotBeEmpty();
+        entity.Id.ShouldNotBe(Guid.Empty);
     }
-    
+
     [Test]
     [InlineAutoData]
     [InlineAutoData(Constants.EmptyETag)]
     public void DocumentEntity_WithIsNew(long etag)
     {
-        var entity = new TestEntity {ETag = etag};
+        var entity = new TestEntity { ETag = etag };
 
-        entity.IsNew().Should().Be(etag == Constants.EmptyETag);
+        entity.IsNew().ShouldBe(etag == Constants.EmptyETag);
     }
-    
+
     [Test]
     public void DocumentEntity_CheckId_ShouldThrowException_WhenEmpty()
     {
         var entity = new TestEntity();
-        entity.Invoking(x => x.CheckId()).Should().Throw<DocumentIdentifierIsEmptyException>();
+        Should.Throw<DocumentIdentifierIsEmptyException>(() => entity.CheckId());
     }
-    
+
     [Test]
     public void DocumentEntity_CheckId_ShouldNotThrowException_WhenNotEmpty()
     {
         var entity = new TestEntity();
         entity.NewId();
-        
-        entity.Invoking(x => x.CheckId()).Should().NotThrow<DocumentIdentifierIsEmptyException>();
+
+        Should.NotThrow(() => entity.CheckId());
     }
-    
+
     [TestCase(true, false)]
     [TestCase(false, true)]
     public void DocumentEntity_IsIdEmpty(bool withId, bool isEmpty)
@@ -71,9 +71,9 @@ public class DocumentEntityExtensionsTests
             entity.NewId();
         }
 
-        entity.IsIdEmpty().Should().Be(isEmpty);
+        entity.IsIdEmpty().ShouldBe(isEmpty);
     }
-    
+
     private class TestEntity : IDocumentEntity
     {
         public Guid Id { get; set; }
@@ -81,7 +81,7 @@ public class DocumentEntityExtensionsTests
         public bool IsDeleted { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        
-        public string Value { get; set; }
+
+        public string? Value { get; set; }
     }
 }
