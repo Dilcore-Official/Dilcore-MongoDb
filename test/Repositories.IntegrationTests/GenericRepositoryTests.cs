@@ -627,7 +627,8 @@ public class GenericRepositoryTests : BaseIntegrationTests
 
         foreach (var entity in entities)
         {
-            await _repository.StoreAsync(entity);
+            var result = await _repository.StoreAsync(entity);
+            result.ShouldBeSuccess();
         }
 
         var count = 0;

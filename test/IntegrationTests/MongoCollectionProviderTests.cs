@@ -175,7 +175,8 @@ public class MongoCollectionProviderTests : BaseIntegrationTests
             Id = Guid.NewGuid(),
             ETag = 1,
             UpdatedAt = DateTime.UtcNow,
-            Value = 1
+            Value = 1,
+            ExpireAt = DateTime.UtcNow.AddMinutes(5)
         };
 
         await collection.InsertOneAsync(entity, cancellationToken: CancellationToken.None);

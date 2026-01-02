@@ -28,27 +28,22 @@ public class ServiceCollectionExtensionsTests
         var serviceProvider = services.BuildServiceProvider();
 
         // Act & Assert
-        using (var scope = serviceProvider.CreateScope())
-        {
-            var provider = scope.ServiceProvider;
+        // MongoClientProvider should be Singleton
+        var clientProvider1 = serviceProvider.GetRequiredService<MongoClientProvider>();
+        var clientProvider2 = serviceProvider.GetRequiredService<MongoClientProvider>();
+        clientProvider1.ShouldBe(clientProvider2);
 
-            // MongoClientProvider should be Singleton
-            var clientProvider1 = serviceProvider.GetRequiredService<MongoClientProvider>();
-            var clientProvider2 = serviceProvider.GetRequiredService<MongoClientProvider>();
-            clientProvider1.ShouldBe(clientProvider2);
+        // IMongoDbCollectionFactory should be Scoped
+        VerifyScoped<IMongoDbCollectionFactory>(serviceProvider);
 
-            // IMongoDbCollectionFactory should be Scoped
-            VerifyScoped<IMongoDbCollectionFactory>(serviceProvider);
+        // IBsonDocumentCollectionFactory should be Scoped
+        VerifyScoped<IBsonDocumentCollectionFactory>(serviceProvider);
 
-            // IBsonDocumentCollectionFactory should be Scoped
-            VerifyScoped<IBsonDocumentCollectionFactory>(serviceProvider);
-
-            // Keyed services
-            VerifyKeyedScoped<IMongoDatabaseProvider>(serviceProvider, "TestDB1");
-            VerifyKeyedScoped<IMongoDbCollectionProvider>(serviceProvider, "TestDB1");
-            VerifyKeyedScoped<IDocumentDatabasePrefixProvider>(serviceProvider, "TestDB1");
-            VerifyKeyedScoped<IDocumentCollectionPrefixProvider>(serviceProvider, "TestDB1");
-        }
+        // Keyed services
+        VerifyKeyedScoped<IMongoDatabaseProvider>(serviceProvider, "TestDB1");
+        VerifyKeyedScoped<IMongoDbCollectionProvider>(serviceProvider, "TestDB1");
+        VerifyKeyedScoped<IDocumentDatabasePrefixProvider>(serviceProvider, "TestDB1");
+        VerifyKeyedScoped<IDocumentCollectionPrefixProvider>(serviceProvider, "TestDB1");
     }
 
     private void VerifyScoped<T>(ServiceProvider rootProvider) where T : class
