@@ -41,19 +41,19 @@ public class GenericRepositoryTests : BaseIntegrationTests
 
         var result = await _repository!.StoreAsync(entity);
 
-        result.Should().BeSuccess();
+        result.ShouldBeSuccess();
 
         var result2 = await _repository!.GetAsync(result.ValueOrDefault.Id);
-        result2.Should().BeSuccess();
+        result2.ShouldBeSuccess();
 
         var createdEntity = result2.ValueOrDefault;
-        createdEntity.Should().NotBeNull();
+        createdEntity.ShouldNotBeNull();
 
-        createdEntity.Id.Should().NotBeEmpty();
-        createdEntity.ETag.Should().NotBe(0);
+        createdEntity.Id.ShouldNotBe(Guid.Empty);
+        createdEntity.ETag.ShouldNotBe(0);
 
-        createdEntity.Name.Should().Be(entity.Name);
-        createdEntity.Value.Should().Be(entity.Value);
+        createdEntity.Name.ShouldBe(entity.Name);
+        createdEntity.Value.ShouldBe(entity.Value);
     }
 
     [Test]
@@ -67,10 +67,10 @@ public class GenericRepositoryTests : BaseIntegrationTests
 
         var createResult = await _repository!.StoreAsync(entity);
 
-        createResult.Should().BeSuccess();
+        createResult.ShouldBeSuccess();
 
         var result2 = await _repository!.GetAsync(createResult.ValueOrDefault.Id);
-        result2.Should().BeSuccess();
+        result2.ShouldBeSuccess();
 
         var entityToUpdate = result2.ValueOrDefault;
 
@@ -78,19 +78,19 @@ public class GenericRepositoryTests : BaseIntegrationTests
         entityToUpdate.Value = "UpdatedValue";
 
         var updateResult = await _repository!.StoreAsync(entityToUpdate);
-        updateResult.Should().BeSuccess();
+        updateResult.ShouldBeSuccess();
 
         var result3 = await _repository!.GetAsync(createResult.ValueOrDefault.Id);
         var updatedEntity = result3.ValueOrDefault;
 
-        updatedEntity.Id.Should().NotBeEmpty();
-        updatedEntity.Id.Should().Be(createResult.ValueOrDefault.Id);
+        updatedEntity.Id.ShouldNotBe(Guid.Empty);
+        updatedEntity.Id.ShouldBe(createResult.ValueOrDefault.Id);
 
-        updatedEntity.ETag.Should().NotBe(0);
-        updatedEntity.ETag.Should().NotBe(createResult.ValueOrDefault.ETag);
+        updatedEntity.ETag.ShouldNotBe(0);
+        updatedEntity.ETag.ShouldNotBe(createResult.ValueOrDefault.ETag);
 
-        updatedEntity.Name.Should().Be(entityToUpdate.Name);
-        updatedEntity.Value.Should().Be(entityToUpdate.Value);
+        updatedEntity.Name.ShouldBe(entityToUpdate.Name);
+        updatedEntity.Value.ShouldBe(entityToUpdate.Value);
     }
 
     [Test]
@@ -104,10 +104,10 @@ public class GenericRepositoryTests : BaseIntegrationTests
 
         var createResult = await _repository!.StoreAsync(entity);
 
-        createResult.Should().BeSuccess();
+        createResult.ShouldBeSuccess();
 
         var result2 = await _repository!.GetAsync(createResult.ValueOrDefault.Id);
-        result2.Should().BeSuccess();
+        result2.ShouldBeSuccess();
 
         var entityToUpdate = result2.ValueOrDefault;
 
@@ -116,15 +116,15 @@ public class GenericRepositoryTests : BaseIntegrationTests
         entityToUpdate.ETag = 123;
 
         var updateResult = await _repository!.StoreAsync(entityToUpdate);
-        updateResult.Should().BeFailure();
+        updateResult.ShouldBeFailure();
 
         var result3 = await _repository!.GetAsync(createResult.ValueOrDefault.Id);
         entity = result3.ValueOrDefault;
 
-        entity.ETag.Should().Be(createResult.ValueOrDefault.ETag);
-        entity.Name.Should().Be(createResult.ValueOrDefault.Name);
-        entity.Value.Should().Be(createResult.ValueOrDefault.Value);
-        entity.UpdatedAt.Should().BeSameDateAs(createResult.ValueOrDefault.UpdatedAt);
+        entity.ETag.ShouldBe(createResult.ValueOrDefault.ETag);
+        entity.Name.ShouldBe(createResult.ValueOrDefault.Name);
+        entity.Value.ShouldBe(createResult.ValueOrDefault.Value);
+        entity.UpdatedAt.ShouldBe(createResult.ValueOrDefault.UpdatedAt, TimeSpan.FromMilliseconds(1));
     }
 
     [Test]
@@ -138,10 +138,10 @@ public class GenericRepositoryTests : BaseIntegrationTests
 
         var createResult = await _repository!.StoreAsync(entity);
 
-        createResult.Should().BeSuccess();
+        createResult.ShouldBeSuccess();
 
         var result2 = await _repository!.GetAsync(createResult.ValueOrDefault.Id);
-        result2.Should().BeSuccess();
+        result2.ShouldBeSuccess();
 
         var entityToUpdate = result2.ValueOrDefault;
 
@@ -150,19 +150,19 @@ public class GenericRepositoryTests : BaseIntegrationTests
         entityToUpdate.Id = Guid.NewGuid();
 
         var updateResult = await _repository!.StoreAsync(entityToUpdate);
-        updateResult.Should().BeFailure();
+        updateResult.ShouldBeFailure();
 
         var result3 = await _repository!.GetAsync(entityToUpdate.Id);
-        result3.Should().BeSuccess();
-        result3.ValueOrDefault.Should().BeNull();
+        result3.ShouldBeSuccess();
+        result3.ValueOrDefault.ShouldBeNull();
 
         var result4 = await _repository!.GetAsync(createResult.ValueOrDefault.Id);
         entity = result4.ValueOrDefault;
 
-        entity.ETag.Should().Be(createResult.ValueOrDefault.ETag);
-        entity.Name.Should().Be(createResult.ValueOrDefault.Name);
-        entity.Value.Should().Be(createResult.ValueOrDefault.Value);
-        entity.UpdatedAt.Should().BeSameDateAs(createResult.ValueOrDefault.UpdatedAt);
+        entity.ETag.ShouldBe(createResult.ValueOrDefault.ETag);
+        entity.Name.ShouldBe(createResult.ValueOrDefault.Name);
+        entity.Value.ShouldBe(createResult.ValueOrDefault.Value);
+        entity.UpdatedAt.ShouldBe(createResult.ValueOrDefault.UpdatedAt, TimeSpan.FromMilliseconds(1));
     }
 
     [Test]
@@ -177,18 +177,18 @@ public class GenericRepositoryTests : BaseIntegrationTests
         foreach (var entity in entities)
         {
             var createResult = await _repository!.StoreAsync(entity);
-            createResult.Should().BeSuccess();
+            createResult.ShouldBeSuccess();
         }
 
         var result = await _repository!.GetListAsync();
-        result.Should().BeSuccess();
+        result.ShouldBeSuccess();
 
         var entitiesFromDb = result.ValueOrDefault;
-        entitiesFromDb.Should().NotBeNullOrEmpty();
+        entitiesFromDb.ShouldNotBeEmpty();
 
         foreach (var entity in entities)
         {
-            entitiesFromDb.Should().Contain(x => x.Id == entity.Id);
+            entitiesFromDb.ShouldContain(x => x.Id == entity.Id);
         }
     }
 
@@ -204,18 +204,18 @@ public class GenericRepositoryTests : BaseIntegrationTests
         foreach (var entity in entities)
         {
             var createResult = await _repository!.StoreAsync(entity);
-            createResult.Should().BeSuccess();
+            createResult.ShouldBeSuccess();
         }
 
         var ids = entities.Select(x => x.Id);
 
         var result = await _repository!.GetListAsync(x => ids.Contains(x.Id));
-        result.Should().BeSuccess();
+        result.ShouldBeSuccess();
 
         var entitiesFromDb = result.ValueOrDefault;
-        entitiesFromDb.Should().NotBeNullOrEmpty();
+        entitiesFromDb.ShouldNotBeEmpty();
 
-        entitiesFromDb.Should().HaveCount(entities.Length);
+        entitiesFromDb.Count.ShouldBe(entities.Length);
     }
 
     [TestCase(true)]
@@ -252,14 +252,14 @@ public class GenericRepositoryTests : BaseIntegrationTests
             .Create();
 
         var createResult = await repository.StoreAsync(entity);
-        createResult.Should().BeSuccess();
+        createResult.ShouldBeSuccess();
 
         var result = await repository.DeleteAsync(createResult.ValueOrDefault.Id, createResult.ValueOrDefault.ETag);
-        result.Should().BeSuccess();
+        result.ShouldBeSuccess();
 
         var collectionFactory = services.BuildServiceProvider().GetRequiredService<IMongoDbCollectionFactory>();
         var collectionResult = await collectionFactory.GetCollectionAsync<TestEntity1>("TestDB1");
-        collectionResult.Should().BeSuccess();
+        collectionResult.ShouldBeSuccess();
 
         var collection = collectionResult.ValueOrDefault;
 
@@ -269,12 +269,12 @@ public class GenericRepositoryTests : BaseIntegrationTests
 
         if (isSoftDelete)
         {
-            entityFromDb.Should().NotBeNull();
-            entityFromDb!.IsDeleted.Should().BeTrue();
+            entityFromDb.ShouldNotBeNull();
+            entityFromDb!.IsDeleted.ShouldBeTrue();
         }
         else
         {
-            entityFromDb.Should().BeNull();
+            entityFromDb.ShouldBeNull();
         }
     }
 
@@ -288,20 +288,20 @@ public class GenericRepositoryTests : BaseIntegrationTests
             .Create();
 
         var createResult = await _repository!.StoreAsync(entity);
-        createResult.Should().BeSuccess();
-        
+        createResult.ShouldBeSuccess();
+
         var derivedEntityResult = await _repository!.GetAsync<TestEntity1, DerivedTestEntity1>(createResult.ValueOrDefault.Id);
-        derivedEntityResult.Should().BeSuccess();
-        
+        derivedEntityResult.ShouldBeSuccess();
+
         var derivedEntity = derivedEntityResult.ValueOrDefault;
-        derivedEntity.Should().NotBeNull();
-        
-        derivedEntity.SomeValue.Should().Be(entity.SomeValue);
-        derivedEntity.Tags.Should().BeEquivalentTo(entity.Tags);
-        derivedEntity.Name.Should().Be(entity.Name);
-        derivedEntity.Value.Should().Be(entity.Value);
+        derivedEntity.ShouldNotBeNull();
+
+        derivedEntity.SomeValue.ShouldBe(entity.SomeValue);
+        derivedEntity.Tags.ShouldBe(entity.Tags);
+        derivedEntity.Name.ShouldBe(entity.Name);
+        derivedEntity.Value.ShouldBe(entity.Value);
     }
-    
+
     [Test]
     public async Task GenericRepository_GetList_OnlyDerivedEntitiesShouldBeObtained()
     {
@@ -315,43 +315,43 @@ public class GenericRepositoryTests : BaseIntegrationTests
         foreach (var derivedEntity in derivedEntities)
         {
             var createResult = await _repository!.StoreAsync(derivedEntity);
-            createResult.Should().BeSuccess();
+            createResult.ShouldBeSuccess();
         }
-        
+
         var entities = Fixture.Build<TestEntity1>()
             .Without(x => x.ETag)
             .Without(x => x.Id)
             .Without(x => x.IsDeleted)
             .CreateMany(5).ToArray();
-        
+
         foreach (var entity in entities)
         {
             var createResult = await _repository!.StoreAsync(entity);
-            createResult.Should().BeSuccess();
+            createResult.ShouldBeSuccess();
         }
 
         var ids = entities.Select(x => x.Id).Concat(derivedEntities.Select(x => x.Id)).ToArray();
-        
+
         var derivedEntityResult =
             await _repository!.GetListAsync<TestEntity1, DerivedTestEntity1>(x => ids.Contains(x.Id));
-        derivedEntityResult.Should().BeSuccess();
-        
-        var derivedEntitiesFromDb = derivedEntityResult.ValueOrDefault;
-        derivedEntitiesFromDb.Should().NotBeNullOrEmpty();
-        
-        derivedEntitiesFromDb.Should().HaveCount(derivedEntities.Length);
+        derivedEntityResult.ShouldBeSuccess();
 
-        derivedEntitiesFromDb.Should().AllSatisfy(derivedEntity =>
+        var derivedEntitiesFromDb = derivedEntityResult.ValueOrDefault;
+        derivedEntitiesFromDb.ShouldNotBeEmpty();
+
+        derivedEntitiesFromDb.Count.ShouldBe(derivedEntities.Length);
+
+        foreach (var derivedEntity in derivedEntitiesFromDb)
         {
             var entity = derivedEntities.First(x => x.Id == derivedEntity.Id);
 
-            derivedEntity.SomeValue.Should().Be(entity.SomeValue);
-            derivedEntity.Tags.Should().BeEquivalentTo(entity.Tags);
-            derivedEntity.Name.Should().Be(entity.Name);
-            derivedEntity.Value.Should().Be(entity.Value);
-        });
+            derivedEntity.SomeValue.ShouldBe(entity.SomeValue);
+            derivedEntity.Tags.ShouldBe(entity.Tags);
+            derivedEntity.Name.ShouldBe(entity.Name);
+            derivedEntity.Value.ShouldBe(entity.Value);
+        }
     }
-    
+
     [Test]
     public async Task GenericRepository_GetList_SpecificEntitiesShouldBeCastedToDerived()
     {
@@ -365,36 +365,36 @@ public class GenericRepositoryTests : BaseIntegrationTests
         foreach (var derivedEntity in derivedEntities)
         {
             var createResult = await _repository!.StoreAsync(derivedEntity);
-            createResult.Should().BeSuccess();
+            createResult.ShouldBeSuccess();
         }
-        
+
         var entities = Fixture.Build<TestEntity1>()
             .Without(x => x.ETag)
             .Without(x => x.Id)
             .Without(x => x.IsDeleted)
             .CreateMany(5);
-        
+
         foreach (var entity in entities)
         {
             var createResult = await _repository!.StoreAsync(entity);
-            createResult.Should().BeSuccess();
+            createResult.ShouldBeSuccess();
         }
-        
+
         var entitiesResult = await _repository!.GetListAsync(x => true);
-        entitiesResult.Should().BeSuccess();
-        
+        entitiesResult.ShouldBeSuccess();
+
         var entitiesFromDb = entitiesResult.ValueOrDefault;
-        entitiesFromDb.Should().NotBeNullOrEmpty();
-        
+        entitiesFromDb.ShouldNotBeEmpty();
+
         var derivedEntitiesFromDb = entitiesFromDb.OfType<DerivedTestEntity1>().ToArray();
 
-        derivedEntitiesFromDb.Should().AllSatisfy(derivedEntity =>
+        foreach (var derivedEntity in derivedEntitiesFromDb)
         {
-            derivedEntity.SomeValue.Should().NotBeNullOrEmpty();
-            derivedEntity.Tags.Should().NotBeNullOrEmpty();
-            derivedEntity.Name.Should().NotBeNullOrEmpty();
-            derivedEntity.Value.Should().NotBeNullOrEmpty();
-        });
+            derivedEntity.SomeValue.ShouldNotBeEmpty();
+            derivedEntity.Tags.ShouldNotBeEmpty();
+            derivedEntity.Name.ShouldNotBeEmpty();
+            derivedEntity.Value.ShouldNotBeEmpty();
+        }
     }
 
     [Test]
@@ -406,62 +406,62 @@ public class GenericRepositoryTests : BaseIntegrationTests
             .Without(x => x.Id)
             .Without(x => x.IsDeleted)
             .CreateMany(5);
-        
+
         foreach (var entity in entities)
         {
             var createResult = await _repository!.StoreAsync(entity);
-            createResult.Should().BeSuccess();
+            createResult.ShouldBeSuccess();
         }
-        
+
         var filter = Builders<TestEntity1>.Filter.Eq(x => x.Id, Guid.NewGuid());
-        
+
         // Act
         var countResult = await _repository!.CountAsync(filter);
-        
+
         // Assert
-        countResult.Should().BeSuccess();
-        
-        countResult.ValueOrDefault.Should().Be(0);
+        countResult.ShouldBeSuccess();
+
+        countResult.ValueOrDefault.ShouldBe(0);
     }
-    
+
     [Test]
     public async Task GenericRepository_Collection_Should_HaveCount()
     {
         // Arrange
         var name = Fixture.Create<string>();
-        
+
         var entities = Fixture.Build<TestEntity1>()
             .Without(x => x.ETag)
             .Without(x => x.Id)
             .Without(x => x.IsDeleted)
             .With(x => x.Name, name)
             .CreateMany(5).ToList();
-        
+
         var otherEntities = Fixture.Build<TestEntity1>()
             .Without(x => x.ETag)
             .Without(x => x.Id)
             .Without(x => x.IsDeleted)
             .CreateMany(5).ToArray();
-        
+
         entities.AddRange(otherEntities);
-        
+
         foreach (var entity in entities)
         {
             var createResult = await _repository!.StoreAsync(entity);
-            createResult.Should().BeSuccess();
+            createResult.ShouldBeSuccess();
         }
-        
+
         var filter = Builders<TestEntity1>.Filter.Eq(x => x.Name, name);
-        
+
         // Act
         var countResult = await _repository!.CountAsync(filter);
-        
+
         // Assert
-        countResult.Should().BeSuccess();
-        
-        countResult.ValueOrDefault.Should().Be(5);
+        countResult.ShouldBeSuccess();
+
+        countResult.ValueOrDefault.ShouldBe(5);
     }
-    
+
     [Test]
     public async Task GenericRepository_Collection_Should_NotHaveAny()
     {
@@ -471,62 +471,62 @@ public class GenericRepositoryTests : BaseIntegrationTests
             .Without(x => x.Id)
             .Without(x => x.IsDeleted)
             .CreateMany(5);
-        
+
         foreach (var entity in entities)
         {
             var createResult = await _repository!.StoreAsync(entity);
-            createResult.Should().BeSuccess();
+            createResult.ShouldBeSuccess();
         }
-        
+
         var filter = Builders<TestEntity1>.Filter.Eq(x => x.Id, Guid.NewGuid());
-        
+
         // Act
         var countResult = await _repository!.HasAnyAsync(filter);
-        
+
         // Assert
-        countResult.Should().BeSuccess();
-        
-        countResult.ValueOrDefault.Should().BeFalse();
+        countResult.ShouldBeSuccess();
+
+        countResult.ValueOrDefault.ShouldBeFalse();
     }
-    
+
     [Test]
     public async Task GenericRepository_Collection_Should_HaveAny()
     {
         // Arrange
         const string name = "TestName";
-        
+
         var entities = Fixture.Build<TestEntity1>()
             .Without(x => x.ETag)
             .Without(x => x.Id)
             .Without(x => x.IsDeleted)
             .With(x => x.Name, name)
             .CreateMany(5).ToList();
-        
+
         var otherEntities = Fixture.Build<TestEntity1>()
             .Without(x => x.ETag)
             .Without(x => x.Id)
             .Without(x => x.IsDeleted)
             .CreateMany(5).ToArray();
-        
+
         entities.AddRange(otherEntities);
-        
+
         foreach (var entity in entities)
         {
             var createResult = await _repository!.StoreAsync(entity);
-            createResult.Should().BeSuccess();
+            createResult.ShouldBeSuccess();
         }
-        
+
         var filter = Builders<TestEntity1>.Filter.Eq(x => x.Name, name);
-        
+
         // Act
         var countResult = await _repository!.HasAnyAsync(filter);
-        
+
         // Assert
-        countResult.Should().BeSuccess();
-        
-        countResult.ValueOrDefault.Should().BeTrue();
+        countResult.ShouldBeSuccess();
+
+        countResult.ValueOrDefault.ShouldBeTrue();
     }
-    
+
     [TestCase(true)]
     [TestCase(false)]
     public async Task GenericRepository_Delete_DerivedType_ShouldBeRemoved(bool isSoftDelete)
@@ -553,7 +553,7 @@ public class GenericRepositoryTests : BaseIntegrationTests
         });
 
         var repository = services.BuildServiceProvider().GetRequiredService<IGenericRepository<TestEntity1>>();
-        
+
         var entity = Fixture.Build<DerivedTestEntity1>()
             .Without(x => x.ETag)
             .Without(x => x.Id)
@@ -561,15 +561,15 @@ public class GenericRepositoryTests : BaseIntegrationTests
             .Create();
 
         var createResult = await repository!.StoreAsync(entity);
-        createResult.Should().BeSuccess();
+        createResult.ShouldBeSuccess();
 
         var deleteResult = await repository.DeleteAsync(x => x.Id == entity.Id);
-        deleteResult.Should().BeSuccess();
-        
+        deleteResult.ShouldBeSuccess();
+
         var collectionFactory = services.BuildServiceProvider().GetRequiredService<IMongoDbCollectionFactory>();
         var collectionResult = await collectionFactory.GetCollectionAsync<TestEntity1>("TestDB1");
-        collectionResult.Should().BeSuccess();
-        
+        collectionResult.ShouldBeSuccess();
+
         var collection = collectionResult.ValueOrDefault;
 
         var filter = Builders<TestEntity1>.Filter.Eq(x => x.Id, createResult.ValueOrDefault.Id);
@@ -578,15 +578,15 @@ public class GenericRepositoryTests : BaseIntegrationTests
 
         if (isSoftDelete)
         {
-            entityFromDb.Should().NotBeNull();
-            entityFromDb!.IsDeleted.Should().BeTrue();
+            entityFromDb.ShouldNotBeNull();
+            entityFromDb!.IsDeleted.ShouldBeTrue();
         }
         else
         {
-            entityFromDb.Should().BeNull();
+            entityFromDb.ShouldBeNull();
         }
     }
-    
+
     [BsonKnownTypes(typeof(DerivedTestEntity1))]
     private class TestEntity1 : IDocumentEntity
     {
@@ -596,15 +596,48 @@ public class GenericRepositoryTests : BaseIntegrationTests
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
-        public string Name { get; set; }
-        public string Value { get; set; }
+        public string? Name { get; set; }
+        public string? Value { get; set; }
     }
 
     /// <inheritdoc />
     // ReSharper disable once ClassNeverInstantiated.Local
     private class DerivedTestEntity1 : TestEntity1
     {
-        public string SomeValue { get; set; }
-        public IEnumerable<string> Tags { get; set; }
+        public string? SomeValue { get; set; }
+        public IEnumerable<string>? Tags { get; set; }
+    }
+    [Test]
+    public async Task GenericRepository_GetAsyncEnumerable_ShouldEnumerate()
+    {
+        var existingResult = await _repository.GetListAsync();
+        if (existingResult.IsSuccess)
+        {
+            foreach (var existing in existingResult.Value)
+            {
+                await _repository.DeleteAsync(Builders<TestEntity1>.Filter.Eq(x => x.Id, existing.Id));
+            }
+        }
+
+        var entities = Fixture.Build<TestEntity1>()
+            .Without(x => x.ETag)
+            .Without(x => x.Id)
+            .Without(x => x.IsDeleted)
+            .CreateMany(10).ToArray();
+
+        foreach (var entity in entities)
+        {
+            var result = await _repository.StoreAsync(entity);
+            result.ShouldBeSuccess();
+        }
+
+        var count = 0;
+        await foreach (var entity in _repository.GetAsyncEnumerable(Builders<TestEntity1>.Filter.Empty))
+        {
+            count++;
+            entity.ShouldNotBeNull();
+        }
+
+        count.ShouldBe(10);
     }
 }

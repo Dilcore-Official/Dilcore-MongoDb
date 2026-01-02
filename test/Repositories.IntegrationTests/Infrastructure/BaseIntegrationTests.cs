@@ -5,14 +5,14 @@ namespace Dilcore.DocumentDb.MongoDb.Repositories.IntegrationTests.Infrastructur
 public abstract class BaseIntegrationTests
 {
     protected readonly Testcontainers.MongoDb.MongoDbContainer MongoDbContainer =
-        new MongoDbBuilder().Build();
+        new MongoDbBuilder("mongo:latest").Build();
 
     [OneTimeSetUp]
     public async Task InitializeAsync()
     {
         await MongoDbContainer.StartAsync();
     }
-    
+
     [OneTimeTearDown]
     public async Task CleanupAsync()
     {

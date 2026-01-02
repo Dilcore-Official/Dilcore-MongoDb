@@ -42,6 +42,41 @@ public class GenericMongoDbBulkRepository<TDocument>(
 
         }, cancellationToken);
 
+    public Task<Result<IReadOnlyList<TDocument>>> BulkStoreRangeAsync(IEnumerable<TDocument> entities,
+        CancellationToken cancellationToken = default)
+        => ExecuteAsync(async (collection, token) =>
+        {
+            // Materialize to list to ensure we can return the modified entities (with IDs/ETags) and count them
+            var entityList = entities as IReadOnlyList<TDocument> ?? entities.ToList();
+
+            if (entityList.Count == 0)
+            {
+                return Result.Ok<IReadOnlyList<TDocument>>(entityList);
+            }
+
+            var writeModels = CreateWriteModels(entityList).ToList();
+
+            var result = await collection.BulkWriteAsync(writeModels, cancellationToken: token);
+
+            if (result.RequestCount != writeModels.Count)
+            {
+                return Result.Fail("Not all entities were processed");
+            }
+
+            if (result.InsertedCount != writeModels.Count(x => x.ModelType == WriteModelType.InsertOne))
+            {
+                return Result.Fail("Not all entities were created");
+            }
+
+            if (result.ModifiedCount != writeModels.Count(x => x.ModelType == WriteModelType.UpdateOne))
+            {
+                return Result.Fail("Not all entities were updated");
+            }
+
+            return Result.Ok<IReadOnlyList<TDocument>>(entityList);
+
+        }, cancellationToken);
+
     public Task<Result> BulkDeleteAsync(Expression<Func<TDocument, bool>> expression,
         CancellationToken cancellationToken = default)
         => ExecuteAsync((collection, token) =>
@@ -93,7 +128,7 @@ public class GenericMongoDbBulkRepository<TDocument>(
                 entity.GenerateETag();
                 entity.CreatedNow();
                 entity.UpdatedNow();
-                
+
                 yield return new InsertOneModel<TDocument>(entity);
                 continue;
             }
@@ -105,7 +140,7 @@ public class GenericMongoDbBulkRepository<TDocument>(
 
             var filter = Builders<TDocument>.Filter.Eq(x => x.Id, entity.Id);
             filter &= Builders<TDocument>.Filter.Eq(x => x.ETag, currentETag);
-            
+
             filter = ApplyNotDeleteFilter(filter);
 
 

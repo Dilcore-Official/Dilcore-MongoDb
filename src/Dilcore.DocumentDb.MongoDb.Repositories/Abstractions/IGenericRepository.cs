@@ -24,8 +24,19 @@ public interface IGenericRepository<TDocument>
         CancellationToken cancellationToken = default)
         where TDerived : class, TDocument;
 
+    /// <summary>
+    /// Gets an async stream of documents matching the filter.
+    /// </summary>
+    IAsyncEnumerable<TDocument> GetAsyncEnumerable(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets an async stream of derived documents matching the filter.
+    /// </summary>
+    IAsyncEnumerable<TDerived> GetAsyncEnumerable<TDerived>(FilterDefinition<TDerived> filter, CancellationToken cancellationToken = default)
+        where TDerived : class, TDocument;
+
     Task<Result<bool>> DeleteAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default);
-    
+
     Task<Result<bool>> HasAnyAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default);
     Task<Result<long>> CountAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default);
 }

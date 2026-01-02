@@ -12,7 +12,7 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
     private const string DatabaseName = "JsonDocuments";
     private const string Prefix = "prefix";
     const string CollectionName = "test";
-    
+
     [Test]
     public void CustomBsonDocumentRepository_WhenGetRequiredService_ShouldBeResolved()
     {
@@ -28,14 +28,14 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
                     .AddBsonDocumentRepository<IJObjectRepository, JObjectRepository>();
             });
         });
-        
+
         var serviceProvider = services.BuildServiceProvider();
-        
+
         // Act
         var repository = serviceProvider.GetRequiredService<IJObjectRepository>();
 
         // Assert
-        repository.Should().NotBeNull();
+        repository.ShouldNotBeNull();
     }
 
     [Test]
@@ -53,21 +53,21 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
                     .AddBsonDocumentRepository<IJObjectRepository, JObjectRepository>();
             });
         });
-        
+
         var serviceProvider = services.BuildServiceProvider();
-        
+
         var repository = serviceProvider.GetRequiredService<IJObjectRepository>();
-        
+
         var id = Guid.NewGuid().ToString();
         var entity = JObject.Parse("{ \"name\": \"test\", \"_id\": \"" + id + "\" }");
-        
+
         // Act
         var createdEntity = await repository.CreateJObjectAsync(entity);
-        
+
         var result = await repository.GetJObjectAsync(id);
-        
+
         // Assert
-        result.Should().BeSuccess();
+        result.ShouldBeSuccess();
     }
 
     [Test]
@@ -86,23 +86,23 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
                     .AddBsonDocumentRepository<IJObjectRepository, JObjectRepositoryWithDependencies>();
             });
         });
-        
+
         var serviceProvider = services.BuildServiceProvider();
-        
+
         var repository = serviceProvider.GetRequiredService<IJObjectRepository>();
-        
+
         var id = Guid.NewGuid().ToString();
         var entity = JObject.Parse("{ \"name\": \"test\", \"_id\": \"" + id + "\" }");
-        
+
         // Act
         var createdEntity = await repository.CreateJObjectAsync(entity);
-        
+
         var result = await repository.GetJObjectAsync(id);
-        
+
         // Assert
-        result.Should().BeSuccess();
+        result.ShouldBeSuccess();
     }
-    
+
     [Test]
     public async Task CustomBsonDocumentRepository_WithDependencies_And_WithCustomCollectionPrefix_WhenMethodsCalled_ShouldBeSuccess()
     {
@@ -121,33 +121,33 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
                     .AddBsonDocumentRepository<IJObjectRepository, JObjectRepositoryWithDependencies>();
             });
         });
-        
+
         var serviceProvider = services.BuildServiceProvider();
-        
+
         var repository = serviceProvider.GetRequiredService<IJObjectRepository>();
-        
+
         var id = Guid.NewGuid().ToString();
         var entity = JObject.Parse("{ \"name\": \"test\", \"_id\": \"" + id + "\" }");
-        
+
         // Act
         await repository.CreateJObjectAsync(entity);
         var result = await repository.GetJObjectAsync(id);
-        
+
         // Assert
-        
+
         var mongoDbContainer = serviceProvider.GetRequiredKeyedService<IMongoDatabaseProvider>(DatabaseName);
 
         var database = await mongoDbContainer.GetDatabaseAsync(DatabaseName);
-        database.Should().BeSuccess();
-        
+        database.ShouldBeSuccess();
+
         var collectionName = $"{Prefix}_{CollectionName}";
-        
+
         var collection = database.Value.GetCollection<BsonDocument>(collectionName);
-        
+
         var filter = Builders<BsonDocument>.Filter.Eq("_id", id);
         var resultFromDb = await collection.Find(filter).FirstOrDefaultAsync();
-        
-        resultFromDb.Should().NotBeNull();
+
+        resultFromDb.ShouldNotBeNull();
     }
 
     #region Simple Repository Example
@@ -157,7 +157,7 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
         Task<Result<JObject>> GetJObjectAsync(string id);
         Task<JObject> CreateJObjectAsync(JObject entity);
     }
-    
+
     public class JObjectRepository(string dbName, IBsonDocumentCollectionFactory bsonDocumentCollectionFactory)
         : BsonDocumentRepository(dbName, bsonDocumentCollectionFactory), IJObjectRepository
     {
@@ -167,20 +167,20 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
             {
                 var filter = Builders<BsonDocument>.Filter.Eq("_id", id);
                 var result = await collection.Find(filter).FirstOrDefaultAsync();
-                
+
                 return Result.Ok(JObject.Parse(result.ToJson()));
             });
         }
-        
+
         public async Task<JObject> CreateJObjectAsync(JObject entity)
         {
             var json = entity.ToString();
             var document = BsonDocument.Parse(json);
-            
+
             await ExecuteAsync(CollectionName, async collection =>
             {
                 await collection.InsertOneAsync(document);
-                
+
                 return Result.Ok();
             });
 
@@ -201,24 +201,24 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
             {
                 var filter = Builders<BsonDocument>.Filter.Eq("_id", id);
                 var result = await collection.Find(filter).FirstOrDefaultAsync();
-                
+
                 await dependency.Execute();
-                
+
                 return Result.Ok(JObject.Parse(result.ToJson()));
             });
         }
-        
+
         public async Task<JObject> CreateJObjectAsync(JObject entity)
         {
             var json = entity.ToString();
             var document = BsonDocument.Parse(json);
-            
+
             await ExecuteAsync(CollectionName, async collection =>
             {
                 await collection.InsertOneAsync(document);
-                
+
                 await dependency.Execute();
-                
+
                 return Result.Ok();
             });
 
@@ -234,7 +234,7 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
             await Task.Delay(TimeSpan.FromMicroseconds(25));
         }
     }
-    
+
     #endregion
 
     #region Custom Collection Prefix Example
@@ -246,6 +246,6 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
             return Task.FromResult(Result.Ok(Prefix));
         }
     }
-    
+
     #endregion
 }

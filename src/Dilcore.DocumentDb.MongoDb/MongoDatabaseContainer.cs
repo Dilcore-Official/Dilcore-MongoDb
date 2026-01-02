@@ -17,27 +17,27 @@ public class MongoDatabaseContainer
         DbName = dbName;
     }
 
-    public MongoDatabaseContainer AddCustomDatabasePrefixResolver<T>() 
+    public MongoDatabaseContainer AddCustomDatabasePrefixResolver<T>()
         where T : class, IDocumentDatabasePrefixProvider
     {
-        Services.AddKeyedSingleton<IDocumentDatabasePrefixProvider, T>(DbName);
+        Services.AddKeyedScoped<IDocumentDatabasePrefixProvider, T>(DbName);
         return this;
     }
-    
-    public MongoDatabaseContainer AddCustomCollectionPrefixResolver<T>() 
+
+    public MongoDatabaseContainer AddCustomCollectionPrefixResolver<T>()
         where T : class, IDocumentCollectionPrefixProvider
     {
-        Services.AddKeyedSingleton<IDocumentCollectionPrefixProvider, T>(DbName);
+        Services.AddKeyedScoped<IDocumentCollectionPrefixProvider, T>(DbName);
         return this;
     }
 
     public MongoDatabaseContainer AddMongoCollection<TDocument>(Action<GetCollectionOptions<TDocument>> action)
         where TDocument : class, IDocumentEntity
     {
-        Services.AddKeyedSingleton(DbName, (_, _) => action);
+        Services.AddKeyedScoped(DbName, (_, _) => action);
         return this;
     }
-    
+
     public MongoDatabaseContainer AddBsonDocumentCollectionFactory()
     {
         Services.AddBsonDocumentCollectionFactory();
@@ -51,21 +51,21 @@ public class MongoDatabaseContainer
         Services.AddBsonDocumentRepository<TInterface, TImplementation>(DbName);
         return this;
     }
-    
+
     private MongoDatabaseContainer AddDefaultPrefixProviders()
     {
-        Services.AddKeyedSingleton<IDocumentDatabasePrefixProvider, DefaultDocumentDatabasePrefixProvider>(DbName);
-        Services.AddKeyedSingleton<IDocumentCollectionPrefixProvider, DefaultDocumentCollectionPrefixProvider>(DbName);
-        
+        Services.AddKeyedScoped<IDocumentDatabasePrefixProvider, DefaultDocumentDatabasePrefixProvider>(DbName);
+        Services.AddKeyedScoped<IDocumentCollectionPrefixProvider, DefaultDocumentCollectionPrefixProvider>(DbName);
+
         return this;
     }
-    
+
     private MongoDatabaseContainer AddDatabaseProvider()
     {
-        Services.AddKeyedSingleton<IMongoDatabaseProvider>(DbName, (provider, _) =>
+        Services.AddKeyedScoped<IMongoDatabaseProvider>(DbName, (provider, _) =>
         {
             var prefixProvider = provider.GetRequiredKeyedService<IDocumentDatabasePrefixProvider>(DbName);
-            
+
             var mongoClientProvider = provider.GetRequiredService<MongoClientProvider>();
 
             return new MongoDatabaseProvider(prefixProvider, mongoClientProvider);
@@ -75,7 +75,7 @@ public class MongoDatabaseContainer
 
     private MongoDatabaseContainer AddCollectionProvider()
     {
-        Services.AddKeyedSingleton<IMongoDbCollectionProvider>(DbName, (provider, _) =>
+        Services.AddKeyedScoped<IMongoDbCollectionProvider>(DbName, (provider, _) =>
         {
             var mongoDatabaseProvider = provider.GetRequiredKeyedService<IMongoDatabaseProvider>(DbName);
 
@@ -83,10 +83,10 @@ public class MongoDatabaseContainer
 
             return new MongoCollectionProvider(mongoDatabaseProvider, collectionPrefixProvider);
         });
-        
+
         return this;
     }
-    
+
     internal static MongoDatabaseContainer Create(IServiceCollection services, string dbName)
     {
         return new MongoDatabaseContainer(services, dbName)

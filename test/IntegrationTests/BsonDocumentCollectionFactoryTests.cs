@@ -5,20 +5,20 @@ using FluentResults;
 
 namespace Dilcore.DocumentDb.MongoDb.IntegrationTests;
 
-public class BsonDocumentCollectionFactoryTests  : BaseIntegrationTests
+public class BsonDocumentCollectionFactoryTests : BaseIntegrationTests
 {
     private const string DatabaseName = "TestDb";
     private const string CollectionName = "TestCollection";
-    
+
     private const string TestPrefix = "TestPrefix";
-    
+
     [Test]
     public async Task GetCollectionAsync_WhenCalled_ReturnsCollection()
     {
         // Arrange
         var services = new ServiceCollection();
         var connectionString = MongoDbContainer.GetConnectionString();
-        
+
         services.AddMongoDb(builder => builder.UseConnectionString(connectionString), container =>
         {
             container.AddDatabase(DatabaseName, databaseContainer =>
@@ -26,33 +26,33 @@ public class BsonDocumentCollectionFactoryTests  : BaseIntegrationTests
                 databaseContainer.AddBsonDocumentCollectionFactory();
             });
         });
-        
+
         var serviceProvider = services.BuildServiceProvider();
-        
+
         var factory = serviceProvider.GetRequiredService<IBsonDocumentCollectionFactory>();
-        
+
         // Act
         var result = await factory.GetCollectionAsync(DatabaseName, CollectionName);
-        
+
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        
+        result.IsSuccess.ShouldBeTrue();
+
         var collection = result.Value;
-        
-        collection.Should().NotBeNull();
-        
+
+        collection.ShouldNotBeNull();
+
         var collectionName = collection.CollectionNamespace.CollectionName;
-        
-        collectionName.Should().Be(CollectionName);
+
+        collectionName.ShouldBe(CollectionName);
     }
-    
+
     [Test]
     public async Task GetCollectionAsync_WhenDatabaseDoesNotExist_ReturnsFailure()
     {
         // Arrange
         var services = new ServiceCollection();
         var connectionString = MongoDbContainer.GetConnectionString();
-        
+
         services.AddMongoDb(builder => builder.UseConnectionString(connectionString), container =>
         {
             container.AddDatabase("TestDb", databaseContainer =>
@@ -60,25 +60,25 @@ public class BsonDocumentCollectionFactoryTests  : BaseIntegrationTests
                 databaseContainer.AddBsonDocumentCollectionFactory();
             });
         });
-        
+
         var serviceProvider = services.BuildServiceProvider();
-        
+
         var factory = serviceProvider.GetRequiredService<IBsonDocumentCollectionFactory>();
-        
+
         // Act
         var result = await factory.GetCollectionAsync("NonExistentTestDb", "NonExistentCollection");
-        
+
         // Assert
-        result.Should().BeFailure();
+        result.ShouldBeFailure();
     }
-    
+
     [Test]
     public async Task GetCollectionAsync_WithCustomCollectionPrefix_WhenCalled_ReturnsCollection()
     {
         // Arrange
         var services = new ServiceCollection();
         var connectionString = MongoDbContainer.GetConnectionString();
-        
+
         services.AddMongoDb(builder => builder.UseConnectionString(connectionString), container =>
         {
             container.AddDatabase(DatabaseName, databaseContainer =>
@@ -88,24 +88,24 @@ public class BsonDocumentCollectionFactoryTests  : BaseIntegrationTests
                     .AddCustomCollectionPrefixResolver<TestCollectionPrefixResolver>();
             });
         });
-        
+
         var serviceProvider = services.BuildServiceProvider();
-        
+
         var factory = serviceProvider.GetRequiredService<IBsonDocumentCollectionFactory>();
-        
+
         // Act
         var result = await factory.GetCollectionAsync(DatabaseName, CollectionName);
-        
+
         // Assert
-        result.Should().BeSuccess();
-        
+        result.ShouldBeSuccess();
+
         var collection = result.Value;
-        
-        collection.Should().NotBeNull();
-        
+
+        collection.ShouldNotBeNull();
+
         var collectionName = collection.CollectionNamespace.CollectionName;
-        
-        collectionName.Should().Be($"{TestPrefix}_{CollectionName}");
+
+        collectionName.ShouldBe($"{TestPrefix}_{CollectionName}");
     }
 
     [Test]
@@ -117,7 +117,7 @@ public class BsonDocumentCollectionFactoryTests  : BaseIntegrationTests
 
         var dbName1 = $"{DatabaseName}_1";
         var dbName2 = $"{DatabaseName}_2";
-        
+
         services.AddMongoDb(builder => builder.UseConnectionString(connectionString), container =>
         {
             container.AddDatabase(dbName1, databaseContainer =>
@@ -133,32 +133,32 @@ public class BsonDocumentCollectionFactoryTests  : BaseIntegrationTests
                     .AddCustomCollectionPrefixResolver<TestCollectionPrefixResolver>();
             });
         });
-        
+
         var serviceProvider = services.BuildServiceProvider();
-        
+
         // Act
         var factory = serviceProvider.GetRequiredService<IBsonDocumentCollectionFactory>();
-        
+
         var result1 = await factory.GetCollectionAsync(dbName1, CollectionName);
         var result2 = await factory.GetCollectionAsync(dbName2, CollectionName);
-        
+
         // Assert
-        result1.Should().BeSuccess();
-        result2.Should().BeSuccess();
-        
+        result1.ShouldBeSuccess();
+        result2.ShouldBeSuccess();
+
         var collection1 = result1.Value;
         var collection2 = result2.Value;
-        
-        collection1.Should().NotBeNull();
-        collection2.Should().NotBeNull();
-        
+
+        collection1.ShouldNotBeNull();
+        collection2.ShouldNotBeNull();
+
         var collectionName1 = collection1.CollectionNamespace.CollectionName;
         var collectionName2 = collection2.CollectionNamespace.CollectionName;
-        
-        collectionName1.Should().Be($"{TestPrefix}_{CollectionName}");
-        collectionName2.Should().Be($"{TestPrefix}_{CollectionName}");
+
+        collectionName1.ShouldBe($"{TestPrefix}_{CollectionName}");
+        collectionName2.ShouldBe($"{TestPrefix}_{CollectionName}");
     }
-    
+
     private class TestCollectionPrefixResolver : IDocumentCollectionPrefixProvider
     {
         public Task<Result<string>> ResolveAsync(CancellationToken cancellationToken = default)

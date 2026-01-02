@@ -11,8 +11,8 @@ public static class ServiceCollectionExtensions
         var mongoContainer = MongoDbContainer.Create(services, configure);
         action(mongoContainer);
 
-        services.AddSingleton<IMongoDbCollectionFactory, MongoDbCollectionFactory>();
-        
+        services.AddScoped<IMongoDbCollectionFactory, MongoDbCollectionFactory>();
+
         return services;
     }
 
@@ -26,12 +26,12 @@ public static class ServiceCollectionExtensions
             var instance = ActivatorUtilities.CreateInstance<TImplementation>(sp, parameters);
             return instance;
         });
-        
+
         return services;
     }
-    
+
     internal static IServiceCollection AddBsonDocumentCollectionFactory(this IServiceCollection services)
     {
-        return services.AddSingleton<IBsonDocumentCollectionFactory, BsonDocumentCollectionFactory>();
+        return services.AddScoped<IBsonDocumentCollectionFactory, BsonDocumentCollectionFactory>();
     }
 }

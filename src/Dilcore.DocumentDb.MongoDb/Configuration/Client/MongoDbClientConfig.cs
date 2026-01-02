@@ -5,8 +5,8 @@ internal class MongoDbClientConfig
     /// <summary>
     /// Gets or sets MongoDb connection string
     /// </summary>
-    internal string ConnectionString { get; set; }
-    
+    internal required string ConnectionString { get; set; }
+
     /// <summary>
     /// Max connection pool size to MongoDB Cluster
     /// </summary>

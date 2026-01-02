@@ -11,7 +11,7 @@ public class GenericProjectionRepository : BaseIntegrationTests
 
     private IGenericBulkRepository<TestEntity1> _bulkRepository;
     private IGenericProjectionRepository<TestEntity1> _projectionRepository;
-    
+
     [SetUp]
     public void Setup()
     {
@@ -34,7 +34,7 @@ public class GenericProjectionRepository : BaseIntegrationTests
         _bulkRepository = services.BuildServiceProvider().GetRequiredService<IGenericBulkRepository<TestEntity1>>();
         _projectionRepository = services.BuildServiceProvider().GetRequiredService<IGenericProjectionRepository<TestEntity1>>();
     }
-    
+
     [Test]
     public async Task GenericProjectionRepository_GetProjected()
     {
@@ -45,11 +45,11 @@ public class GenericProjectionRepository : BaseIntegrationTests
             .CreateMany(20).ToList();
 
         var createResult = await _bulkRepository.BulkStoreAsync(entities.ToArray());
-        createResult.Should().BeSuccess();
+        createResult.ShouldBeSuccess();
 
         var entity = entities.First();
         var id = entity.Id;
-        
+
         var filter = Builders<TestEntity1>.Filter.Eq(x => x.Id, id);
         var projectionResult = await _projectionRepository.GetAsync(filter, x =>
             new TestEntityProjection
@@ -58,13 +58,13 @@ public class GenericProjectionRepository : BaseIntegrationTests
                 Name = x.Name
             });
 
-        projectionResult.Should().BeSuccess();
-        
-        projectionResult.ValueOrDefault.Should().NotBeNull();
-        projectionResult.ValueOrDefault.Id.Should().Be(id);
-        projectionResult.ValueOrDefault.Name.Should().Be(entity.Name);
+        projectionResult.ShouldBeSuccess();
+
+        projectionResult.ValueOrDefault.ShouldNotBeNull();
+        projectionResult.ValueOrDefault.Id.ShouldBe(id);
+        projectionResult.ValueOrDefault.Name.ShouldBe(entity.Name);
     }
-    
+
     [Test]
     public async Task GenericProjectionRepository_GetProjectedList()
     {
@@ -75,10 +75,10 @@ public class GenericProjectionRepository : BaseIntegrationTests
             .CreateMany(20).ToList();
 
         var createResult = await _bulkRepository.BulkStoreAsync(entities.ToArray());
-        createResult.Should().BeSuccess();
+        createResult.ShouldBeSuccess();
 
         var entityIds = entities.Select(x => x.Id);
-        
+
         var filter = Builders<TestEntity1>.Filter.In(x => x.Id, entityIds);
         var projectionResult = await _projectionRepository.GetListAsync(filter, x =>
             new TestEntityProjection
@@ -87,15 +87,15 @@ public class GenericProjectionRepository : BaseIntegrationTests
                 Name = x.Name
             });
 
-        projectionResult.Should().BeSuccess();
+        projectionResult.ShouldBeSuccess();
 
-        projectionResult.ValueOrDefault.Should().AllSatisfy(projected =>
+        foreach (var projected in projectionResult.ValueOrDefault)
         {
             var entity = entities.First(x => x.Id == projected.Id);
-            projected.Name.Should().Be(entity.Name);
-        });
+            projected.Name.ShouldBe(entity.Name);
+        }
     }
-    
+
     private class TestEntity1 : IDocumentEntity
     {
         public Guid Id { get; set; }
@@ -103,14 +103,14 @@ public class GenericProjectionRepository : BaseIntegrationTests
         public bool IsDeleted { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        
-        public string Name { get; set; }
-        public string Value { get; set; }
+
+        public string? Name { get; set; }
+        public string? Value { get; set; }
     }
 
     private class TestEntityProjection
     {
         public Guid Id { get; set; }
-        public string Name { get; set; }
+        public string? Name { get; set; }
     }
 }
