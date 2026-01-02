@@ -9,17 +9,17 @@ namespace Dilcore.DocumentDb.MongoDb.Configuration.Client;
 public class MongoDbConfigBuilder
 {
     private static readonly Validator BuilderValidator = new();
-   
+
     /// <summary>
     /// Connection string to the MongoDb
     /// </summary>
-    public string ConnectionString { get; private set; }
-    
+    public string? ConnectionString { get; private set; }
+
     /// <summary>
     /// Gets max connection pool size to the MongoDb connection
     /// </summary>
     public int? MaxConnectionPoolSize { get; private set; }
-    
+
     /// <summary>
     /// Set MongoDb connection string
     /// </summary>
@@ -41,20 +41,20 @@ public class MongoDbConfigBuilder
         MaxConnectionPoolSize = maxConnectionPoolSize;
         return this;
     }
-    
+
     internal MongoDbClientConfig Build()
     {
         BuilderValidator.ValidateAndThrow(this);
-        
+
         return new MongoDbClientConfig
         {
-            ConnectionString = ConnectionString,
+            ConnectionString = ConnectionString!,
             MaxConnectionPoolSize = MaxConnectionPoolSize ?? Constants.MaxConnectionPoolSize
         };
     }
-    
+
     internal static MongoDbConfigBuilder Create() => new();
-    
+
     private class Validator : AbstractValidator<MongoDbConfigBuilder>
     {
         public Validator()
@@ -62,7 +62,7 @@ public class MongoDbConfigBuilder
             RuleFor(x => x.ConnectionString)
                 .NotEmpty()
                 .WithMessage("MongoDB Connection String cannot be null or empty");
-            
+
             RuleFor(x => x.MaxConnectionPoolSize)
                 .GreaterThan(0)
                 .WithMessage("Max connection pool size should be greater than 0");

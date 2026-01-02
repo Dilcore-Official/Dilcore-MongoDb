@@ -14,12 +14,17 @@ internal class MongoCollectionProvider(
 {
     private const string DefaultConventions = nameof(DefaultConventions);
 
-    public async Task<Result<IMongoCollection<TDocument>>> GetCollectionAsync<TDocument>(Action<GetCollectionOptions<TDocument>> collectionOptions, 
-        CancellationToken cancellationToken = default) 
+    public async Task<Result<IMongoCollection<TDocument>>> GetCollectionAsync<TDocument>(Action<GetCollectionOptions<TDocument>> collectionOptions,
+        CancellationToken cancellationToken = default)
         where TDocument : class, IDocumentEntity
     {
         var options = new GetCollectionOptions<TDocument>();
         collectionOptions(options);
+
+        if (string.IsNullOrWhiteSpace(options.DatabaseName))
+        {
+            return Result.Fail("Database name is not provided");
+        }
 
         var databaseResult = await mongoDatabaseProvider.GetDatabaseAsync(options.DatabaseName, cancellationToken);
 
@@ -27,62 +32,67 @@ internal class MongoCollectionProvider(
         {
             return databaseResult.ToResult<IMongoCollection<TDocument>>();
         }
-        
+
+        if (string.IsNullOrWhiteSpace(options.CollectionName))
+        {
+            return Result.Fail("Collection name is not provided");
+        }
+
         var collectionNameResult = await GetCollectionNameAsync(options.CollectionName, cancellationToken);
 
-        if(collectionNameResult.IsFailed)
+        if (collectionNameResult.IsFailed)
         {
             return collectionNameResult.ToResult<IMongoCollection<TDocument>>();
         }
-        
+
         options.WithCollectionName(collectionNameResult.ValueOrDefault);
-        
+
         var database = databaseResult.ValueOrDefault;
-        
+
         return await GetCollectionAsync(database, options, cancellationToken);
     }
 
     public async Task<Result<IMongoCollection<BsonDocument>>> GetCollectionAsync(string databaseName, string collectionName, CancellationToken cancellationToken = default)
     {
         var databaseResult = await mongoDatabaseProvider.GetDatabaseAsync(databaseName, cancellationToken);
-        
+
         if (databaseResult.IsFailed)
         {
             return databaseResult.ToResult<IMongoCollection<BsonDocument>>();
         }
-        
+
         var collectionNameResult = await GetCollectionNameAsync(collectionName, cancellationToken);
-        
-        if(collectionNameResult.IsFailed)
+
+        if (collectionNameResult.IsFailed)
         {
             return collectionNameResult.ToResult<IMongoCollection<BsonDocument>>();
         }
-        
+
         var database = databaseResult.ValueOrDefault;
-        
+
         return Result.Ok(database.GetCollection<BsonDocument>(collectionNameResult.ValueOrDefault));
     }
 
     public async Task<Result<string>> GetCollectionNameAsync(string collectionName, CancellationToken cancellationToken)
     {
         var collectionPrefixResult = await collectionPrefixProvider.ResolveAsync(cancellationToken);
-        
+
         if (collectionPrefixResult.IsFailed)
         {
             return collectionPrefixResult;
         }
 
         var collectionPrefix = collectionPrefixResult.ValueOrDefault;
-        
-        collectionName = string.IsNullOrWhiteSpace(collectionPrefix) 
-            ? collectionName 
+
+        collectionName = string.IsNullOrWhiteSpace(collectionPrefix)
+            ? collectionName
             : $"{collectionPrefix}_{collectionName}";
-        
+
         return collectionName;
     }
-    
+
     private static async Task<Result<IMongoCollection<TDocument>>> GetCollectionAsync<TDocument>(IMongoDatabase database,
-        GetCollectionOptions<TDocument> options, CancellationToken cancellationToken) 
+        GetCollectionOptions<TDocument> options, CancellationToken cancellationToken)
         where TDocument : IDocumentEntity
     {
         var pack = new ConventionPack
@@ -93,12 +103,17 @@ internal class MongoCollectionProvider(
             new IgnoreIfNullConvention(true),
             new IgnoreExtraElementsConvention(true)
         };
-        
+
         ConventionRegistry.Register(DefaultConventions, pack, _ => true);
 
+        if (string.IsNullOrWhiteSpace(options.CollectionName))
+        {
+            return Result.Fail("Collection name is not provided");
+        }
+
         var collection = database.GetCollection<TDocument>(options.CollectionName);
-        
-        if (options.CollectionItemsTimeToLive.HasValue)
+
+        if (options.CollectionItemsTimeToLive.HasValue && options.TimeToLeavePropertySelector != null)
         {
             await CreateTimeToLiveIndexAsync(collection, options.CollectionItemsTimeToLive.Value, options.TimeToLeavePropertySelector, cancellationToken);
         }
@@ -107,16 +122,16 @@ internal class MongoCollectionProvider(
         {
             await collection.Indexes.CreateManyAsync(options.Indices, cancellationToken);
         }
-                
+
         return Result.Ok(collection);
     }
 
     private static async Task CreateTimeToLiveIndexAsync<TDocument>(IMongoCollection<TDocument> collection,
-        TimeSpan timeToLeave, Expression<Func<TDocument, object>> optionsTimeToLeavePropertySelector, CancellationToken cancellationToken) 
+        TimeSpan timeToLeave, Expression<Func<TDocument, object>> optionsTimeToLeavePropertySelector, CancellationToken cancellationToken)
         where TDocument : IDocumentEntity
     {
         var indexKeysDefinition = Builders<TDocument>.IndexKeys.Ascending(optionsTimeToLeavePropertySelector);
-        
+
         var indexOptions = new CreateIndexOptions { ExpireAfter = timeToLeave };
         var indexModel = new CreateIndexModel<TDocument>(indexKeysDefinition, indexOptions);
         await collection.Indexes.CreateOneAsync(indexModel, cancellationToken: cancellationToken);

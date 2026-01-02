@@ -17,7 +17,7 @@ internal class GenericMongoDbRepository<TDocument>(
     public Task<Result<TDocument>> StoreAsync(TDocument entity, CancellationToken cancellationToken = default)
         => ExecuteAsync((collection, ct) => StoreEntityAsync(entity, collection, ct), cancellationToken);
 
-    public Task<Result<TDocument>> GetAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default) 
+    public Task<Result<TDocument>> GetAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
         => ExecuteAsync(async (collection, token) =>
         {
             filter = ApplyNotDeleteFilter(filter);
@@ -26,7 +26,7 @@ internal class GenericMongoDbRepository<TDocument>(
             return Result.Ok(entity);
         }, cancellationToken);
 
-    public Task<Result<TDerived>> GetAsync<TDerived>(FilterDefinition<TDerived> filter, CancellationToken cancellationToken = default) 
+    public Task<Result<TDerived>> GetAsync<TDerived>(FilterDefinition<TDerived> filter, CancellationToken cancellationToken = default)
         where TDerived : class, TDocument
         => ExecuteAsync(async (collection, token) =>
         {
@@ -60,7 +60,7 @@ internal class GenericMongoDbRepository<TDocument>(
         }, cancellationToken);
 
     public Task<Result<IReadOnlyList<TDerived>>> GetListAsync<TDerived>(FilterDefinition<TDerived> filter,
-        CancellationToken cancellationToken = default) 
+        CancellationToken cancellationToken = default)
         where TDerived : class, TDocument
         =>
             ExecuteAsync(async (collection, token) =>
@@ -72,13 +72,58 @@ internal class GenericMongoDbRepository<TDocument>(
                 return Result.Ok<IReadOnlyList<TDerived>>(entities);
             }, cancellationToken);
 
-    
-    
+    public async IAsyncEnumerable<TDocument> GetAsyncEnumerable(FilterDefinition<TDocument> filter, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var collectionResult = await collectionProvider(cancellationToken);
+        if (collectionResult.IsFailed)
+        {
+            throw new InvalidOperationException($"Failed to get collection: {collectionResult.Errors.FirstOrDefault()?.Message}");
+        }
+
+        var collection = collectionResult.Value;
+        filter = ApplyNotDeleteFilter(filter);
+
+        using var cursor = await collection.Find(filter).ToCursorAsync(cancellationToken);
+
+        while (await cursor.MoveNextAsync(cancellationToken))
+        {
+            foreach (var document in cursor.Current)
+            {
+                yield return document;
+            }
+        }
+    }
+
+    public async IAsyncEnumerable<TDerived> GetAsyncEnumerable<TDerived>(FilterDefinition<TDerived> filter, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        where TDerived : class, TDocument
+    {
+        var collectionResult = await collectionProvider(cancellationToken);
+        if (collectionResult.IsFailed)
+        {
+            throw new InvalidOperationException($"Failed to get collection: {collectionResult.Errors.FirstOrDefault()?.Message}");
+        }
+
+        var collection = collectionResult.Value;
+        filter = ApplyNotDeleteFilter(filter);
+
+        using var cursor = await collection.OfType<TDerived>().Find(filter).ToCursorAsync(cancellationToken);
+
+        while (await cursor.MoveNextAsync(cancellationToken))
+        {
+            foreach (var document in cursor.Current)
+            {
+                yield return document;
+            }
+        }
+    }
+
+
+
     public Task<Result<bool>> DeleteAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
         => ExecuteAsync((collection, token) =>
         {
             var collectionOptions = GetOptions();
-            
+
             if (collectionOptions.SoftDeleteDisabled)
             {
                 return PermanentDeleteOneAsync(collection, filter, token);
@@ -146,7 +191,7 @@ internal class GenericMongoDbRepository<TDocument>(
         var updateResult =
             await collection.UpdateOneAsync(filter, updateDocument, cancellationToken: cancellationToken);
 
-        return updateResult.ModifiedCount == 1 ? Result.Ok(entity) 
+        return updateResult.ModifiedCount == 1 ? Result.Ok(entity)
             : Result.Fail($"Failed to update entity '{collection.CollectionNamespace}' with id {entity.Id}");
     }
 

@@ -607,4 +607,27 @@ public class GenericRepositoryTests : BaseIntegrationTests
         public string? SomeValue { get; set; }
         public IEnumerable<string>? Tags { get; set; }
     }
+    [Test]
+    public async Task GenericRepository_GetAsyncEnumerable_ShouldEnumerate()
+    {
+        var entities = Fixture.Build<TestEntity1>()
+            .Without(x => x.ETag)
+            .Without(x => x.Id)
+            .Without(x => x.IsDeleted)
+            .CreateMany(10).ToArray();
+
+        foreach (var entity in entities)
+        {
+            await _repository.StoreAsync(entity);
+        }
+
+        var count = 0;
+        await foreach (var entity in _repository.GetAsyncEnumerable(Builders<TestEntity1>.Filter.Empty))
+        {
+            count++;
+            entity.ShouldNotBeNull();
+        }
+
+        count.ShouldBe(10);
+    }
 }

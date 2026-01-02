@@ -192,4 +192,23 @@ public class GenericBulkRepositoryTests : BaseIntegrationTests
         public string? Name { get; set; }
         public string? Value { get; set; }
     }
+    [Test]
+    public async Task GenericBulkRepository_BulkStoreRangeAsync_ShouldStore()
+    {
+        var entities = Fixture.Build<TestEntity1>()
+            .With(x => x.IsDeleted, false)
+            .With(x => x.UpdatedAt, DateTime.UtcNow)
+            .Without(x => x.ETag)
+            .CreateMany(20).ToList();
+
+        // Pass IEnumerable<T> explicitly (via List) to test the new overload
+        var createResult = await _bulkRepository.BulkStoreRangeAsync(entities);
+        createResult.ShouldBeSuccess();
+
+        var ids = entities.Select(x => x.Id);
+        var entitiesListResult = await _repository.GetListAsync(x => ids.Contains(x.Id));
+        entitiesListResult.ShouldBeSuccess();
+
+        entitiesListResult.ValueOrDefault.Count.ShouldBe(entities.Count);
+    }
 }

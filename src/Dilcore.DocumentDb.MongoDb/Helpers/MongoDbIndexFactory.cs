@@ -7,10 +7,10 @@ namespace Dilcore.DocumentDb.MongoDb.Helpers;
 public static class MongoDbIndexFactory
 {
     public static CreateIndexModel<T> CreateAscendingIndex<T>(Expression<Func<T, object>> fieldSelector,
-        Action<CreateIndexOptions> optionsAction = null)
+        Action<CreateIndexOptions>? optionsAction = null)
         where T : IDocumentEntity
     {
-        CreateIndexOptions options = null;
+        CreateIndexOptions? options = null;
 
         if (optionsAction is not null)
         {
