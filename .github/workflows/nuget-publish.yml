@@ -44,7 +44,7 @@ jobs:
           PATCH=$((PATCH + 1))
           
           NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
-          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "version=${NEW_VERSION}" >> "${GITHUB_OUTPUT}"
           echo "📦 New version: ${NEW_VERSION}"
 
       - name: 🛠️ Setup .NET
