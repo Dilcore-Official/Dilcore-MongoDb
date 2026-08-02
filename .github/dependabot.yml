@@ -1,0 +1,36 @@
+# Dependabot updates NuGet packages and GitHub Actions workflow references only.
+# Arbitrary YAML keys and non-ecosystem config values are out of scope.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - area:dependencies
+      - type:chore
+    groups:
+      nuget-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - area:ci
+      - area:dependencies
+      - type:chore
+    groups:
+      actions-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch

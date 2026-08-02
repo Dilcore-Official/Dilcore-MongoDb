@@ -4,6 +4,18 @@ A comprehensive .NET library providing a clean, abstracted interface for working
 
 > **v2 roadmap:** See [ROADMAP.md](ROADMAP.md) and [roadmap issues](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues?q=is%3Aissue+label%3Aroadmap) for the professional open-source redesign (milestones M0–M9). v2 renames the product to **Dilcore MongoDB** ([ADR 0001](docs/adr/0001-package-naming.md)).
 
+## Community and trust
+
+| Document | Purpose |
+|----------|---------|
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute, develop, and open pull requests |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
+| [SECURITY.md](SECURITY.md) | Private vulnerability reporting |
+| [SUPPORT.md](SUPPORT.md) | Where to get help (Issues vs Discussions) |
+| [GOVERNANCE.md](GOVERNANCE.md) | Maintainers and decision making |
+| [CHANGELOG.md](CHANGELOG.md) | Notable changes |
+| [LICENSE](LICENSE) | MIT |
+
 ## 🏗️ Architecture Overview
 
 The library follows Clean Architecture principles with clear separation of concerns:

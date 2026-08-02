@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a defect with a clear reproduction path
+title: "[Bug]: "
+labels: ["type:bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Security issues must use [private vulnerability reporting](https://github.com/Dilcore-Official/Dilcore-MongoDb/security/advisories/new), not this form.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong in one or two sentences?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps or code that reproduce the issue.
+      placeholder: |
+        1. Configure ...
+        2. Call ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Environment
+      description: .NET SDK, package version, MongoDB server/driver versions if known.
+      placeholder: net10.0, Dilcore.DocumentDb.MongoDb 1.x, MongoDB.Driver 3.5.2, MongoDB 7.0
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Logs, stack traces, or related roadmap issues (optional).
