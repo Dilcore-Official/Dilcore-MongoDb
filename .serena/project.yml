@@ -1,0 +1,61 @@
+# the name by which the project can be referenced within Serena
+project_name: "DocumentDb"
+
+# list of languages for which language servers are started
+languages:
+  - csharp
+
+# the encoding used by text files in the project
+encoding: "utf-8"
+
+# line ending convention: unset uses global setting
+line_ending:
+
+# language backend: unset uses global setting (LSP or JetBrains)
+language_backend:
+
+# whether to use project's .gitignore files to ignore files
+ignore_all_files_in_gitignore: true
+
+# language server-specific options
+ls_specific_settings: {}
+
+# additional paths to ignore (gitignore syntax); quote paths that contain special chars
+ignored_paths:
+  - "**/bin/**"
+  - "**/obj/**"
+  - "**/TestResults/**"
+  - "**/BenchmarkDotNet.Artifacts/**"
+  - "**/.vs/**"
+  - "**/nupkgs/**"
+
+# whether the project is in read-only mode
+read_only: false
+
+# tools to exclude beyond global exclusions
+excluded_tools: []
+
+# optional tools to include
+included_optional_tools: []
+
+# fixed tool set (leave empty to use Serena defaults)
+fixed_tools: []
+
+# base/default modes: unset inherits global configuration
+base_modes:
+default_modes:
+
+# initial prompt always given on project activation
+initial_prompt: |
+  Dilcore MongoDB toolkit (.NET 10). Current v1 packages are Dilcore.DocumentDb.*;
+  v2 renames to Dilcore.MongoDB (two packages: Abstractions + primary) with a hard break.
+  Prefer Serena symbolic tools for C# edits. Do not invent provider-neutral DocumentDB claims.
+  Integration tests require Docker/Testcontainers. See ROADMAP.md and docs/ for M0 decisions.
+  Never commit .serena/project.local.yml or secrets.
+
+# symbol info budget: unset inherits global
+symbol_info_budget:
+
+# read-only / ignored memory patterns
+read_only_memory_patterns: []
+ignored_memory_patterns: []
