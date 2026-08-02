@@ -1,6 +1,10 @@
 bin/
 obj/
 /packages/
+
+# Locally downloaded actionlint binary (CI downloads its own copy)
+/actionlint
+/actionlint.exe
 riderModule.iml
 /_ReSharper.Caches/
 
