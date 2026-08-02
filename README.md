@@ -2,6 +2,8 @@
 
 A comprehensive .NET library providing a clean, abstracted interface for working with MongoDB databases. The library implements the Repository pattern with support for multiple databases, custom prefixes, and various repository types including generic, bulk, and projection repositories.
 
+> **v2 roadmap:** See [ROADMAP.md](ROADMAP.md) and [roadmap issues](https://github.com/aytymchuk/Dilcore-Library-DocumentDb/issues?q=is%3Aissue+label%3Aroadmap) for the professional open-source redesign plan (milestones M0–M9).
+
 ## 🏗️ Architecture Overview
 
 The library follows Clean Architecture principles with clear separation of concerns:
