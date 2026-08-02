@@ -14,7 +14,7 @@ Microsoft.Extensions.DependencyInjection.IServiceCollection Dilcore.DocumentDb.M
 MongoDB.Driver.CreateIndexModel<T> Dilcore.DocumentDb.MongoDb.Helpers.MongoDbIndexFactory.CreateAscendingIndex<T>(System.Linq.Expressions.Expression<System.Func<T, System.Object>>, System.Action<MongoDB.Driver.CreateIndexOptions>)
 MongoDB.Driver.CreateIndexModel<T> Dilcore.DocumentDb.MongoDb.Helpers.MongoDbIndexFactory.CreateCombinedIndex<T>(MongoDB.Driver.IndexKeysDefinition<T>[])
 System.Nullable<System.Int32> Dilcore.DocumentDb.MongoDb.Configuration.Client.MongoDbConfigBuilder.MaxConnectionPoolSize { get; }
-System.String Dilcore.DocumentDb.MongoDb.Configuration.Client.MongoDbConfigBuilder.ConnectionString { get; }
+System.String? Dilcore.DocumentDb.MongoDb.Configuration.Client.MongoDbConfigBuilder.ConnectionString { get; }
 System.String Dilcore.DocumentDb.MongoDb.MongoDatabaseContainer.DbName
 System.Threading.Tasks.Task<FluentResults.Result<MongoDB.Driver.IMongoCollection<MongoDB.Bson.BsonDocument>>> Dilcore.DocumentDb.MongoDb.BsonDocumentCollectionFactory.GetCollectionAsync(System.String, System.String, System.Threading.CancellationToken)
 System.Threading.Tasks.Task<FluentResults.Result<System.String>> Dilcore.DocumentDb.MongoDb.BsonDocumentCollectionFactory.GetCollectionNameAsync(System.String, System.String, System.Threading.CancellationToken)

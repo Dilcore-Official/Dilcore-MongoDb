@@ -11,11 +11,11 @@ MongoDB.Bson.BsonDocument Dilcore.DocumentDb.Abstractions.Extensions.DocumentEnt
 System.Boolean Dilcore.DocumentDb.Abstractions.GetCollectionOptions<TDocument>.CreateEmptyCollection { get; }
 System.Boolean Dilcore.DocumentDb.Abstractions.GetCollectionOptions<TDocument>.SoftDeleteDisabled { get; }
 System.Boolean Dilcore.DocumentDb.Abstractions.GetCollectionOptions<TDocument>.SoftDeleteEnabled { get; }
-System.Collections.Generic.IReadOnlyList<MongoDB.Driver.CreateIndexModel<TDocument>> Dilcore.DocumentDb.Abstractions.GetCollectionOptions<TDocument>.Indices { get; }
-System.Linq.Expressions.Expression<System.Func<TDocument, System.Object>> Dilcore.DocumentDb.Abstractions.GetCollectionOptions<TDocument>.TimeToLeavePropertySelector { get; }
+System.Collections.Generic.IReadOnlyList<MongoDB.Driver.CreateIndexModel<TDocument>>? Dilcore.DocumentDb.Abstractions.GetCollectionOptions<TDocument>.Indices { get; }
+System.Linq.Expressions.Expression<System.Func<TDocument, System.Object>>? Dilcore.DocumentDb.Abstractions.GetCollectionOptions<TDocument>.TimeToLeavePropertySelector { get; }
 System.Nullable<System.TimeSpan> Dilcore.DocumentDb.Abstractions.GetCollectionOptions<TDocument>.CollectionItemsTimeToLive { get; }
-System.String Dilcore.DocumentDb.Abstractions.GetCollectionOptions<TDocument>.CollectionName { get; }
-System.String Dilcore.DocumentDb.Abstractions.GetCollectionOptions<TDocument>.DatabaseName { get; }
+System.String? Dilcore.DocumentDb.Abstractions.GetCollectionOptions<TDocument>.CollectionName { get; }
+System.String? Dilcore.DocumentDb.Abstractions.GetCollectionOptions<TDocument>.DatabaseName { get; }
 System.Threading.Tasks.Task<FluentResults.Result<MongoDB.Driver.IMongoCollection<MongoDB.Bson.BsonDocument>>> Dilcore.DocumentDb.Abstractions.IBsonDocumentCollectionFactory.GetCollectionAsync(System.String, System.String, System.Threading.CancellationToken)
 System.Threading.Tasks.Task<FluentResults.Result<MongoDB.Driver.IMongoCollection<MongoDB.Bson.BsonDocument>>> Dilcore.DocumentDb.Abstractions.IMongoDbCollectionFactory.GetCollectionAsync(System.String, System.String, System.Threading.CancellationToken)
 System.Threading.Tasks.Task<FluentResults.Result<MongoDB.Driver.IMongoCollection<MongoDB.Bson.BsonDocument>>> Dilcore.DocumentDb.Abstractions.IMongoDbCollectionProvider.GetCollectionAsync(System.String, System.String, System.Threading.CancellationToken)

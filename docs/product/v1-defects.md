@@ -40,6 +40,10 @@ Feeds naming ADR ([#4](https://github.com/Dilcore-Official/Dilcore-MongoDb/issue
 | D15 | Missing-document returns success with null | `GetAsync` returns `Result.Ok(entity)` after `FirstOrDefaultAsync` without null check | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
 | D16 | Streaming error model break | `GetAsyncEnumerable` throws `InvalidOperationException` on collection failure instead of `Result` | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18), [#25](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/25) |
 | D17 | Primary-constructor capture warning | CS9107 in `GenericMongoDbRepository.cs` | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) / [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
+| D23 | Timestamp ETag is not collision-safe | `DocumentDbHelper.GenerateEtag()` uses `DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()`; concurrent writers can share the same token | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D24 | Entities mutated before write success | `UpdateAsync` / bulk `CreateWriteModels` call `GenerateETag` / `UpdatedNow` before `UpdateOne` / `BulkWrite` succeeds, so failed writes leave in-memory entities dirty | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D25 | Full-document `$set` replace/patch risk | `ToBsonUpdateDocument` wraps `document.ToBsonDocument()` in `$set`, so updates can rewrite `_id` and concurrent fields instead of an explicit replace/patch contract | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D26 | Bulk write edge cases incomplete | `BulkWriteAsync` uses default options; no-op / partial-failure / ordered-vs-unordered / per-item results and chunking are not modeled beyond coarse count checks | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
 
 ---
 

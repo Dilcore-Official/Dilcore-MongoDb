@@ -60,8 +60,34 @@ for n in $(seq 2 46); do
   if ! grep -Eq '(^|,)priority:' <<<"${labels}"; then
     problems+=("missing priority:* label")
   fi
-  if ! grep -Eqi '## Acceptance criteria' <<<"${body}"; then
+  if ! grep -Eqi '^##[[:space:]]*Acceptance criteria[[:space:]]*$' <<<"${body}"; then
     problems+=("missing Acceptance criteria section")
+  else
+    acceptance_section="$(BODY="${body}" python3 - <<'PY'
+import os
+body = os.environ["BODY"]
+lines = body.splitlines()
+start = None
+for i, line in enumerate(lines):
+    if line.strip().lower() == "## acceptance criteria":
+        start = i + 1
+        break
+if start is None:
+    raise SystemExit(0)
+chunk = []
+for line in lines[start:]:
+    if line.startswith("## "):
+        break
+    chunk.append(line)
+print("\n".join(chunk))
+PY
+)"
+    if ! grep -Eq '^[[:space:]]*-[[:space:]]*\[[ xX]\][[:space:]]*[^[:space:]].+' <<<"${acceptance_section}"; then
+      problems+=("Acceptance criteria section has no non-empty checklist items")
+    fi
+  fi
+  if ! grep -Eqi '^##[[:space:]]*Dependencies[[:space:]]*$' <<<"${body}"; then
+    problems+=("missing Dependencies section")
   fi
   if ! grep -Eq "#${n}([^0-9]|$)|/issues/${n}([^0-9]|$)" "${ROADMAP}"; then
     problems+=("not linked from ROADMAP.md")

@@ -7,10 +7,10 @@
 - `dotnet test --configuration Release` (needs Docker for Testcontainers integration tests)
 
 ## Pack (local)
-- `dotnet pack src/Dilcore.DocumentDb.*/Dilcore.DocumentDb.*.csproj -c Release -o ./nupkgs`
+- `dotnet pack Dilcore.DocumentDb.sln -c Release -o ./nupkgs`
 
 ## Roadmap verification
 - `./scripts/verify-roadmap-coverage.sh`
 
 ## System utilities (Darwin)
-- `git`, `ls`, `cd`, `rg`/`grep`, `find`, `gh` for GitHub issues
+- `git`, `ls`, `cd`, `rg`/`grep`, `find`, `gh`, `jq` for GitHub issues and roadmap verification

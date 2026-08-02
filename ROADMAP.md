@@ -203,9 +203,9 @@ Milestone: [M8 Docs, Context7 & Repository AI](https://github.com/Dilcore-Offici
 | Issue | Work | Priority |
 |-------|------|----------|
 | [#39](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/39) | README + structured `docs/` overhaul with tested snippets | P0 |
-| [#40](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/40) | `context7.json` + `context7-refresh.yml` for `/aytymchuk/dilcore-library-documentdb` | P0 |
+| [#40](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/40) | `context7.json` + `context7-refresh.yml` for `/dilcore-official/dilcore-mongodb` | P0 |
 | [#41](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/41) | Hierarchical `AGENTS.md` (root, src, test, samples, per-project) | P0 |
-| [#42](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/42) | Consumer skill `.cursor/skills/using-dilcore-documentdb/` | P0 |
+| [#42](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/42) | Consumer skill `.cursor/skills/using-dilcore-mongodb/` | P0 |
 
 **Exit criteria:** Context7 indexes consumer docs only (excludes `AGENTS.md` / skills); skill and AGENTS responsibilities stay separate; representative Context7 queries succeed after refresh.
 
@@ -332,7 +332,7 @@ Ongoing: supported versions, upstream driver / VectorData changes, dependency ca
 ## Verification checklist
 
 - [x] Roadmap states why the library exists, when direct `MongoDB.Driver` is preferable, and what will not be reimplemented.
-- [x] Every roadmap work item links to a GitHub issue with milestone, area, type, priority, dependencies, and acceptance criteria.
+- [x] Every roadmap work item links to a GitHub issue with milestone, `area:*`, `type:*`, `priority:*`, `roadmap`, a Dependencies section, non-empty acceptance-criteria checklist items, and a ROADMAP.md link (enforced by `scripts/verify-roadmap-coverage.sh`).
 - [x] Dependabot plan covers NuGet and GitHub Actions (not arbitrary YAML keys) — [#10](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/10).
 - [x] DI, JSON, transaction, streaming, observability, vector, Context7, AGENTS, and skill requirements are represented as issues.
 - [ ] GitHub Project **Dilcore MongoDB v2 Roadmap** created and issues attached (owner action if token lacks `project` scope).

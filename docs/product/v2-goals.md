@@ -9,10 +9,15 @@ Validated later by M5 packaging/benchmarks ([#28](https://github.com/Dilcore-Off
 |--------|--------------|-----------|--------------|
 | Packable core packages | 4 | **2** (`Dilcore.MongoDB.Abstractions`, `Dilcore.MongoDB`) | [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12) |
 | Third-party deps in Abstractions | FluentResults | **0** preferred; FluentResults only if Result remains a public contract and cannot be inlined | [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12) |
-| Direct runtime deps in primary package | FluentValidation + DI + MongoDB.Driver (+ transitive Result) | **≤ 3** direct runtime PackageReferences (driver + DI abstractions/extensions + at most one Result/helper package); no FluentValidation unless justified | [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12), [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
+| Direct runtime deps in primary package | FluentValidation + DI + MongoDB.Driver (+ transitive Result) | **≤ 3** direct runtime `PackageReference` items | [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12), [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
 | Consumer single-binding setup | Multi-builder sample | **≤ 15** meaningful C# statements for one cluster + one document binding | [#17](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/17), [#39](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/39) |
 
 Optional JSON / OpenTelemetry / VectorData packages are extra and do not count against the two-core-package goal.
+
+### Counting rules
+
+- **Direct runtime deps:** count each direct `PackageReference` in the primary package `.csproj` (not transitive packages). `Microsoft.Extensions.DependencyInjection` and `Microsoft.Extensions.DependencyInjection.Abstractions` count as two if both are referenced. Development-only / private-asset packages do not count.
+- **Meaningful setup statements:** in a minimal single-binding sample, count executable C# statements that configure services or resolve the binding. Exclude `using` directives, namespace/type declarations, braces-only lines, blank lines, and comments.
 
 ## Quality
 
@@ -29,9 +34,21 @@ Baselines must be captured before enforcement. BenchmarkDotNet suite lands in [#
 
 | Metric | v2 budget | Notes |
 |--------|-----------|-------|
-| Cold-start: DI registration + first resolution vs direct driver | **≤ 5%** regression | Measure median; record machine/runtime |
+| Cold-start: DI registration + first resolution vs direct driver | **≤ 5%** regression | Median vs recorded baseline |
 | Telemetry disabled overhead | **≤ 1%** | No listeners / meters disabled |
 | Telemetry enabled overhead | **≤ 3%** | Agreed balanced budget; validated in [#34](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/34) |
+
+### Benchmark protocol
+
+Use BenchmarkDotNet for all three budgets. Record runtime, OS, CPU, and commit SHA with each baseline.
+
+| Budget | Operation boundary | Comparison |
+|--------|--------------------|------------|
+| Cold-start | Library path: configure DI + resolve one document binding once. Control path: create `MongoClient` + get one collection once. | Median library vs median control |
+| Telemetry disabled | Steady-state repository read/write with no `ActivityListener` / meter listeners | Median vs same workload baseline captured with telemetry hooks absent |
+| Telemetry enabled | Same workload with ActivitySource + Meter listeners attached (exporter-neutral in-process listeners only) | Median vs the disabled-telemetry baseline for the same commit |
+
+Default run shape unless a later ADR changes it: at least 1 warmup iteration and 15 measured iterations (or BenchmarkDotNet defaults that meet those floors). Fail the budget if median regression exceeds the table threshold.
 
 ## Documentation quality
 
