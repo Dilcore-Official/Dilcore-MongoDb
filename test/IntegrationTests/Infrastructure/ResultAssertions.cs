@@ -1,7 +1,6 @@
 using FluentResults;
-using Shouldly;
 
-namespace Dilcore.DocumentDb.MongoDb.IntegrationTests.Infrastructure;
+namespace Dilcore.MongoDB.IntegrationTests.Infrastructure;
 
 public static class ResultAssertions
 {

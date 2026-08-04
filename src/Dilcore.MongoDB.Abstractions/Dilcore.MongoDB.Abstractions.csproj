@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <RootNamespace>Dilcore.MongoDB.Abstractions</RootNamespace>
+        <PackageId>Dilcore.MongoDB.Abstractions</PackageId>
+        <PackageDescription>Contracts, entity/policy abstractions, MongoDB interfaces, and repository interfaces for Dilcore.MongoDB</PackageDescription>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="FluentResults" />
+      <PackageReference Include="MongoDB.Driver" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+      <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    </ItemGroup>
+
+</Project>

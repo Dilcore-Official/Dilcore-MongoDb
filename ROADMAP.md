@@ -6,7 +6,7 @@ This document is the product roadmap. Implementation work is tracked as GitHub i
 **Repository:** [Dilcore-Official/Dilcore-MongoDb](https://github.com/Dilcore-Official/Dilcore-MongoDb)  
 **Issues filter:** [label:roadmap](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues?q=is%3Aissue+label%3Aroadmap)  
 **GitHub Project:** see [GitHub tracking](#github-tracking)  
-**Status:** M0 baseline docs/tooling in progress; package/API renames start in M2.
+**Status:** M2 Simplification & DI in progress on `feature/m2-simplification-di` (two-package topology + new DI/namespace model).
 
 ---
 
@@ -124,11 +124,12 @@ Milestone: [M2 Simplification & DI](https://github.com/Dilcore-Official/Dilcore-
 | [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12) | Package topology: primary package + optional JSON/OTEL/Vector/policy integrations | P0 |
 | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) | Remove dead APIs, redundant packages, FluentValidation single-guard usage | P0 |
 | [#14](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/14) | Named/typed cluster, database, document bindings; multi-cluster singleton clients | P0 |
-| [#15](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/15) | Scoped namespace-resolution pipeline; tenant fail-closed policies | P0 |
+| [#15](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/15) | Scoped namespace-resolution pipeline; app-owned dynamic prefixes (no first-class tenant types) | P0 |
 | [#16](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/16) | External client ownership; keyed/typed driver escape hatches | P1 |
 | [#17](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/17) | DI acceptance tests (clusters, same-type bindings, tenants, resolver order, v1 parity) | P0 |
+| [#54](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/54) | Architecture tests (package topology, dependency/namespace/public-API/DI boundaries) | P0 |
 
-**Exit criteria:** No unkeyed same-type collisions; duplicate registrations fail at startup; JSON and typed APIs share one resolver path; DI suite green.
+**Exit criteria:** No unkeyed same-type collisions; duplicate registrations fail at startup; JSON and typed APIs share one resolver path; DI suite green; architecture tests green.
 
 ### M3 — MongoDB production, JSON, and transactions
 
@@ -278,7 +279,7 @@ Ongoing: supported versions, upstream driver / VectorData changes, dependency ca
 | `area:product` | Product positioning and scope |
 | `area:api` | Public API surface |
 | `area:di` | Dependency injection |
-| `area:tenancy` | Tenant / namespace resolution |
+| `area:tenancy` | Namespace resolution (app-owned multi-tenancy via prefix contributors) |
 | `area:mongodb` | MongoDB driver integration |
 | `area:json` | JSON interoperability |
 | `area:serialization` | BSON / serializer conventions |
@@ -314,8 +315,8 @@ Ongoing: supported versions, upstream driver / VectorData changes, dependency ca
 
 | Theme | Issues |
 |-------|--------|
-| Product / decisions | #2–#6, #12, #24, #36, #46 |
-| DI / tenancy | #14–#17, #15 |
+| Product / decisions | #2–#6, #12, #24, #36, #46, #54 |
+| DI / tenancy | #14–#17, #15, #54 |
 | JSON / serialization | #20 |
 | Transactions | #21 |
 | Streaming / change streams | #24–#27 |

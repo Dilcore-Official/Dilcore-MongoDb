@@ -1,36 +1,28 @@
-using Dilcore.DocumentDb.Abstractions;
-using Dilcore.DocumentDb.MongoDb.Extensions;
-using Dilcore.DocumentDb.MongoDb.Repositories;
-using Dilcore.DocumentDb.MongoDb.Repositories.Abstractions;
+using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Repositories;
+using Dilcore.MongoDB.Extensions;
+using Dilcore.MongoDB.Repositories;
 using Testcontainers.MongoDb;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var mongoDbContainer =
-    new MongoDbBuilder("mongo:latest").Build();
+    new MongoDbBuilder("mongo:7.0").Build();
 
 await mongoDbContainer.StartAsync();
 
 var connectionString = mongoDbContainer.GetConnectionString();
 
-builder.Services.AddMongoDb(configure => configure.UseConnectionString(connectionString), dbContainer =>
-{
-    dbContainer.AddDatabase("SampleDB",
-        db =>
-        {
-            db.AddGenericRepository<WeatherForecast>(
-                registerRepositoryAction: register => register.WithBulkRepository(), options =>
-                {
-                    options.WithCollectionName("weatherForecasts")
-                        .WithDatabaseName("SampleDB");
-                });
-        });
-});
+builder.Services.AddMongoDb(mongo => mongo
+    .AddCluster("primary", c => c.UseConnectionString(connectionString))
+    .AddDatabase("SampleDB", db => db.OnCluster("primary"))
+    .AddDocumentBinding<WeatherForecast>("weather", d => d
+        .InDatabase("SampleDB")
+        .WithCollectionName("weatherForecasts")
+        .WithBulkRepository()));
 
 var app = builder.Build();
 
@@ -38,7 +30,6 @@ async void Callback() => await mongoDbContainer.DisposeAsync();
 
 app.Lifetime.ApplicationStopping.Register(Callback);
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

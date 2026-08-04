@@ -53,28 +53,22 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: 📦 Restore dependencies
-        run: dotnet restore
+        run: dotnet restore Dilcore.MongoDB.sln
 
       - name: 🔨 Build
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release
 
-      - name: 📦 Pack all projects
+      - name: 📦 Pack core packages
         run: |
-          dotnet pack src/Dilcore.DocumentDb.Abstractions/Dilcore.DocumentDb.Abstractions.csproj \
+          dotnet pack src/Dilcore.MongoDB.Abstractions/Dilcore.MongoDB.Abstractions.csproj \
             --no-build --configuration Release --output ./nupkgs \
             -p:Version=${{ steps.version.outputs.version }}
-          dotnet pack src/Dilcore.DocumentDb.MongoDb/Dilcore.DocumentDb.MongoDb.csproj \
-            --no-build --configuration Release --output ./nupkgs \
-            -p:Version=${{ steps.version.outputs.version }}
-          dotnet pack src/Dilcore.DocumentDb.MongoDb.Abstractions/Dilcore.DocumentDb.MongoDb.Abstractions.csproj \
-            --no-build --configuration Release --output ./nupkgs \
-            -p:Version=${{ steps.version.outputs.version }}
-          dotnet pack src/Dilcore.DocumentDb.MongoDb.Repositories/Dilcore.DocumentDb.MongoDb.Repositories.csproj \
+          dotnet pack src/Dilcore.MongoDB/Dilcore.MongoDB.csproj \
             --no-build --configuration Release --output ./nupkgs \
             -p:Version=${{ steps.version.outputs.version }}
 
       - name: 🚀 Push to GitHub Packages
-        run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/aytymchuk/index.json" --skip-duplicate
+        run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/Dilcore-Official/index.json" --skip-duplicate
 
       - name: 🏷️ Create Git Tag
         run: |

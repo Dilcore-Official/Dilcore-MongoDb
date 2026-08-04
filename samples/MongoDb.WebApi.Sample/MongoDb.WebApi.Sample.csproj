@@ -11,8 +11,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\src\Dilcore.DocumentDb.MongoDb.Repositories\Dilcore.DocumentDb.MongoDb.Repositories.csproj" />
-      <ProjectReference Include="..\..\src\Dilcore.DocumentDb.MongoDb\Dilcore.DocumentDb.MongoDb.csproj" />
+      <ProjectReference Include="..\..\src\Dilcore.MongoDB\Dilcore.MongoDB.csproj" />
     </ItemGroup>
 
 </Project>

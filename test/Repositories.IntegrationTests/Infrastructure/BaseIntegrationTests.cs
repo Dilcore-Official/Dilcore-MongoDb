@@ -1,11 +1,11 @@
-﻿using Testcontainers.MongoDb;
+using Testcontainers.MongoDb;
 
-namespace Dilcore.DocumentDb.MongoDb.Repositories.IntegrationTests.Infrastructure;
+namespace Dilcore.MongoDB.Repositories.IntegrationTests.Infrastructure;
 
 public abstract class BaseIntegrationTests
 {
-    protected readonly Testcontainers.MongoDb.MongoDbContainer MongoDbContainer =
-        new MongoDbBuilder("mongo:latest").Build();
+    protected readonly MongoDbContainer MongoDbContainer =
+        new MongoDbBuilder("mongo:7.0").Build();
 
     [OneTimeSetUp]
     public async Task InitializeAsync()

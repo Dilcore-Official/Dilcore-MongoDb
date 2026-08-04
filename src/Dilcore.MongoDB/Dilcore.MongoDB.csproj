@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <RootNamespace>Dilcore.MongoDB</RootNamespace>
+        <PackageId>Dilcore.MongoDB</PackageId>
+        <PackageDescription>Dilcore MongoDB toolkit: DI, providers, repositories, policies, and driver integration</PackageDescription>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Dilcore.MongoDB.Abstractions\Dilcore.MongoDB.Abstractions.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+      <PackageReference Include="MongoDB.Driver" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <InternalsVisibleTo Include="Dilcore.MongoDB.UnitTests" />
+      <InternalsVisibleTo Include="Dilcore.MongoDB.IntegrationTests" />
+      <InternalsVisibleTo Include="Dilcore.MongoDB.Repositories.IntegrationTests" />
+      <InternalsVisibleTo Include="Dilcore.MongoDB.ArchitectureTests" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+      <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    </ItemGroup>
+
+</Project>

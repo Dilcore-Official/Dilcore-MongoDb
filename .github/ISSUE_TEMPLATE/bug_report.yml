@@ -42,7 +42,7 @@ body:
     attributes:
       label: Environment
       description: .NET SDK, package version, MongoDB server/driver versions if known.
-      placeholder: net10.0, Dilcore.DocumentDb.MongoDb 1.x, MongoDB.Driver 3.5.2, MongoDB 7.0
+      placeholder: net10.0, Dilcore.MongoDB 2.x, MongoDB.Driver 3.5.2, MongoDB 7.0
     validations:
       required: true
   - type: textarea
