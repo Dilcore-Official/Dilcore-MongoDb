@@ -2,7 +2,9 @@ using System.Linq.Expressions;
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Extensions;
 using Dilcore.MongoDB.Abstractions.Helpers;
+using Dilcore.MongoDB.Abstractions.Internal;
 using Dilcore.MongoDB.Abstractions.Options;
+using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using FluentResults;
 using MongoDB.Driver;
@@ -15,6 +17,15 @@ internal class GenericMongoDbBulkRepository<TDocument>(
     : BaseMongoDbRepository<TDocument>(options, collectionProvider), IGenericBulkRepository<TDocument>
     where TDocument : class, IDocumentEntity
 {
+    private static readonly bool HasConcurrencyToken =
+        typeof(IHasConcurrencyToken).IsAssignableFrom(typeof(TDocument));
+
+    private static readonly bool IsSoftDeletable =
+        typeof(ISoftDeletable).IsAssignableFrom(typeof(TDocument));
+
+    private static readonly IDocumentIdAccessor<TDocument> IdAccessor =
+        DocumentIdAccessorCache.Get<TDocument>();
+
     public Task<Result<IReadOnlyList<TDocument>>> BulkStoreAsync(
         TDocument[] entities,
         CancellationToken cancellationToken = default)
@@ -33,7 +44,7 @@ internal class GenericMongoDbBulkRepository<TDocument>(
                 return Result.Fail("Not all entities were created");
             }
 
-            if (result.ModifiedCount != writeModels.Count(x => x.ModelType == WriteModelType.UpdateOne))
+            if (result.ModifiedCount != writeModels.Count(x => x.ModelType == WriteModelType.UpdateOne || x.ModelType == WriteModelType.ReplaceOne))
             {
                 return Result.Fail("Not all entities were updated");
             }
@@ -66,7 +77,7 @@ internal class GenericMongoDbBulkRepository<TDocument>(
                 return Result.Fail("Not all entities were created");
             }
 
-            if (result.ModifiedCount != writeModels.Count(x => x.ModelType == WriteModelType.UpdateOne))
+            if (result.ModifiedCount != writeModels.Count(x => x.ModelType == WriteModelType.UpdateOne || x.ModelType == WriteModelType.ReplaceOne))
             {
                 return Result.Fail("Not all entities were updated");
             }
@@ -82,7 +93,7 @@ internal class GenericMongoDbBulkRepository<TDocument>(
             var collectionOptions = GetOptions();
             var filter = Builders<TDocument>.Filter.Where(expression);
 
-            if (collectionOptions.SoftDeleteDisabled)
+            if (collectionOptions.SoftDeleteDisabled || !IsSoftDeletable)
             {
                 return PermanentDeleteAsync(collection, filter, token);
             }
@@ -96,8 +107,11 @@ internal class GenericMongoDbBulkRepository<TDocument>(
         FilterDefinition<TDocument> filter,
         CancellationToken token)
     {
-        var update = Builders<TDocument>.Update.Set(x => x.IsDeleted, true)
-            .Set(x => x.ETag, MongoDbHelper.GenerateEtag());
+        UpdateDefinition<TDocument> update = Builders<TDocument>.Update.Set("isDeleted", true);
+        if (HasConcurrencyToken)
+        {
+            update = update.Set("eTag", MongoDbHelper.GenerateEtag());
+        }
 
         var result = await collection.UpdateManyAsync(filter, update, cancellationToken: token);
         return result.MatchedCount == 0 ? Result.Fail("No entities were deleted") : Result.Ok();
@@ -114,13 +128,19 @@ internal class GenericMongoDbBulkRepository<TDocument>(
 
     private IEnumerable<WriteModel<TDocument>> CreateWriteModels(IEnumerable<TDocument> entities)
     {
+        var guidStrategy = GetOptions().GuidIdGenerationStrategy;
+
         foreach (var entity in entities)
         {
-            if (entity.IsNew())
+            var isCreate = HasConcurrencyToken
+                ? entity.IsNew()
+                : IdAccessor.IsEmpty(entity);
+
+            if (isCreate)
             {
-                if (entity.IsIdEmpty())
+                if (IdAccessor.IsEmpty(entity))
                 {
-                    entity.NewId();
+                    IdAccessor.EnsureNewId(entity, guidStrategy);
                 }
 
                 entity.GenerateETag();
@@ -131,16 +151,26 @@ internal class GenericMongoDbBulkRepository<TDocument>(
                 continue;
             }
 
-            var currentETag = entity.ETag;
-            entity.GenerateETag();
             entity.UpdatedNow();
 
-            var filter = Builders<TDocument>.Filter.Eq(x => x.Id, entity.Id);
-            filter &= Builders<TDocument>.Filter.Eq(x => x.ETag, currentETag);
-            filter = ApplyNotDeleteFilter(filter);
+            if (HasConcurrencyToken)
+            {
+                var currentETag = ((IHasConcurrencyToken)entity).ETag;
+                entity.GenerateETag();
 
-            var updateDocument = entity.ToBsonUpdateDocument();
-            yield return new UpdateOneModel<TDocument>(filter, updateDocument);
+                var filter = IdAccessor.BuildIdFilter(entity);
+                filter &= Builders<TDocument>.Filter.Eq("eTag", currentETag);
+                filter = ApplyNotDeleteFilter(filter);
+
+                var updateDocument = entity.ToBsonUpdateDocument();
+                yield return new UpdateOneModel<TDocument>(filter, updateDocument);
+            }
+            else
+            {
+                entity.GenerateETag();
+                var filter = ApplyNotDeleteFilter(IdAccessor.BuildIdFilter(entity));
+                yield return new ReplaceOneModel<TDocument>(filter, entity);
+            }
         }
     }
 }

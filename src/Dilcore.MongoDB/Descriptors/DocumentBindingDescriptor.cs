@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Keys;
 
 namespace Dilcore.MongoDB.Descriptors;
@@ -15,4 +16,5 @@ internal sealed record DocumentBindingDescriptor(
     IReadOnlyList<object>? Indices,
     TimeSpan? CollectionItemsTimeToLive,
     LambdaExpression? TimeToLeavePropertySelector,
-    Type? NamespacePrefixResolverType = null);
+    Type? NamespacePrefixResolverType = null,
+    GuidIdGenerationStrategy GuidIdGenerationStrategy = GuidIdGenerationStrategy.Random);

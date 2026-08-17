@@ -1,7 +1,9 @@
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Extensions;
 using Dilcore.MongoDB.Abstractions.Helpers;
+using Dilcore.MongoDB.Abstractions.Internal;
 using Dilcore.MongoDB.Abstractions.Options;
+using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using FluentResults;
 using MongoDB.Driver;
@@ -14,6 +16,15 @@ internal class GenericMongoDbRepository<TDocument>(
     : BaseMongoDbRepository<TDocument>(options, collectionProvider), IGenericRepository<TDocument>
     where TDocument : class, IDocumentEntity
 {
+    private static readonly bool HasConcurrencyToken =
+        typeof(IHasConcurrencyToken).IsAssignableFrom(typeof(TDocument));
+
+    private static readonly bool IsSoftDeletable =
+        typeof(ISoftDeletable).IsAssignableFrom(typeof(TDocument));
+
+    private static readonly IDocumentIdAccessor<TDocument> IdAccessor =
+        DocumentIdAccessorCache.Get<TDocument>();
+
     public Task<Result<TDocument>> StoreAsync(TDocument entity, CancellationToken cancellationToken = default)
         => ExecuteAsync((collection, ct) => StoreEntityAsync(entity, collection, ct), cancellationToken);
 
@@ -116,7 +127,7 @@ internal class GenericMongoDbRepository<TDocument>(
         {
             var collectionOptions = GetOptions();
 
-            if (collectionOptions.SoftDeleteDisabled)
+            if (collectionOptions.SoftDeleteDisabled || !IsSoftDeletable)
             {
                 return PermanentDeleteOneAsync(collection, filter, token);
             }
@@ -144,22 +155,29 @@ internal class GenericMongoDbRepository<TDocument>(
         IMongoCollection<TDocument> collection,
         CancellationToken cancellationToken = default)
     {
-        var currentEtag = entity.ETag;
         entity.UpdatedNow();
 
-        return entity.IsNew()
+        if (HasConcurrencyToken)
+        {
+            var currentEtag = ((IHasConcurrencyToken)entity).ETag;
+            return entity.IsNew()
+                ? CreateAsync(entity, collection, cancellationToken)
+                : UpdateWithConcurrencyAsync(entity, currentEtag, collection, cancellationToken);
+        }
+
+        return IdAccessor.IsEmpty(entity)
             ? CreateAsync(entity, collection, cancellationToken)
-            : UpdateAsync(entity, currentEtag, collection, cancellationToken);
+            : ReplaceWithoutConcurrencyAsync(entity, collection, cancellationToken);
     }
 
-    private static async Task<Result<TDocument>> CreateAsync(
+    private async Task<Result<TDocument>> CreateAsync(
         TDocument entity,
         IMongoCollection<TDocument> collection,
         CancellationToken cancellationToken)
     {
-        if (entity.IsIdEmpty())
+        if (IdAccessor.IsEmpty(entity))
         {
-            entity.NewId();
+            IdAccessor.EnsureNewId(entity, GetOptions().GuidIdGenerationStrategy);
         }
 
         entity.CreatedNow();
@@ -169,14 +187,14 @@ internal class GenericMongoDbRepository<TDocument>(
         return Result.Ok(entity);
     }
 
-    private async Task<Result<TDocument>> UpdateAsync(
+    private async Task<Result<TDocument>> UpdateWithConcurrencyAsync(
         TDocument entity,
         long currentEtag,
         IMongoCollection<TDocument> collection,
         CancellationToken cancellationToken)
     {
-        var filter = Builders<TDocument>.Filter.Eq(x => x.Id, entity.Id);
-        filter &= Builders<TDocument>.Filter.Eq(x => x.ETag, currentEtag);
+        var filter = IdAccessor.BuildIdFilter(entity);
+        filter &= Builders<TDocument>.Filter.Eq("eTag", currentEtag);
         filter = ApplyNotDeleteFilter(filter);
 
         entity.GenerateETag();
@@ -187,7 +205,23 @@ internal class GenericMongoDbRepository<TDocument>(
 
         return updateResult.ModifiedCount == 1
             ? Result.Ok(entity)
-            : Result.Fail($"Failed to update entity '{collection.CollectionNamespace}' with id {entity.Id}");
+            : Result.Fail($"Failed to update entity '{collection.CollectionNamespace}' with id filter");
+    }
+
+    private async Task<Result<TDocument>> ReplaceWithoutConcurrencyAsync(
+        TDocument entity,
+        IMongoCollection<TDocument> collection,
+        CancellationToken cancellationToken)
+    {
+        var filter = IdAccessor.BuildIdFilter(entity);
+        filter = ApplyNotDeleteFilter(filter);
+
+        entity.GenerateETag();
+        var result = await collection.ReplaceOneAsync(filter, entity, cancellationToken: cancellationToken);
+
+        return result.ModifiedCount == 1 || result.MatchedCount == 1
+            ? Result.Ok(entity)
+            : Result.Fail($"Failed to update entity '{collection.CollectionNamespace}' with id filter");
     }
 
     private static async Task<Result<bool>> SoftDeleteOneAsync(
@@ -195,8 +229,11 @@ internal class GenericMongoDbRepository<TDocument>(
         FilterDefinition<TDocument> filter,
         CancellationToken cancellationToken = default)
     {
-        var update = Builders<TDocument>.Update.Set(x => x.IsDeleted, true)
-            .Set(x => x.ETag, MongoDbHelper.GenerateEtag());
+        UpdateDefinition<TDocument> update = Builders<TDocument>.Update.Set("isDeleted", true);
+        if (HasConcurrencyToken)
+        {
+            update = update.Set("eTag", MongoDbHelper.GenerateEtag());
+        }
 
         var result = await collection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
         return Result.Ok(result.ModifiedCount == 1);

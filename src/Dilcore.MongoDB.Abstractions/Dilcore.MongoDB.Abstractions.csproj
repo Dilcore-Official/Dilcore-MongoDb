@@ -16,4 +16,12 @@
       <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
     </ItemGroup>
 
+    <ItemGroup>
+      <InternalsVisibleTo Include="Dilcore.MongoDB" />
+      <InternalsVisibleTo Include="Dilcore.MongoDB.UnitTests" />
+      <InternalsVisibleTo Include="Dilcore.MongoDB.IntegrationTests" />
+      <InternalsVisibleTo Include="Dilcore.MongoDB.Repositories.IntegrationTests" />
+      <InternalsVisibleTo Include="Dilcore.MongoDB.ArchitectureTests" />
+    </ItemGroup>
+
 </Project>

@@ -1,4 +1,5 @@
 using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.IntegrationTests.Infrastructure;
@@ -127,7 +128,7 @@ public class MultiClusterAcceptanceTests
         (await collectionB.Find(x => x.Value == 1).FirstOrDefaultAsync()).ShouldBeNull();
     }
 
-    private class Order : IDocumentEntity
+    private class Order : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
     {
         public Guid Id { get; set; }
         public long ETag { get; set; }
@@ -137,7 +138,7 @@ public class MultiClusterAcceptanceTests
         public int Value { get; set; }
     }
 
-    private class PageView : IDocumentEntity
+    private class PageView : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
     {
         public Guid Id { get; set; }
         public long ETag { get; set; }

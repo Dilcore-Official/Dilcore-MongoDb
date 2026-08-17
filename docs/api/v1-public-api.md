@@ -128,3 +128,24 @@ Internal (not in baseline as public API): `MongoClientProvider`, `MongoCollectio
 5. Public mutable `MongoDatabaseContainer.Services` service-locator field.
 
 These feed the [defect inventory](../product/v1-defects.md) and [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13).
+
+---
+
+## M2.5 update (v2 entity model)
+
+As of [ADR 0002](../adr/0002-generic-document-identifier.md) / milestone M2.5:
+
+| Type | Change |
+|------|--------|
+| `IDocumentEntity` | Empty marker (no longer carries `Guid Id` / ETag / soft-delete / audit members) |
+| `IDocumentEntity<TId>` | Typed identifier contract |
+| `IHasConcurrencyToken` | Opt-in `ETag` |
+| `ISoftDeletable` | Opt-in `IsDeleted` |
+| `IAuditableDocument` | Opt-in `CreatedAt` / `UpdatedAt` |
+| `GuidIdGenerationStrategy` | `Random` (default) or `SequentialVersion7` |
+| `UnsupportedIdentifierTypeException` | Thrown when auto-generating unsupported `TId` |
+| `GetCollectionOptions<TDocument>.WithGuidIdGeneration` | Per-collection Guid generation |
+| `IMongoDocumentBindingBuilder<TDocument>.WithGuidIdGeneration` | Per-binding Guid generation |
+| `DocumentEntityExtensions` | Policy-aware no-ops; `NewId` accepts optional Guid strategy |
+
+Machine-readable baselines live under `src/Dilcore.MongoDB.Abstractions/PublicAPI.*.txt` and `src/Dilcore.MongoDB/PublicAPI.*.txt`.
