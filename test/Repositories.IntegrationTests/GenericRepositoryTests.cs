@@ -23,10 +23,12 @@ public class GenericRepositoryTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase("TestDB1", db => db.OnCluster("primary"))
-            .AddDocumentBinding<TestEntity1>("e1", d => d
-                .InDatabase("TestDB1")
-                .WithCollectionName("testEntity1")));
+            .AddDatabase("TestDB1", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity1>("e1", d => d
+                    .WithCollectionName("testEntity1"));
+            }));
 
         _provider = AcceptanceServiceProviderFactory.Create(services);
         _scope = _provider.CreateScope();
@@ -144,14 +146,17 @@ public class GenericRepositoryTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase("TestDB1", db => db.OnCluster("primary"))
-            .AddDocumentBinding<TestEntity1>("e1", d =>
+            .AddDatabase("TestDB1", db =>
             {
-                d.InDatabase("TestDB1").WithCollectionName("testEntity1-delete");
-                if (isSoftDelete)
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity1>("e1", d =>
                 {
-                    d.WithSoftDelete();
-                }
+                    d.WithCollectionName("testEntity1-delete");
+                    if (isSoftDelete)
+                    {
+                        d.WithSoftDelete();
+                    }
+                });
             }));
 
         using var provider = AcceptanceServiceProviderFactory.Create(services);

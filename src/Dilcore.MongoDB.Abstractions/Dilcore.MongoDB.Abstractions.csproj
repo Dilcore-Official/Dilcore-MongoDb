@@ -3,7 +3,7 @@
     <PropertyGroup>
         <RootNamespace>Dilcore.MongoDB.Abstractions</RootNamespace>
         <PackageId>Dilcore.MongoDB.Abstractions</PackageId>
-        <PackageDescription>Contracts, entity/policy abstractions, MongoDB interfaces, and repository interfaces for Dilcore.MongoDB</PackageDescription>
+        <PackageDescription>Contracts, entity and policy abstractions, and MongoDB-facing interfaces for Dilcore.MongoDB without DI host wiring</PackageDescription>
     </PropertyGroup>
 
     <ItemGroup>

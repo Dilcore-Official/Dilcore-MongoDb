@@ -21,12 +21,14 @@ public class GenericProjectionRepositoryTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase("TestDB1", db => db.OnCluster("primary"))
-            .AddDocumentBinding<TestEntity1>("e1", d => d
-                .InDatabase("TestDB1")
-                .WithCollectionName("projectionEntity1")
-                .WithBulkRepository()
-                .WithProjectionRepository()));
+            .AddDatabase("TestDB1", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity1>("e1", d => d
+                    .WithCollectionName("projectionEntity1")
+                    .WithBulkRepository()
+                    .WithProjectionRepository());
+            }));
 
         _provider = AcceptanceServiceProviderFactory.Create(services);
         _scope = _provider.CreateScope();

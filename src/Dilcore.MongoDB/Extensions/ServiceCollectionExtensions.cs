@@ -33,10 +33,24 @@ public static class ServiceCollectionExtensions
         // INamespaceSegmentContributor implementations for dynamic prefixes (e.g. multi-tenancy).
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<INamespaceSegmentContributor, PrefixNamespaceSegmentContributor>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Scoped<INamespaceSegmentContributor, DescriptorNamespacePrefixResolverContributor>());
         services.AddScoped<INamespaceResolver>(sp =>
-            new DefaultNamespaceResolver(sp.GetServices<INamespaceSegmentContributor>()));
+            new DefaultNamespaceResolver(
+                sp.GetServices<INamespaceSegmentContributor>(),
+                sp.GetRequiredService<MongoRegistrationGraph>()));
         services.AddScoped<IMongoDatabaseResolver, MongoDatabaseResolver>();
         services.AddScoped<IMongoDbCollectionFactory, MongoDbCollectionFactory>();
+        services.AddScoped<IRepositoryResolver, RepositoryResolver>();
+
+        foreach (var resolverType in graph.Databases
+                     .Select(d => d.NamespacePrefixResolverType)
+                     .Concat(graph.Bindings.Select(b => b.NamespacePrefixResolverType))
+                     .Where(t => t is not null)
+                     .Distinct())
+        {
+            services.TryAddScoped(resolverType!);
+        }
 
         foreach (var cluster in graph.Clusters)
         {

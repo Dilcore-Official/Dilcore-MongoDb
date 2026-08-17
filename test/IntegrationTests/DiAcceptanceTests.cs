@@ -21,10 +21,11 @@ public class DiAcceptanceTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase("app", db => db.OnCluster("primary"))
-            .AddDocumentBinding<TestEntity>("orders", d => d
-                .InDatabase("app")
-                .WithCollectionName("orders")));
+            .AddDatabase("app", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity>("orders", d => d.WithCollectionName("orders"));
+            }));
 
         using var root = AcceptanceServiceProviderFactory.Create(services);
 
@@ -52,11 +53,17 @@ public class DiAcceptanceTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase("TestDB1", db => db.OnCluster("primary"))
-            .AddDatabase("TestDB2", db => db.OnCluster("primary"))
-            .AddDocumentBinding<TestEntity1>("e1", d => d.InDatabase("TestDB1").WithCollectionName("testEntity1"))
-            .AddDocumentBinding<TestEntity2>("e2", d => d.InDatabase("TestDB1").WithCollectionName("testEntity2"))
-            .AddDocumentBinding<TestEntity3>("e3", d => d.InDatabase("TestDB2").WithCollectionName("testEntity3")));
+            .AddDatabase("TestDB1", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity1>("e1", d => d.WithCollectionName("testEntity1"));
+                db.AddDocumentBinding<TestEntity2>("e2", d => d.WithCollectionName("testEntity2"));
+            })
+            .AddDatabase("TestDB2", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity3>("e3", d => d.WithCollectionName("testEntity3"));
+            }));
 
         using var root = AcceptanceServiceProviderFactory.Create(services);
         using var scope = root.CreateScope();
@@ -88,11 +95,13 @@ public class DiAcceptanceTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase("TestDB1", db => db.OnCluster("primary").WithNamespacePrefix("prefix1"))
-            .AddDocumentBinding<TestEntity1>("e1", d => d
-                .InDatabase("TestDB1")
-                .WithCollectionName("testEntity1")
-                .WithNamespacePrefix("collectionPrefix")));
+            .AddDatabase("TestDB1", db =>
+            {
+                db.OnCluster("primary").WithNamespacePrefix("prefix1");
+                db.AddDocumentBinding<TestEntity1>("e1", d => d
+                    .WithCollectionName("testEntity1")
+                    .WithNamespacePrefix("collectionPrefix"));
+            }));
 
         using var root = AcceptanceServiceProviderFactory.Create(services);
         using var scope = root.CreateScope();
@@ -119,11 +128,12 @@ public class DiAcceptanceTests : BaseIntegrationTests
         Should.Throw<InvalidOperationException>(() =>
             services.AddMongoDb(mongo => mongo
                 .AddCluster("primary", c => c.UseConnectionString(connectionString))
-                .AddDatabase("TestDB1", db => db.OnCluster("primary"))
-                .AddDatabase("TestDB1", db => db.OnCluster("primary"))
-                .AddDocumentBinding<TestEntity1>("e1", d => d
-                    .InDatabase("TestDB1")
-                    .WithCollectionName("testEntity1"))));
+                .AddDatabase("TestDB1", db =>
+                {
+                    db.OnCluster("primary");
+                    db.AddDocumentBinding<TestEntity1>("e1", d => d.WithCollectionName("testEntity1"));
+                })
+                .AddDatabase("TestDB1", db => db.OnCluster("primary"))));
     }
 
     [Test]
@@ -134,10 +144,11 @@ public class DiAcceptanceTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("shared", c => c.UseExistingClient(external, MongoClientOwnership.ExternalOwned))
-            .AddDatabase("app", db => db.OnCluster("shared"))
-            .AddDocumentBinding<TestEntity>("orders", d => d
-                .InDatabase("app")
-                .WithCollectionName("orders")));
+            .AddDatabase("app", db =>
+            {
+                db.OnCluster("shared");
+                db.AddDocumentBinding<TestEntity>("orders", d => d.WithCollectionName("orders"));
+            }));
 
         var root = AcceptanceServiceProviderFactory.Create(services);
         var holder = root.GetRequiredKeyedService<MongoClientHolder>("shared");
@@ -157,14 +168,17 @@ public class DiAcceptanceTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase("app", db => db.OnCluster("primary"))
-            .AddDocumentBinding<TestEntity1>("e1", d =>
+            .AddDatabase("app", db =>
             {
-                d.InDatabase("app").WithCollectionName("testEntity1");
-                if (enabled)
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity1>("e1", d =>
                 {
-                    d.WithBulkRepository().WithProjectionRepository();
-                }
+                    d.WithCollectionName("testEntity1");
+                    if (enabled)
+                    {
+                        d.WithBulkRepository().WithProjectionRepository();
+                    }
+                });
             }));
 
         using var root = AcceptanceServiceProviderFactory.Create(services);
@@ -191,10 +205,11 @@ public class DiAcceptanceTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase("TestDb", db => db.OnCluster("primary").WithNamespacePrefix("pfx"))
-            .AddDocumentBinding<TestEntity>("keep-graph-valid", d => d
-                .InDatabase("TestDb")
-                .WithCollectionName("keep")));
+            .AddDatabase("TestDb", db =>
+            {
+                db.OnCluster("primary").WithNamespacePrefix("pfx");
+                db.AddDocumentBinding<TestEntity>("keep-graph-valid", d => d.WithCollectionName("keep"));
+            }));
 
         using var root = AcceptanceServiceProviderFactory.Create(services);
         using var scope = root.CreateScope();
@@ -218,10 +233,11 @@ public class DiAcceptanceTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase("app", db => db.OnCluster("primary"))
-            .AddDocumentBinding<TestEntity>("orders", d => d
-                .InDatabase("app")
-                .WithCollectionName("orders")));
+            .AddDatabase("app", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity>("orders", d => d.WithCollectionName("orders"));
+            }));
 
         using var root = AcceptanceServiceProviderFactory.Create(services);
         using var scope = root.CreateScope();
@@ -241,10 +257,16 @@ public class DiAcceptanceTests : BaseIntegrationTests
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
             .AddCluster("analytics", c => c.UseConnectionString(connectionString))
-            .AddDatabase("app", db => db.OnCluster("primary"))
-            .AddDatabase("metrics", db => db.OnCluster("analytics"))
-            .AddDocumentBinding<TestEntity>("orders", d => d.InDatabase("app").WithCollectionName("orders"))
-            .AddDocumentBinding<TestEntity>("metrics-orders", d => d.InDatabase("metrics").WithCollectionName("orders")));
+            .AddDatabase("app", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity>("orders", d => d.WithCollectionName("orders"));
+            })
+            .AddDatabase("metrics", db =>
+            {
+                db.OnCluster("analytics");
+                db.AddDocumentBinding<TestEntity>("metrics-orders", d => d.WithCollectionName("orders"));
+            }));
 
         using var root = AcceptanceServiceProviderFactory.Create(services);
         var primary = root.GetRequiredKeyedService<IMongoClient>("primary");
@@ -252,8 +274,9 @@ public class DiAcceptanceTests : BaseIntegrationTests
         primary.ShouldNotBe(analytics);
 
         using var scope = root.CreateScope();
-        var orders = scope.ServiceProvider.GetRequiredKeyedService<IGenericRepository<TestEntity>>("orders");
-        var metrics = scope.ServiceProvider.GetRequiredKeyedService<IGenericRepository<TestEntity>>("metrics-orders");
+        var repositories = scope.ServiceProvider.GetRequiredService<IRepositoryResolver>();
+        var orders = repositories.GetRepository<TestEntity>("orders");
+        var metrics = repositories.GetRepository<TestEntity>("metrics-orders");
 
         await orders.StoreAsync(new TestEntity { Value = 1 });
         await metrics.StoreAsync(new TestEntity { Value = 2 });
@@ -274,19 +297,26 @@ public class DiAcceptanceTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase("app", db => db.OnCluster("primary"))
-            .AddDatabase("archive", db => db.OnCluster("primary"))
-            .AddDocumentBinding<TestEntity>("orders-main", d => d.InDatabase("app").WithCollectionName("orders"))
-            .AddDocumentBinding<TestEntity>("orders-archive", d => d.InDatabase("archive").WithCollectionName("orders")));
+            .AddDatabase("app", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity>("orders-main", d => d.WithCollectionName("orders"));
+            })
+            .AddDatabase("archive", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity>("orders-archive", d => d.WithCollectionName("orders"));
+            }));
 
         using var root = AcceptanceServiceProviderFactory.Create(services);
         using var scope = root.CreateScope();
         var sp = scope.ServiceProvider;
+        var repositories = sp.GetRequiredService<IRepositoryResolver>();
 
-        Should.Throw<InvalidOperationException>(() => sp.GetRequiredService<IGenericRepository<TestEntity>>());
+        Should.Throw<InvalidOperationException>(() => repositories.GetRepository<TestEntity>());
 
-        var main = sp.GetRequiredKeyedService<IGenericRepository<TestEntity>>("orders-main");
-        var archive = sp.GetRequiredKeyedService<IGenericRepository<TestEntity>>("orders-archive");
+        var main = repositories.GetRepository<TestEntity>("orders-main");
+        var archive = repositories.GetRepository<TestEntity>("orders-archive");
         await main.StoreAsync(new TestEntity { Value = 10 });
         await archive.StoreAsync(new TestEntity { Value = 20 });
 
@@ -305,17 +335,21 @@ public class DiAcceptanceTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase("app", db => db.OnCluster("primary"))
-            .AddDocumentBinding<TestEntity>("products-live", d => d.InDatabase("app").WithCollectionName("products_live"))
-            .AddDocumentBinding<TestEntity>("products-staging", d => d.InDatabase("app").WithCollectionName("products_staging")));
+            .AddDatabase("app", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity>("products-live", d => d.WithCollectionName("products_live"));
+                db.AddDocumentBinding<TestEntity>("products-staging", d => d.WithCollectionName("products_staging"));
+            }));
 
         using var root = AcceptanceServiceProviderFactory.Create(services);
         using var scope = root.CreateScope();
         var sp = scope.ServiceProvider;
+        var repositories = sp.GetRequiredService<IRepositoryResolver>();
 
-        await sp.GetRequiredKeyedService<IGenericRepository<TestEntity>>("products-live")
+        await repositories.GetRepository<TestEntity>("products-live")
             .StoreAsync(new TestEntity { Value = 1 });
-        await sp.GetRequiredKeyedService<IGenericRepository<TestEntity>>("products-staging")
+        await repositories.GetRepository<TestEntity>("products-staging")
             .StoreAsync(new TestEntity { Value = 2 });
 
         var db = sp.GetRequiredKeyedService<IMongoDatabase>("app");
@@ -333,10 +367,11 @@ public class DiAcceptanceTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase("app", db => db.OnCluster("primary"))
-            .AddDocumentBinding<TestEntity>("orders", d => d
-                .InDatabase("app")
-                .WithCollectionName("orders")));
+            .AddDatabase("app", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity>("orders", d => d.WithCollectionName("orders"));
+            }));
 
         using var root = AcceptanceServiceProviderFactory.Create(services);
 
@@ -369,10 +404,11 @@ public class DiAcceptanceTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase("app", db => db.OnCluster("primary"))
-            .AddDocumentBinding<TestEntity>("orders", d => d
-                .InDatabase("app")
-                .WithCollectionName(collectionName)));
+            .AddDatabase("app", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity>("orders", d => d.WithCollectionName(collectionName));
+            }));
 
         using var root = AcceptanceServiceProviderFactory.Create(services);
         using var scope = root.CreateScope();
@@ -395,8 +431,11 @@ public class DiAcceptanceTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase("app", db => db.OnCluster("primary"))
-            .AddDocumentBinding<TestEntity>("orders", d => d.InDatabase("app").WithCollectionName("orders_escape")));
+            .AddDatabase("app", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity>("orders", d => d.WithCollectionName("orders_escape"));
+            }));
 
         using var root = AcceptanceServiceProviderFactory.Create(services);
         using var scope = root.CreateScope();
@@ -412,6 +451,209 @@ public class DiAcceptanceTests : BaseIntegrationTests
 
         await sp.GetRequiredService<IGenericRepository<TestEntity>>().StoreAsync(new TestEntity { Value = 7 });
         (await collection.Find(x => x.Value == 7).FirstOrDefaultAsync()).ShouldNotBeNull();
+    }
+
+    [Test]
+    public async Task RepositoryResolver_KeylessKeyedAndAmbiguous()
+    {
+        var connectionString = MongoDbContainer.GetConnectionString();
+        var services = new ServiceCollection();
+
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(connectionString))
+            .AddDatabase("app", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity1>("e1", d => d
+                    .WithCollectionName("resolver_e1")
+                    .WithBulkRepository()
+                    .WithProjectionRepository());
+                db.AddDocumentBinding<TestEntity>("orders-main", d => d.WithCollectionName("orders_main"));
+                db.AddDocumentBinding<TestEntity>("orders-archive", d => d.WithCollectionName("orders_archive"));
+            }));
+
+        using var root = AcceptanceServiceProviderFactory.Create(services);
+        using var scope = root.CreateScope();
+        var repositories = scope.ServiceProvider.GetRequiredService<IRepositoryResolver>();
+
+        // Single binding: keyless works for plain / bulk / projection.
+        var keyless = repositories.GetRepository<TestEntity1>();
+        keyless.ShouldNotBeNull();
+        Should.NotThrow(() => repositories.GetBulkRepository<TestEntity1>());
+        Should.NotThrow(() => repositories.GetProjectionRepository<TestEntity1>());
+
+        await keyless.StoreAsync(new TestEntity1 { Value = 42 });
+        (await keyless.GetListAsync()).ValueOrDefault!.ShouldContain(x => x.Value == 42);
+
+        // Multiple bindings: keyless fails; keyed disambiguates.
+        Should.Throw<InvalidOperationException>(() => repositories.GetRepository<TestEntity>());
+        var main = repositories.GetRepository<TestEntity>("orders-main");
+        var archive = repositories.GetRepository<TestEntity>("orders-archive");
+        await main.StoreAsync(new TestEntity { Value = 1 });
+        await archive.StoreAsync(new TestEntity { Value = 2 });
+
+        var client = scope.ServiceProvider.GetRequiredKeyedService<IMongoClient>("primary");
+        (await client.GetDatabase("app").GetCollection<TestEntity>("orders_main")
+            .Find(x => x.Value == 1).FirstOrDefaultAsync()).ShouldNotBeNull();
+        (await client.GetDatabase("app").GetCollection<TestEntity>("orders_archive")
+            .Find(x => x.Value == 2).FirstOrDefaultAsync()).ShouldNotBeNull();
+    }
+
+    [Test]
+    public async Task AsyncPrefixResolver_OnDatabase_AppliesToPhysicalDatabaseName()
+    {
+        var connectionString = MongoDbContainer.GetConnectionString();
+        var services = new ServiceCollection();
+
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(connectionString))
+            .AddDatabase("UserDB", db =>
+            {
+                db.OnCluster("primary");
+                db.WithNamespacePrefixResolver<AsyncLocalNamespacePrefixResolver>();
+                db.AddDocumentBinding<TestEntity>("users", d => d.WithCollectionName("users"));
+            }));
+
+        using var root = AcceptanceServiceProviderFactory.Create(services);
+        using var scope = root.CreateScope();
+        using (AsyncLocalNamespacePrefixResolver.Use("tenantA"))
+        {
+            await scope.ServiceProvider.GetRequiredService<IGenericRepository<TestEntity>>()
+                .StoreAsync(new TestEntity { Value = 1 });
+        }
+
+        var client = root.GetRequiredKeyedService<IMongoClient>("primary");
+        var names = await (await client.ListDatabaseNamesAsync()).ToListAsync();
+        names.ShouldContain("tenantA_UserDB");
+
+        (await client.GetDatabase("tenantA_UserDB").GetCollection<TestEntity>("users")
+            .Find(x => x.Value == 1).FirstOrDefaultAsync()).ShouldNotBeNull();
+    }
+
+    [Test]
+    public async Task AsyncPrefixResolver_OnBinding_AppliesToPhysicalCollectionName()
+    {
+        var connectionString = MongoDbContainer.GetConnectionString();
+        var services = new ServiceCollection();
+
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(connectionString))
+            .AddDatabase("app", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity>("orders", d => d
+                    .WithCollectionName("orders")
+                    .WithNamespacePrefixResolver<AsyncLocalNamespacePrefixResolver>());
+            }));
+
+        using var root = AcceptanceServiceProviderFactory.Create(services);
+        using var scope = root.CreateScope();
+        using (AsyncLocalNamespacePrefixResolver.Use("feat"))
+        {
+            await scope.ServiceProvider.GetRequiredService<IGenericRepository<TestEntity>>()
+                .StoreAsync(new TestEntity { Value = 9 });
+        }
+
+        var client = root.GetRequiredKeyedService<IMongoClient>("primary");
+        (await client.GetDatabase("app").GetCollection<TestEntity>("feat_orders")
+            .Find(x => x.Value == 9).FirstOrDefaultAsync()).ShouldNotBeNull();
+    }
+
+    [Test]
+    public async Task AsyncPrefixResolver_FailClosed_DoesNotWrite()
+    {
+        var connectionString = MongoDbContainer.GetConnectionString();
+        var services = new ServiceCollection();
+        var collectionName = $"async_fail_{Guid.NewGuid():N}";
+
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(connectionString))
+            .AddDatabase("app", db =>
+            {
+                db.OnCluster("primary");
+                db.WithNamespacePrefixResolver<AsyncLocalNamespacePrefixResolver>();
+                db.AddDocumentBinding<TestEntity>("orders", d => d.WithCollectionName(collectionName));
+            }));
+
+        using var root = AcceptanceServiceProviderFactory.Create(services);
+        using var scope = root.CreateScope();
+        using (AsyncLocalNamespacePrefixResolver.UseFailure())
+        {
+            var result = await scope.ServiceProvider.GetRequiredService<IGenericRepository<TestEntity>>()
+                .StoreAsync(new TestEntity { Value = 99 });
+            result.IsFailed.ShouldBeTrue();
+        }
+
+        var client = root.GetRequiredKeyedService<IMongoClient>("primary");
+        var count = await client.GetDatabase("app")
+            .GetCollection<TestEntity>(collectionName)
+            .CountDocumentsAsync(FilterDefinition<TestEntity>.Empty);
+        count.ShouldBe(0);
+    }
+
+    [Test]
+    public async Task AsyncPrefixResolver_CombinesWithStaticPrefix()
+    {
+        var connectionString = MongoDbContainer.GetConnectionString();
+        var services = new ServiceCollection();
+
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(connectionString))
+            .AddDatabase("UserDB", db =>
+            {
+                db.OnCluster("primary");
+                db.WithNamespacePrefix("catalog");
+                db.WithNamespacePrefixResolver<AsyncLocalNamespacePrefixResolver>();
+                db.AddDocumentBinding<TestEntity>("users", d => d.WithCollectionName("users"));
+            }));
+
+        using var root = AcceptanceServiceProviderFactory.Create(services);
+        using var scope = root.CreateScope();
+        using (AsyncLocalNamespacePrefixResolver.Use("tenantA"))
+        {
+            await scope.ServiceProvider.GetRequiredService<IGenericRepository<TestEntity>>()
+                .StoreAsync(new TestEntity { Value = 3 });
+        }
+
+        var client = root.GetRequiredKeyedService<IMongoClient>("primary");
+        var names = await (await client.ListDatabaseNamesAsync()).ToListAsync();
+        names.ShouldContain("tenantA_catalog_UserDB");
+    }
+
+    [Test]
+    public async Task AsyncPrefixResolver_SkipsCache_WhenPrefixChangesInSameScope()
+    {
+        var connectionString = MongoDbContainer.GetConnectionString();
+        var services = new ServiceCollection();
+
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(connectionString))
+            .AddDatabase("CacheDb", db =>
+            {
+                db.OnCluster("primary");
+                db.WithNamespacePrefixResolver<AsyncLocalNamespacePrefixResolver>();
+                db.AddDocumentBinding<TestEntity>("orders", d => d.WithCollectionName("orders"));
+            }));
+
+        using var root = AcceptanceServiceProviderFactory.Create(services);
+        using var scope = root.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IGenericRepository<TestEntity>>();
+        var client = root.GetRequiredKeyedService<IMongoClient>("primary");
+
+        using (AsyncLocalNamespacePrefixResolver.Use("t1"))
+        {
+            await repo.StoreAsync(new TestEntity { Value = 1 });
+        }
+
+        using (AsyncLocalNamespacePrefixResolver.Use("t2"))
+        {
+            await repo.StoreAsync(new TestEntity { Value = 2 });
+        }
+
+        (await client.GetDatabase("t1_CacheDb").GetCollection<TestEntity>("orders")
+            .CountDocumentsAsync(FilterDefinition<TestEntity>.Empty)).ShouldBe(1);
+        (await client.GetDatabase("t2_CacheDb").GetCollection<TestEntity>("orders")
+            .CountDocumentsAsync(FilterDefinition<TestEntity>.Empty)).ShouldBe(1);
     }
 
     [Test]

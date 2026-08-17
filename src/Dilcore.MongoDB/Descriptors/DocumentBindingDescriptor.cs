@@ -14,4 +14,5 @@ internal sealed record DocumentBindingDescriptor(
     string? NamespacePrefix,
     IReadOnlyList<object>? Indices,
     TimeSpan? CollectionItemsTimeToLive,
-    LambdaExpression? TimeToLeavePropertySelector);
+    LambdaExpression? TimeToLeavePropertySelector,
+    Type? NamespacePrefixResolverType = null);

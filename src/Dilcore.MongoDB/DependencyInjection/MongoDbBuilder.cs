@@ -1,4 +1,3 @@
-using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Descriptors;
 
 namespace Dilcore.MongoDB.DependencyInjection;
@@ -43,26 +42,18 @@ internal sealed class MongoDbBuilder : IMongoDbBuilder
         var builder = new MongoDatabaseBuilder();
         configure(builder);
         _databases.Add(builder.Build(name));
-        return this;
-    }
 
-    public IMongoDbBuilder AddDocumentBinding<TDocument>(
-        string name,
-        Action<IMongoDocumentBindingBuilder<TDocument>> configure)
-        where TDocument : class, IDocumentEntity
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentNullException.ThrowIfNull(configure);
-
-        if (!_bindingNames.Add(name))
+        foreach (var binding in builder.Bindings)
         {
-            throw new InvalidOperationException(
-                $"Duplicate document binding key '{name}'. Each AddDocumentBinding name must be unique.");
+            if (!_bindingNames.Add(binding.Key.Name))
+            {
+                throw new InvalidOperationException(
+                    $"Duplicate document binding key '{binding.Key.Name}'. Each AddDocumentBinding name must be unique.");
+            }
+
+            _bindings.Add(binding);
         }
 
-        var builder = new MongoDocumentBindingBuilder<TDocument>();
-        configure(builder);
-        _bindings.Add(builder.Build(name));
         return this;
     }
 
@@ -100,8 +91,7 @@ internal sealed class MongoDbBuilder : IMongoDbBuilder
             if (_databases.All(d => !d.Key.Equals(binding.DatabaseKey)))
             {
                 throw new InvalidOperationException(
-                    $"Document binding '{binding.Key.Name}' references unknown database '{binding.DatabaseKey.Name}'. " +
-                    "Call AddDatabase before AddDocumentBinding, and ensure InDatabase matches a registered database key.");
+                    $"Document binding '{binding.Key.Name}' references unknown database '{binding.DatabaseKey.Name}'.");
             }
 
             if (string.IsNullOrWhiteSpace(binding.CollectionName))

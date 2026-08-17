@@ -21,11 +21,13 @@ public class GenericBulkRepositoryTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase("TestDB1", db => db.OnCluster("primary"))
-            .AddDocumentBinding<TestEntity1>("e1", d => d
-                .InDatabase("TestDB1")
-                .WithCollectionName("bulkEntity1")
-                .WithBulkRepository()));
+            .AddDatabase("TestDB1", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity1>("e1", d => d
+                    .WithCollectionName("bulkEntity1")
+                    .WithBulkRepository());
+            }));
 
         _provider = AcceptanceServiceProviderFactory.Create(services);
         _scope = _provider.CreateScope();

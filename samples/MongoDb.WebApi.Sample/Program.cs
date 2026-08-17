@@ -18,11 +18,13 @@ var connectionString = mongoDbContainer.GetConnectionString();
 
 builder.Services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
-    .AddDatabase("SampleDB", db => db.OnCluster("primary"))
-    .AddDocumentBinding<WeatherForecast>("weather", d => d
-        .InDatabase("SampleDB")
-        .WithCollectionName("weatherForecasts")
-        .WithBulkRepository()));
+    .AddDatabase("SampleDB", db =>
+    {
+        db.OnCluster("primary");
+        db.AddDocumentBinding<WeatherForecast>("weather", d => d
+            .WithCollectionName("weatherForecasts")
+            .WithBulkRepository());
+    }));
 
 var app = builder.Build();
 

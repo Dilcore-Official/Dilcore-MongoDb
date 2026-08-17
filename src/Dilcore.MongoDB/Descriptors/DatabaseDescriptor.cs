@@ -5,4 +5,5 @@ namespace Dilcore.MongoDB.Descriptors;
 internal sealed record DatabaseDescriptor(
     MongoDatabaseKey Key,
     MongoClusterKey ClusterKey,
-    string? NamespacePrefix);
+    string? NamespacePrefix,
+    Type? NamespacePrefixResolverType = null);

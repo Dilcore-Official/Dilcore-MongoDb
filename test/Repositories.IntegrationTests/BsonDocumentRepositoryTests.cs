@@ -21,10 +21,12 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase(DatabaseName, db => db.OnCluster("primary"))
-            .AddDocumentBinding<KeepAliveEntity>("keep", d => d
-                .InDatabase(DatabaseName)
-                .WithCollectionName("keep")));
+            .AddDatabase(DatabaseName, db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<KeepAliveEntity>("keep", d => d
+                    .WithCollectionName("keep"));
+            }));
 
         services.AddScoped<IBsonDocRepository>(sp =>
             new BsonDocRepository(
@@ -53,10 +55,12 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))
-            .AddDatabase(DatabaseName, db => db.OnCluster("primary"))
-            .AddDocumentBinding<KeepAliveEntity>("keep", d => d
-                .InDatabase(DatabaseName)
-                .WithCollectionName("keep")));
+            .AddDatabase(DatabaseName, db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<KeepAliveEntity>("keep", d => d
+                    .WithCollectionName("keep"));
+            }));
 
         services.AddScoped<IBsonDocRepository>(sp =>
             new BsonDocRepository(

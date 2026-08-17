@@ -1,5 +1,6 @@
 using FluentResults;
 using Dilcore.MongoDB.Abstractions.Namespace;
+using Dilcore.MongoDB.Descriptors;
 using Dilcore.MongoDB.Namespace;
 using Dilcore.MongoDB.UnitTests.Infrastructure;
 
@@ -7,13 +8,20 @@ namespace Dilcore.MongoDB.UnitTests;
 
 public class NamespacePipelineTests
 {
+    private static readonly MongoRegistrationGraph EmptyGraph = new()
+    {
+        Clusters = [],
+        Databases = [],
+        Bindings = []
+    };
+
     [Test]
     public async Task Resolve_AppliesStaticPrefix_WithDefaultSeparator()
     {
         var resolver = new DefaultNamespaceResolver(
         [
             new PrefixNamespaceSegmentContributor()
-        ]);
+        ], EmptyGraph);
 
         var result = await resolver.ResolveAsync(new NamespaceResolutionRequest
         {
@@ -33,7 +41,7 @@ public class NamespacePipelineTests
         [
             new PrefixNamespaceSegmentContributor(),
             new FailClosedContributor()
-        ]);
+        ], EmptyGraph);
 
         var result = await resolver.ResolveAsync(new NamespaceResolutionRequest
         {
@@ -51,7 +59,7 @@ public class NamespacePipelineTests
         var resolver = new DefaultNamespaceResolver(
         [
             new PrefixNamespaceSegmentContributor()
-        ]);
+        ], EmptyGraph);
 
         var request = new NamespaceResolutionRequest
         {
@@ -74,7 +82,7 @@ public class NamespacePipelineTests
         var resolver = new DefaultNamespaceResolver(
         [
             new PrefixNamespaceSegmentContributor()
-        ]);
+        ], EmptyGraph);
 
         var result = await resolver.ResolveAsync(new NamespaceResolutionRequest
         {

@@ -3,7 +3,7 @@
     <PropertyGroup>
         <RootNamespace>Dilcore.MongoDB</RootNamespace>
         <PackageId>Dilcore.MongoDB</PackageId>
-        <PackageDescription>Dilcore MongoDB toolkit: DI, providers, repositories, policies, and driver integration</PackageDescription>
+        <PackageDescription>Opinionated MongoDB application toolkit: validated multi-cluster DI, namespace resolution, repositories, document policies, and direct MongoDB.Driver escape hatches</PackageDescription>
     </PropertyGroup>
 
     <ItemGroup>

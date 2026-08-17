@@ -9,6 +9,7 @@ interface Dilcore.MongoDB.Abstractions.IMongoDbCollectionFactory
 struct Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey
 struct Dilcore.MongoDB.Abstractions.Keys.MongoDatabaseKey
 struct Dilcore.MongoDB.Abstractions.Keys.MongoDocumentBindingKey
+interface Dilcore.MongoDB.Abstractions.Namespace.INamespacePrefixResolver
 interface Dilcore.MongoDB.Abstractions.Namespace.INamespaceResolver
 interface Dilcore.MongoDB.Abstractions.Namespace.INamespaceSegmentContributor
 class Dilcore.MongoDB.Abstractions.Namespace.NamespaceResolutionRequest
@@ -20,3 +21,4 @@ class Dilcore.MongoDB.Abstractions.Repositories.BsonDocumentRepository
 interface Dilcore.MongoDB.Abstractions.Repositories.IGenericBulkRepository`1
 interface Dilcore.MongoDB.Abstractions.Repositories.IGenericProjectionRepository`1
 interface Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository`1
+interface Dilcore.MongoDB.Abstractions.Repositories.IRepositoryResolver

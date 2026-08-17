@@ -121,7 +121,7 @@ Milestone: [M2 Simplification & DI](https://github.com/Dilcore-Official/Dilcore-
 
 | Issue | Work | Priority |
 |-------|------|----------|
-| [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12) | Package topology: primary package + optional JSON/OTEL/Vector/policy integrations | P0 |
+| [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12) | Package topology + canonical package descriptions (core + planned optional IDs) | P0 |
 | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) | Remove dead APIs, redundant packages, FluentValidation single-guard usage | P0 |
 | [#14](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/14) | Named/typed cluster, database, document bindings; multi-cluster singleton clients | P0 |
 | [#15](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/15) | Scoped namespace-resolution pipeline; app-owned dynamic prefixes (no first-class tenant types) | P0 |
@@ -129,7 +129,19 @@ Milestone: [M2 Simplification & DI](https://github.com/Dilcore-Official/Dilcore-
 | [#17](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/17) | DI acceptance tests (clusters, same-type bindings, tenants, resolver order, v1 parity) | P0 |
 | [#54](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/54) | Architecture tests (package topology, dependency/namespace/public-API/DI boundaries) | P0 |
 
-**Exit criteria:** No unkeyed same-type collisions; duplicate registrations fail at startup; JSON and typed APIs share one resolver path; DI suite green; architecture tests green.
+**Package descriptions (canonical):** [docs/product/package-descriptions.md](docs/product/package-descriptions.md)
+
+| NuGet ID | Status | PackageDescription (summary) |
+|----------|--------|------------------------------|
+| `Dilcore.MongoDB.Abstractions` | Core (M2) | Contracts, entity/policy abstractions, MongoDB-facing interfaces without DI host wiring |
+| `Dilcore.MongoDB` | Core (M2) | Opinionated MongoDB toolkit: DI, namespace resolution, repositories, policies, driver escape hatches |
+| `Dilcore.MongoDB.SystemTextJson` | Planned M3 | System.Text.Json adapters with Extended JSON fidelity + shared resolvers |
+| `Dilcore.MongoDB.NewtonsoftJson` | Planned M3 | Newtonsoft.Json adapters (optional; never forced on STJ consumers) |
+| `Dilcore.MongoDB.OpenTelemetry` | Planned M6 | OTEL source/meter registration helpers; exporters stay host-owned |
+| `Dilcore.MongoDB.VectorData` | Planned M7 | Vector Search helpers; embeddings remain app-owned via MEAI |
+| Streaming | M4 decision (#24) | Prefer in-core opt-in APIs; split package only if dependency lifecycle requires it |
+
+**Exit criteria:** No unkeyed same-type collisions; duplicate registrations fail at startup; JSON and typed APIs share one resolver path; DI suite green; architecture tests green; core `PackageDescription` values match the package-descriptions catalog.
 
 ### M3 — MongoDB production, JSON, and transactions
 
@@ -152,7 +164,7 @@ Milestone: [M4 Streaming](https://github.com/Dilcore-Official/Dilcore-MongoDb/mi
 
 | Issue | Work | Priority |
 |-------|------|----------|
-| [#24](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/24) | Streaming surface design (separate namespace/opt-in; package only if justified) | P0 |
+| [#24](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/24) | Streaming surface design (in-core vs package; update [package-descriptions](docs/product/package-descriptions.md)) | P0 |
 | [#25](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/25) | Finite query streaming (`IAsyncEnumerable<T>`, disposal, backpressure) | P0 |
 | [#26](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/26) | Change streams (resume tokens, checkpoints, at-least-once docs) | P0 |
 | [#27](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/27) | Streaming tests + bounded lifecycle telemetry hooks | P1 |
@@ -167,7 +179,7 @@ Milestone: [M5 Quality & Packaging](https://github.com/Dilcore-Official/Dilcore-
 |-------|------|----------|
 | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) | `global.json`, `.editorconfig`, analyzers, XML docs, warnings-as-errors, format gate | P0 |
 | [#29](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/29) | Consolidate tests on NUnit + Shouldly; expand unit/integration/public-API suites | P0 |
-| [#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30) | Package validation, Source Link, symbols, OIDC NuGet publish, GitHub Releases | P0 |
+| [#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30) | Package validation, Source Link, symbols, OIDC NuGet publish; `PackageDescription`/tags match [package-descriptions](docs/product/package-descriptions.md) | P0 |
 | [#31](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/31) | Benchmarks: driver vs policy, DI, JSON, transactions, streaming, telemetry overhead | P1 |
 
 **Exit criteria:** Deterministic builds; package validation green; main-branch auto-publish removed; Shouldly remains the assertion library.
@@ -279,7 +291,7 @@ Ongoing: supported versions, upstream driver / VectorData changes, dependency ca
 | `area:product` | Product positioning and scope |
 | `area:api` | Public API surface |
 | `area:di` | Dependency injection |
-| `area:tenancy` | Namespace resolution (app-owned multi-tenancy via prefix contributors) |
+| `area:tenancy` | Namespace resolution (app-owned async prefix resolvers / contributors) |
 | `area:mongodb` | MongoDB driver integration |
 | `area:json` | JSON interoperability |
 | `area:serialization` | BSON / serializer conventions |
@@ -325,7 +337,7 @@ Ongoing: supported versions, upstream driver / VectorData changes, dependency ca
 | Vector / AI | #36–#38 |
 | Dependabot / dependencies | #10, #11, #32 |
 | Docs / Context7 / AGENTS / skill | #39–#42 |
-| Packaging / GA | #28–#31, #43–#45 |
+| Packaging / GA | #12 (descriptions), #28–#31, #43–#45 |
 | Serena / tooling | #7, #28 |
 
 ---

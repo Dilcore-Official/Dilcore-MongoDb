@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Keys;
+using Dilcore.MongoDB.Abstractions.Namespace;
 using Dilcore.MongoDB.Descriptors;
 using MongoDB.Driver;
 
@@ -9,22 +10,15 @@ namespace Dilcore.MongoDB.DependencyInjection;
 internal sealed class MongoDocumentBindingBuilder<TDocument> : IMongoDocumentBindingBuilder<TDocument>
     where TDocument : class, IDocumentEntity
 {
-    private string? _databaseName;
     private string? _collectionName;
     private bool _softDeleteEnabled;
     private bool _registerBulk;
     private bool _registerProjection;
     private string? _namespacePrefix;
+    private Type? _namespacePrefixResolverType;
     private IReadOnlyList<CreateIndexModel<TDocument>>? _indices;
     private TimeSpan? _ttl;
     private Expression<Func<TDocument, object>>? _ttlSelector;
-
-    public IMongoDocumentBindingBuilder<TDocument> InDatabase(string databaseName)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(databaseName);
-        _databaseName = databaseName;
-        return this;
-    }
 
     public IMongoDocumentBindingBuilder<TDocument> WithCollectionName(string collectionName)
     {
@@ -58,6 +52,19 @@ internal sealed class MongoDocumentBindingBuilder<TDocument> : IMongoDocumentBin
         return this;
     }
 
+    public IMongoDocumentBindingBuilder<TDocument> WithNamespacePrefixResolver<TResolver>()
+        where TResolver : class, INamespacePrefixResolver
+    {
+        if (_namespacePrefixResolverType is not null)
+        {
+            throw new InvalidOperationException(
+                "WithNamespacePrefixResolver can only be called once per document binding.");
+        }
+
+        _namespacePrefixResolverType = typeof(TResolver);
+        return this;
+    }
+
     public IMongoDocumentBindingBuilder<TDocument> WithIndexes(params CreateIndexModel<TDocument>[] indexes)
     {
         ArgumentNullException.ThrowIfNull(indexes);
@@ -75,14 +82,8 @@ internal sealed class MongoDocumentBindingBuilder<TDocument> : IMongoDocumentBin
         return this;
     }
 
-    internal DocumentBindingDescriptor Build(string name)
+    internal DocumentBindingDescriptor Build(string name, MongoDatabaseKey databaseKey)
     {
-        if (string.IsNullOrWhiteSpace(_databaseName))
-        {
-            throw new InvalidOperationException(
-                $"Document binding '{name}' must call InDatabase(\"<database-name>\").");
-        }
-
         if (string.IsNullOrWhiteSpace(_collectionName))
         {
             throw new InvalidOperationException(
@@ -92,7 +93,7 @@ internal sealed class MongoDocumentBindingBuilder<TDocument> : IMongoDocumentBin
         return new DocumentBindingDescriptor(
             new MongoDocumentBindingKey(name),
             typeof(TDocument),
-            new MongoDatabaseKey(_databaseName),
+            databaseKey,
             _collectionName,
             _softDeleteEnabled,
             _registerBulk,
@@ -100,6 +101,7 @@ internal sealed class MongoDocumentBindingBuilder<TDocument> : IMongoDocumentBin
             _namespacePrefix,
             _indices?.Cast<object>().ToList(),
             _ttl,
-            _ttlSelector);
+            _ttlSelector,
+            _namespacePrefixResolverType);
     }
 }

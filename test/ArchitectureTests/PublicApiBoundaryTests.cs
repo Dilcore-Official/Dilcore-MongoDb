@@ -72,5 +72,13 @@ public class PublicApiBoundaryTests
         typeof(IGenericRepository<>).Assembly.ShouldBe(typeof(IDocumentEntity).Assembly);
         typeof(IGenericBulkRepository<>).Assembly.ShouldBe(typeof(IDocumentEntity).Assembly);
         typeof(IGenericProjectionRepository<>).Assembly.ShouldBe(typeof(IDocumentEntity).Assembly);
+        typeof(IRepositoryResolver).Assembly.ShouldBe(typeof(IDocumentEntity).Assembly);
+    }
+
+    [Test]
+    public void NamespacePrefixResolver_IsInAbstractions()
+    {
+        typeof(Dilcore.MongoDB.Abstractions.Namespace.INamespacePrefixResolver).Assembly
+            .ShouldBe(typeof(IDocumentEntity).Assembly);
     }
 }

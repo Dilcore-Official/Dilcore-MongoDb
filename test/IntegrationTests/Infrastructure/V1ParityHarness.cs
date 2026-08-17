@@ -1,5 +1,6 @@
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Abstractions.Namespace;
+using Dilcore.MongoDB.Descriptors;
 using Dilcore.MongoDB.Namespace;
 
 namespace Dilcore.MongoDB.IntegrationTests.Infrastructure;
@@ -33,7 +34,12 @@ public static class V1ParityHarness
         var resolver = new DefaultNamespaceResolver(
         [
             new PrefixNamespaceSegmentContributor()
-        ]);
+        ], new MongoRegistrationGraph
+        {
+            Clusters = [],
+            Databases = [],
+            Bindings = []
+        });
 
         var database = resolver.ResolveAsync(new NamespaceResolutionRequest
         {

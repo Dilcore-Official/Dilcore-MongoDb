@@ -127,20 +127,23 @@ The library supports multiple MongoDB databases within a single application, eac
 ```csharp
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
-    .AddDatabase("UserDB", db => db.OnCluster("primary"))
-    .AddDatabase("ProductDB", db => db.OnCluster("primary").WithNamespacePrefix("catalog"))
-    .AddDocumentBinding<User>("users", d => d
-        .InDatabase("UserDB")
-        .WithCollectionName("users"))
-    .AddDocumentBinding<Role>("roles", d => d
-        .InDatabase("UserDB")
-        .WithCollectionName("roles")
-        .WithBulkRepository())
-    .AddDocumentBinding<Product>("products", d => d
-        .InDatabase("ProductDB")
-        .WithCollectionName("products")
-        .WithBulkRepository()
-        .WithProjectionRepository()));
+    .AddDatabase("UserDB", db =>
+    {
+        db.OnCluster("primary");
+        db.AddDocumentBinding<User>("users", d => d.WithCollectionName("users"));
+        db.AddDocumentBinding<Role>("roles", d => d
+            .WithCollectionName("roles")
+            .WithBulkRepository());
+    })
+    .AddDatabase("ProductDB", db =>
+    {
+        db.OnCluster("primary");
+        db.WithNamespacePrefix("catalog");
+        db.AddDocumentBinding<Product>("products", d => d
+            .WithCollectionName("products")
+            .WithBulkRepository()
+            .WithProjectionRepository());
+    }));
 ```
 
 ### Benefits of Multi-Database Approach
@@ -153,53 +156,67 @@ services.AddMongoDb(mongo => mongo
 
 ## 🏷️ Namespace resolution
 
-Physical database and collection names are resolved by a scoped ordered pipeline of `INamespaceSegmentContributor` implementations. The library ships a default static-prefix contributor (`WithNamespacePrefix`). It has **no first-class multi-tenancy / Tenant APIs** — apps own dynamic prefixes by registering extra contributors.
+Physical database and collection names are resolved by a scoped ordered pipeline of `INamespaceSegmentContributor` implementations. The library has **no first-class multi-tenancy / Tenant APIs**.
 
 ### Static prefix (registration-time)
 
 ```csharp
-.AddDatabase("UserDB", db => db
-    .OnCluster("primary")
-    .WithNamespacePrefix("catalog")) // → catalog_UserDB
+.AddDatabase("UserDB", db =>
+{
+    db.OnCluster("primary");
+    db.WithNamespacePrefix("catalog"); // → catalog_UserDB
+})
 ```
 
-### Dynamic prefix (app-owned contributor)
+### Async prefix resolver (primary multi-tenant path)
 
-Use cases such as multi-tenancy, environment, or region belong in your app (or a separate package), not in Dilcore.MongoDB:
+For prefixes that must be loaded from storage, an HTTP API, or other async work, register an `INamespacePrefixResolver` on a **database** or **document binding**. Dilcore registers the type as scoped automatically.
 
 ```csharp
-public sealed class RequestPrefixContributor : INamespaceSegmentContributor
+public sealed class TenantDatabasePrefixResolver : INamespacePrefixResolver
 {
-    private readonly IHttpContextAccessor _http;
+    private readonly ITenantStore _store; // your app service — not a Dilcore type
 
-    public int Order => 50; // before the default static-prefix contributor (100)
+    public TenantDatabasePrefixResolver(ITenantStore store) => _store = store;
 
-    public RequestPrefixContributor(IHttpContextAccessor http) => _http = http;
-
-    public Task<Result<string?>> ContributeAsync(
+    public async Task<Result<string?>> ResolveAsync(
         NamespaceResolutionRequest request,
         CancellationToken cancellationToken = default)
     {
-        var prefix = _http.HttpContext?.Items["NamespacePrefix"] as string;
-        if (string.IsNullOrWhiteSpace(prefix))
-            return Task.FromResult(Result.Fail<string?>("Namespace prefix is required for this request."));
+        var tenant = await _store.GetCurrentAsync(cancellationToken);
+        if (tenant is null)
+            return Result.Fail<string?>("Tenant context is required.");
 
-        return Task.FromResult(Result.Ok<string?>(prefix));
+        return Result.Ok<string?>(tenant.Id);
     }
 }
 
-// Register alongside AddMongoDb — GetServices composes all contributors
-services.AddScoped<INamespaceSegmentContributor, RequestPrefixContributor>();
-services.AddMongoDb(mongo => { /* clusters / databases / bindings */ });
+services.AddMongoDb(mongo => mongo
+    .AddCluster("primary", c => c.UseConnectionString(connectionString))
+    .AddDatabase("UserDB", db =>
+    {
+        db.OnCluster("primary");
+        db.WithNamespacePrefix("catalog"); // optional static segment
+        db.WithNamespacePrefixResolver<TenantDatabasePrefixResolver>(); // async segment
+        db.AddDocumentBinding<User>("users", d => d
+            .WithCollectionName("users")
+            .WithNamespacePrefixResolver<FeatureCollectionPrefixResolver>()); // optional per-collection
+    }));
 ```
+
+Combined example: async `tenantA` + static `catalog` + logical `UserDB` → `tenantA_catalog_UserDB`.
+
+### Cross-cutting contributor (escape hatch)
+
+For prefixes that apply across many databases/bindings without per-builder registration, implement `INamespaceSegmentContributor` and register it with DI (`AddScoped` / `TryAddEnumerable`). Prefer `WithNamespacePrefixResolver<T>` when the prefix is scoped to one database or binding.
 
 ### How resolution works
 
-1. Contributors run in `Order` ascending and may each emit a segment (or `null` to skip).
+1. Contributors run in `Order` ascending (descriptor async resolvers at 90, static `WithNamespacePrefix` at 100) and may each emit a segment (or `null` to skip).
 2. Segments are joined with `_` and validated as a physical MongoDB name.
-3. Example: dynamic `tenant1` + logical `UserDB` → `tenant1_UserDB`.
+3. When a database/binding has an async prefix resolver, that resolution is not cached within the scope (so a changed tenant context cannot reuse a stale physical name).
 
-Fail-closed behavior (require a prefix when missing) is an app policy inside your contributor — return `Result.Fail`, do not rely on library Tenant types.
+Fail-closed behavior (require a prefix when missing) is an app policy inside your resolver — return `Result.Fail`.
 
 ## 📋 Usage Examples
 
@@ -213,19 +230,15 @@ var mongoDbContainer = new MongoDbBuilder().Build();
 await mongoDbContainer.StartAsync();
 var connectionString = mongoDbContainer.GetConnectionString();
 
-builder.Services.AddMongoDb(configure => configure.UseConnectionString(connectionString), dbContainer =>
-{
-    dbContainer.AddDatabase("SampleDB", db =>
+builder.Services.AddMongoDb(mongo => mongo
+    .AddCluster("primary", c => c.UseConnectionString(connectionString))
+    .AddDatabase("SampleDB", db =>
     {
-        db.AddGenericRepository<WeatherForecast>(
-            registerRepositoryAction: register => register.WithBulkRepository(),
-            options =>
-            {
-                options.WithCollectionName("weatherForecasts")
-                       .WithDatabaseName("SampleDB");
-            });
-    });
-});
+        db.OnCluster("primary");
+        db.AddDocumentBinding<WeatherForecast>("weather", d => d
+            .WithCollectionName("weatherForecasts")
+            .WithBulkRepository());
+    }));
 
 var app = builder.Build();
 
@@ -261,20 +274,19 @@ public record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary) 
 ### Advanced configuration with custom namespace prefixes
 
 ```csharp
-// Optional: app-owned dynamic prefix (e.g. multi-tenancy) — not a library Tenant type
-services.AddScoped<INamespaceSegmentContributor, RequestPrefixContributor>();
-
 services.AddMongoDb(mongo => mongo
-    .AddCluster("primary", c => c.WithConnectionString(connectionString))
-    .AddDatabase("TestDB1", db => db
-        .OnCluster("primary")
-        .WithNamespacePrefix("env")) // static segment; dynamic ones come from contributors
-    .AddDocumentBinding<TestEntity>("testEntities", d => d
-        .InDatabase("TestDB1")
-        .WithCollectionName("testEntities")
-        .WithSoftDelete()
-        .WithBulkRepository()
-        .WithProjectionRepository()));
+    .AddCluster("primary", c => c.UseConnectionString(connectionString))
+    .AddDatabase("TestDB1", db =>
+    {
+        db.OnCluster("primary");
+        db.WithNamespacePrefix("env"); // static segment
+        db.WithNamespacePrefixResolver<TenantDatabasePrefixResolver>(); // async multi-tenant segment
+        db.AddDocumentBinding<TestEntity>("testEntities", d => d
+            .WithCollectionName("testEntities")
+            .WithSoftDelete()
+            .WithBulkRepository()
+            .WithProjectionRepository());
+    }));
 ```
 
 ### Repository Usage Patterns
@@ -451,15 +463,14 @@ repositoryOptions.WithBulkRepository()             // Enable bulk operations
 
 3. **Configure services**:
    ```csharp
-   services.AddMongoDb(configure => configure.UseConnectionString(connectionString), builder =>
-   {
-       builder.AddDatabase("MyDatabase", db =>
+   services.AddMongoDb(mongo => mongo
+       .AddCluster("primary", c => c.UseConnectionString(connectionString))
+       .AddDatabase("MyDatabase", db =>
        {
-           db.AddGenericRepository<MyEntity>(options => 
-               options.WithCollectionName("myEntities")
-                      .WithDatabaseName("MyDatabase"));
-       });
-   });
+           db.OnCluster("primary");
+           db.AddDocumentBinding<MyEntity>("myEntities", d => d
+               .WithCollectionName("myEntities"));
+       }));
    ```
 
 4. **Use in your services**:
