@@ -441,6 +441,26 @@ The library includes comprehensive test suites demonstrating various usage patte
 ### Unit Tests
 - **DocumentEntityExtensionsTests**: Entity extension methods and utilities
 
+### Benchmarks
+Performance suite under `test/Benchmarks/Dilcore.MongoDB.Benchmarks` (BenchmarkDotNet):
+
+- **ColdStartBenchmarks**: DI registration + first resolve vs raw `MongoClient`
+- **RepositoryCrudBenchmarks**: Store / Get / GetList / streaming / Count / HasAny / soft & hard delete vs raw driver
+- **BulkRepositoryBenchmarks**: `BulkStoreAsync` / `BulkDeleteAsync` at batch sizes 100 and 1000
+- **ProjectionRepositoryBenchmarks**: typed projection get/list vs raw driver projections
+
+Telemetry on/off overhead (v2 budgets ≤1% / ≤3%) is deferred until M6 (`#33` / `#34`).
+
+```bash
+# Full suite (Docker required for CRUD / bulk / projection):
+dotnet run --project test/Benchmarks/Dilcore.MongoDB.Benchmarks -c Release -- --filter '*'
+
+# Cold-start only (no Docker):
+dotnet run --project test/Benchmarks/Dilcore.MongoDB.Benchmarks -c Release -- --filter '*ColdStart*'
+```
+
+CI workflow [`.github/workflows/benchmarks.yml`](.github/workflows/benchmarks.yml) posts results as a PR comment (non-blocking) and stores history on `gh-pages` when merging to `main`.
+
 ### Test Infrastructure
 The tests use Testcontainers for MongoDB to provide isolated, reproducible test environments:
 

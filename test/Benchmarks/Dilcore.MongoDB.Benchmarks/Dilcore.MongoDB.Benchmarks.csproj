@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <IsPackable>false</IsPackable>
+        <IsTestProject>false</IsTestProject>
+        <RootNamespace>Dilcore.MongoDB.Benchmarks</RootNamespace>
+        <AssemblyName>Dilcore.MongoDB.Benchmarks</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="BenchmarkDotNet" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+        <PackageReference Include="Testcontainers.MongoDb" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\src\Dilcore.MongoDB\Dilcore.MongoDB.csproj" />
+        <ProjectReference Include="..\..\..\src\Dilcore.MongoDB.Abstractions\Dilcore.MongoDB.Abstractions.csproj" />
+    </ItemGroup>
+
+</Project>

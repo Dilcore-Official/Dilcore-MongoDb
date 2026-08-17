@@ -212,7 +212,7 @@ Milestone: [M5 Quality & Packaging](https://github.com/Dilcore-Official/Dilcore-
 | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) | `global.json`, `.editorconfig`, analyzers, XML docs, warnings-as-errors, format gate | P0 |
 | [#29](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/29) | Consolidate tests on NUnit + Shouldly; expand unit/integration/public-API suites | P0 |
 | [#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30) | Package validation, Source Link, symbols, OIDC NuGet publish; `PackageDescription`/tags match [package-descriptions](docs/product/package-descriptions.md) | P0 |
-| [#31](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/31) | Benchmarks: driver vs policy, DI, JSON, transactions, streaming, telemetry overhead | P1 |
+| [#31](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/31) | Benchmarks: initial suite (cold-start, CRUD, bulk, projections) in CI with non-blocking PR comments; telemetry / JSON / transactions / streaming overhead still pending M3–M6 | P1 |
 
 **Exit criteria:** Deterministic builds; package validation green; main-branch auto-publish removed; Shouldly remains the assertion library.
 
