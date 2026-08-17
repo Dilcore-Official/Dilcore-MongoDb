@@ -72,10 +72,10 @@ internal sealed class MongoDbCollectionFactory(
             options.WithIndexes(binding.Indices.Cast<CreateIndexModel<TDocument>>().ToArray());
         }
 
-        if (binding is { CollectionItemsTimeToLive: not null, TimeToLeavePropertySelector: not null })
+        if (binding is { CollectionItemsTimeToLive: { } ttl, TimeToLeavePropertySelector: not null })
         {
             options.WithCollectionItemsTimeToLive(
-                binding.CollectionItemsTimeToLive.Value,
+                ttl,
                 (Expression<Func<TDocument, object>>)binding.TimeToLeavePropertySelector);
         }
 

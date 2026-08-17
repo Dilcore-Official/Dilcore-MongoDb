@@ -76,14 +76,11 @@ internal sealed class MongoDbBuilder : IMongoDbBuilder
                 "AddMongoDb requires at least one AddCluster(...).");
         }
 
-        foreach (var database in _databases)
+        foreach (var database in _databases.Where(d => _clusters.All(c => !c.Key.Equals(d.ClusterKey))))
         {
-            if (_clusters.All(c => !c.Key.Equals(database.ClusterKey)))
-            {
-                throw new InvalidOperationException(
-                    $"Database '{database.Key.Name}' references unknown cluster '{database.ClusterKey.Name}'. " +
-                    "Call AddCluster before AddDatabase, and ensure OnCluster matches a registered cluster key.");
-            }
+            throw new InvalidOperationException(
+                $"Database '{database.Key.Name}' references unknown cluster '{database.ClusterKey.Name}'. " +
+                "Call AddCluster before AddDatabase, and ensure OnCluster matches a registered cluster key.");
         }
 
         foreach (var binding in _bindings)

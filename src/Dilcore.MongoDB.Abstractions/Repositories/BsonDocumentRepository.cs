@@ -59,7 +59,7 @@ public abstract class BsonDocumentRepository
 
             return await execution(collection.Value);
         }
-        catch (Exception e)
+        catch (MongoException e)
         {
             return Result.Fail(new Error(e.Message));
         }

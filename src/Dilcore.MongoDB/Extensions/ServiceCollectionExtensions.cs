@@ -62,9 +62,8 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredKeyedService<MongoClientHolder>(clusterKey).Client);
         }
 
-        foreach (var database in graph.Databases)
+        foreach (var databaseKey in graph.Databases.Select(d => d.Key.Name))
         {
-            var databaseKey = database.Key.Name;
             services.AddKeyedScoped<IMongoDatabase>(databaseKey, (sp, _) =>
             {
                 var resolver = sp.GetRequiredService<IMongoDatabaseResolver>();
@@ -139,10 +138,10 @@ public static class ServiceCollectionExtensions
                 options.WithIndexes(binding.Indices.Cast<CreateIndexModel<TDocument>>().ToArray());
             }
 
-            if (binding is { CollectionItemsTimeToLive: not null, TimeToLeavePropertySelector: not null })
+            if (binding is { CollectionItemsTimeToLive: { } ttl, TimeToLeavePropertySelector: not null })
             {
                 options.WithCollectionItemsTimeToLive(
-                    binding.CollectionItemsTimeToLive.Value,
+                    ttl,
                     (Expression<Func<TDocument, object>>)binding.TimeToLeavePropertySelector);
             }
         };
