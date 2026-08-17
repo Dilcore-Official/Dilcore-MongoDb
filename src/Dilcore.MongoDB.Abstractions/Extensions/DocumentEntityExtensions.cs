@@ -9,13 +9,7 @@ namespace Dilcore.MongoDB.Abstractions.Extensions;
 public static class DocumentEntityExtensions
 {
     private const string UpdateSetOperator = "$set";
-    private static readonly object SerializationLock = new();
-    private static bool _serializationConfigured;
-
-    static DocumentEntityExtensions()
-    {
-        EnsureGuidSerializer();
-    }
+    private static readonly Lazy<bool> SerializationConfigured = new(RegisterGuidSerializer);
 
     public static void GenerateETag(this IDocumentEntity document)
     {
@@ -58,34 +52,21 @@ public static class DocumentEntityExtensions
     public static BsonDocument ToBsonUpdateDocument<T>(this T document)
         where T : IDocumentEntity
     {
-        EnsureGuidSerializer();
+        _ = SerializationConfigured.Value;
         return new BsonDocument(UpdateSetOperator, document.ToBsonDocument());
     }
 
-    private static void EnsureGuidSerializer()
+    private static bool RegisterGuidSerializer()
     {
-        if (_serializationConfigured)
+        try
         {
-            return;
+            BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+        }
+        catch (BsonSerializationException)
+        {
+            // Already registered by another component.
         }
 
-        lock (SerializationLock)
-        {
-            if (_serializationConfigured)
-            {
-                return;
-            }
-
-            try
-            {
-                BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
-            }
-            catch (BsonSerializationException)
-            {
-                // Already registered by another component.
-            }
-
-            _serializationConfigured = true;
-        }
+        return true;
     }
 }

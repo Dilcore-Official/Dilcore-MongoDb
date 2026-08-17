@@ -54,7 +54,10 @@ flowchart TD
   M0[M0 Product Baseline] --> M1[M1 OSS Foundation]
   M0 --> M2[M2 Simplification and DI]
   M1 --> M2
-  M2 --> M3[M3 MongoDB Production JSON Transactions]
+  M2 --> M2_5[M2.5 Flexible Document Entity Model]
+  M2 --> M2_6[M2.6 Configurable Serialization Conventions]
+  M2_5 --> M3[M3 MongoDB Production JSON Transactions]
+  M2_6 --> M3
   M3 --> M4[M4 Streaming]
   M3 --> M5[M5 Quality and Packaging]
   M4 --> M5
@@ -65,6 +68,7 @@ flowchart TD
   M7 --> M8
   M5 --> M8
   M8 --> M9[M9 Preview and GA]
+  M6 -.-> M10[M10 Aspire Support - Investigation]
   M9 --> Post[Post-v2 Maintenance]
 ```
 
@@ -142,6 +146,34 @@ Milestone: [M2 Simplification & DI](https://github.com/Dilcore-Official/Dilcore-
 | Streaming | M4 decision (#24) | Prefer in-core opt-in APIs; split package only if dependency lifecycle requires it |
 
 **Exit criteria:** No unkeyed same-type collisions; duplicate registrations fail at startup; JSON and typed APIs share one resolver path; DI suite green; architecture tests green; core `PackageDescription` values match the package-descriptions catalog.
+
+### M2.5 — Flexible document entity model
+
+Milestone: [M2.5 Flexible Document Entity Model](https://github.com/Dilcore-Official/Dilcore-MongoDb/milestone/13)
+
+`IDocumentEntity` currently forces every document into one mandatory shape (`Guid Id`, `ETag`, `IsDeleted`, `CreatedAt`, `UpdatedAt`), even when a document only needs an identifier. This milestone decouples the identifier type and decomposes the remaining properties into optional, composable policy interfaces, fulfilling the existing design principle that "optional policies are expressed through composable interfaces rather than one mandatory entity shape" — while keeping the single generic-repository pattern (`IGenericRepository<TDocument>` and friends) that consumers already use.
+
+| Issue | Work | Priority |
+|-------|------|----------|
+| [#60](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/60) | ADR: decouple document identifier type from `IDocumentEntity` | P0 |
+| [#61](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/61) | Decompose `IDocumentEntity` into composable policy interfaces (ETag, soft delete, audit timestamps) | P0 |
+| [#62](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/62) | Adapt generic repositories and collection factory to the composable document entity model | P0 |
+
+**Exit criteria:** Documents can use any identifier type and opt into only the policies they need; generic repositories, collection factory, and `DocumentEntityExtensions` behave correctly for any subset of composed policies; this is a hard break with no v1 shims (per non-goals); public API baseline, README, and samples updated.
+
+### M2.6 — Configurable serialization conventions
+
+Milestone: [M2.6 Configurable Serialization Conventions](https://github.com/Dilcore-Official/Dilcore-MongoDb/milestone/14)
+
+`MongoDbCollectionFactory.EnsureConventions` currently registers one hardcoded, process-wide BSON `ConventionPack` (enum-as-string, camelCase naming, ignore-null, ignore-extra-elements) with no way for a consumer to opt into enum-as-int or a different naming/null-handling policy. This milestone exposes those conventions as configuration on `AddMongoDb`/`IMongoDbBuilder`, keeping today's behavior as the default.
+
+| Issue | Work | Priority |
+|-------|------|----------|
+| [#63](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/63) | Design configurable serialization convention surface (enum representation, naming, null/extra-element handling) | P0 |
+| [#64](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/64) | Implement configurable convention registration in `MongoDbCollectionFactory` / `MongoDbBuilder` | P0 |
+| [#65](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/65) | Document global serialization convention configuration and add sample usage | P1 |
+
+**Exit criteria:** Enum representation (string vs int/other), naming convention, and null/extra-element handling are configurable per `AddMongoDb` call; unconfigured consumers keep today's defaults; conflicting registrations across multiple `AddMongoDb` calls fail fast at startup.
 
 ### M3 — MongoDB production, JSON, and transactions
 
@@ -243,6 +275,18 @@ Milestone: [Post-v2 Maintenance](https://github.com/Dilcore-Official/Dilcore-Mon
 
 Ongoing: supported versions, upstream driver / VectorData changes, dependency cadence (Dependabot), issue / security SLAs, benchmarks, deprecation windows, telemetry semantic-convention changes, and adoption feedback.
 
+### M10 — .NET Aspire support (investigation) — `to-be-investigated`
+
+Milestone: [M10 Aspire Support (Investigation)](https://github.com/Dilcore-Official/Dilcore-MongoDb/milestone/12)
+
+Not yet scoped or scheduled; not a dependency for Preview or GA. Tracked as a spike to decide whether/how Dilcore.MongoDB should integrate with [.NET Aspire](https://learn.microsoft.com/dotnet/aspire/) (AppHost resource wiring, `ServiceDefaults`/health-check interop, connection-string/service-discovery alignment with the M2 DI model), and whether the result belongs in core or a new `Dilcore.MongoDB.Aspire` package.
+
+| Issue | Work | Priority |
+|-------|------|----------|
+| [#59](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/59) | Investigate .NET Aspire integration; record decision on scope and package placement | P2 |
+
+**Exit criteria:** Decision recorded (in-core, new package, or no-go); if accepted, follow-up implementation issues filed and this milestone's label changes from `to-be-investigated`.
+
 ---
 
 ## Preview and GA exit criteria
@@ -271,10 +315,10 @@ Ongoing: supported versions, upstream driver / VectorData changes, dependency ca
 
 | Artifact | Location |
 |----------|----------|
-| Labels | `area:*`, `priority:P0/P1/P2`, `type:decision/feature/bug/docs/chore/breaking`, `roadmap` |
-| Milestones | [M0–M9 + Post-v2 Maintenance](https://github.com/Dilcore-Official/Dilcore-MongoDb/milestones) |
+| Labels | `area:*`, `priority:P0/P1/P2`, `type:decision/feature/bug/docs/chore/breaking`, `roadmap`, `to-be-investigated` |
+| Milestones | [M0–M9 + Post-v2 Maintenance + M2.5 Flexible Document Entity Model + M2.6 Configurable Serialization Conventions + M10 Aspire (investigation)](https://github.com/Dilcore-Official/Dilcore-MongoDb/milestones) |
 | Project | **Dilcore MongoDB v2 Roadmap** — create/link if missing (requires `project` token scope); views: milestone roadmap, current iteration, blockers, post-v2 backlog |
-| Issues | [#2](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/2)–[#46](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/46) (roadmap-labeled); coverage verification [#46](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/46) |
+| Issues | [#2](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/2)–[#46](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/46) (roadmap-labeled); coverage verification [#46](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/46); [#59](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/59)–[#65](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/65) track the M10 Aspire investigation, M2.5 entity model, and M2.6 serialization convention work separately (not yet in the enforced coverage range) |
 
 ### Owner actions outside automation
 
@@ -310,6 +354,7 @@ Ongoing: supported versions, upstream driver / VectorData changes, dependency ca
 | `area:security` | Security / Scorecard / secrets |
 | `area:tooling` | Serena, analyzers, editorconfig |
 | `area:community` | Templates, CoC, governance |
+| `area:aspire` | .NET Aspire integration |
 | `priority:P0` | Blocks preview / GA |
 | `priority:P1` | Required for quality GA |
 | `priority:P2` | Nice-to-have / post-GA |
@@ -320,6 +365,7 @@ Ongoing: supported versions, upstream driver / VectorData changes, dependency ca
 | `type:chore` | Tooling / maintenance |
 | `type:breaking` | Breaking change |
 | `roadmap` | v2 roadmap tracked work |
+| `to-be-investigated` | Needs a spike/decision before scoping; not yet committed |
 
 ---
 
@@ -329,6 +375,8 @@ Ongoing: supported versions, upstream driver / VectorData changes, dependency ca
 |-------|--------|
 | Product / decisions | #2–#6, #12, #24, #36, #46, #54 |
 | DI / tenancy | #14–#17, #15, #54 |
+| Document entity model | #60–#62 |
+| Serialization conventions | #63–#65 |
 | JSON / serialization | #20 |
 | Transactions | #21 |
 | Streaming / change streams | #24–#27 |
@@ -339,6 +387,7 @@ Ongoing: supported versions, upstream driver / VectorData changes, dependency ca
 | Docs / Context7 / AGENTS / skill | #39–#42 |
 | Packaging / GA | #12 (descriptions), #28–#31, #43–#45 |
 | Serena / tooling | #7, #28 |
+| Aspire (investigation) | #59 |
 
 ---
 

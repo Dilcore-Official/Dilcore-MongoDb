@@ -11,7 +11,7 @@ public static class RepoLocator
         {
             var hasSln = dir.GetFiles("Dilcore.MongoDB.sln").Length > 0
                 || dir.GetFiles("Dilcore.DocumentDb.sln").Length > 0;
-            var hasSrc = Directory.Exists(Path.Combine(dir.FullName, "src"));
+            var hasSrc = Directory.Exists(Path.Join(dir.FullName, "src"));
             if (hasSln && hasSrc)
             {
                 return dir.FullName;
@@ -25,7 +25,7 @@ public static class RepoLocator
 
     public static IReadOnlyList<string> GetSrcProjectFiles()
     {
-        var src = Path.Combine(FindRepoRoot(), "src");
+        var src = Path.Join(FindRepoRoot(), "src");
         return Directory.GetFiles(src, "*.csproj", SearchOption.AllDirectories)
             .Where(p => !p.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
             .ToList();
