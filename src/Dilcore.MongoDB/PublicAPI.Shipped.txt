@@ -1,0 +1,7 @@
+#nullable enable
+interface Dilcore.MongoDB.DependencyInjection.IMongoClusterBuilder
+interface Dilcore.MongoDB.DependencyInjection.IMongoDatabaseBuilder
+interface Dilcore.MongoDB.DependencyInjection.IMongoDbBuilder
+interface Dilcore.MongoDB.DependencyInjection.IMongoDocumentBindingBuilder`1
+static class Dilcore.MongoDB.Extensions.ServiceCollectionExtensions
+static class Dilcore.MongoDB.Repositories.GenericRepositoryExtensions

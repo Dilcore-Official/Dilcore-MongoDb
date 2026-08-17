@@ -1,9 +1,11 @@
+using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Exceptions;
+using Dilcore.MongoDB.Abstractions.Extensions;
+using Dilcore.MongoDB.Abstractions.Helpers;
 using AutoFixture.NUnit4;
-using Dilcore.DocumentDb.Abstractions.Exceptions;
-using Dilcore.DocumentDb.Abstractions.Extensions;
-using Dilcore.DocumentDb.Abstractions.Helpers;
+using AbstractionsConstants = Dilcore.MongoDB.Abstractions.Constants;
 
-namespace Dilcore.DocumentDb.Abstractions.UnitTests;
+namespace Dilcore.MongoDB.UnitTests;
 
 public class DocumentEntityExtensionsTests
 {
@@ -22,7 +24,7 @@ public class DocumentEntityExtensionsTests
         var entity = new TestEntity();
         entity.GenerateETag();
 
-        var expected = DocumentDbHelper.GenerateEtag();
+        var expected = MongoDbHelper.GenerateEtag();
         entity.ETag.ShouldBeInRange(expected - 100, expected + 100);
     }
 
@@ -37,12 +39,12 @@ public class DocumentEntityExtensionsTests
 
     [Test]
     [InlineAutoData]
-    [InlineAutoData(Constants.EmptyETag)]
+    [InlineAutoData(AbstractionsConstants.EmptyETag)]
     public void DocumentEntity_WithIsNew(long etag)
     {
         var entity = new TestEntity { ETag = etag };
 
-        entity.IsNew().ShouldBe(etag == Constants.EmptyETag);
+        entity.IsNew().ShouldBe(etag == AbstractionsConstants.EmptyETag);
     }
 
     [Test]
@@ -74,6 +76,14 @@ public class DocumentEntityExtensionsTests
         entity.IsIdEmpty().ShouldBe(isEmpty);
     }
 
+    [Test]
+    public void DocumentEntity_ToBsonUpdateDocument_WrapsInSetOperator()
+    {
+        var entity = new TestEntity { Id = Guid.NewGuid(), Value = "x" };
+        var bson = entity.ToBsonUpdateDocument();
+        bson.Contains("$set").ShouldBeTrue();
+    }
+
     private class TestEntity : IDocumentEntity
     {
         public Guid Id { get; set; }
@@ -81,7 +91,6 @@ public class DocumentEntityExtensionsTests
         public bool IsDeleted { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-
         public string? Value { get; set; }
     }
 }

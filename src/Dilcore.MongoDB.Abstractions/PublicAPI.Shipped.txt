@@ -1,0 +1,24 @@
+#nullable enable
+static class Dilcore.MongoDB.Abstractions.Constants
+class Dilcore.MongoDB.Abstractions.Exceptions.DocumentIdentifierIsEmptyException
+static class Dilcore.MongoDB.Abstractions.Extensions.DocumentEntityExtensions
+static class Dilcore.MongoDB.Abstractions.Helpers.MongoDbHelper
+interface Dilcore.MongoDB.Abstractions.IDocumentEntity
+interface Dilcore.MongoDB.Abstractions.IMongoDatabaseResolver
+interface Dilcore.MongoDB.Abstractions.IMongoDbCollectionFactory
+struct Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey
+struct Dilcore.MongoDB.Abstractions.Keys.MongoDatabaseKey
+struct Dilcore.MongoDB.Abstractions.Keys.MongoDocumentBindingKey
+interface Dilcore.MongoDB.Abstractions.Namespace.INamespacePrefixResolver
+interface Dilcore.MongoDB.Abstractions.Namespace.INamespaceResolver
+interface Dilcore.MongoDB.Abstractions.Namespace.INamespaceSegmentContributor
+class Dilcore.MongoDB.Abstractions.Namespace.NamespaceResolutionRequest
+enum Dilcore.MongoDB.Abstractions.Namespace.NamespaceTarget
+class Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions`1
+enum Dilcore.MongoDB.Abstractions.Ownership.MongoClientOwnership
+class Dilcore.MongoDB.Abstractions.Repositories.BaseMongoDbRepository`1
+class Dilcore.MongoDB.Abstractions.Repositories.BsonDocumentRepository
+interface Dilcore.MongoDB.Abstractions.Repositories.IGenericBulkRepository`1
+interface Dilcore.MongoDB.Abstractions.Repositories.IGenericProjectionRepository`1
+interface Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository`1
+interface Dilcore.MongoDB.Abstractions.Repositories.IRepositoryResolver
