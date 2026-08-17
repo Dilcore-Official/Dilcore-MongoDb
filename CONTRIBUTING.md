@@ -24,12 +24,21 @@ Requirements:
 - Docker (only for integration tests that use Testcontainers)
 
 ```bash
-dotnet restore
-dotnet build --configuration Release
+dotnet restore Dilcore.MongoDB.sln
+dotnet build Dilcore.MongoDB.sln --configuration Release
 dotnet test test/UnitTests --configuration Release
-# Full suite (needs Docker):
-dotnet test --configuration Release
+dotnet test test/ArchitectureTests --configuration Release
+# DI acceptance / integration (needs Docker for Testcontainers):
+dotnet test test/IntegrationTests --configuration Release
+# Full suite:
+dotnet test Dilcore.MongoDB.sln --configuration Release
 ```
+
+Use **Shouldly** for assertions (not FluentAssertions). Architecture tests enforce the
+two-package topology and dependency boundaries without Docker. DI acceptance tests
+build the container with `ValidateScopes` / `ValidateOnBuild` via
+`AcceptanceServiceProviderFactory`. CI runs a dedicated Architecture Tests job and a
+DI Acceptance job (Docker preflight) as required checks alongside the full Build & Test job.
 
 Roadmap issue hygiene (needs `gh` + `jq`):
 

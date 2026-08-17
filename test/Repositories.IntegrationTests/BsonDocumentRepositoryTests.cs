@@ -1,251 +1,122 @@
-﻿using Dilcore.DocumentDb.Abstractions;
-using Dilcore.DocumentDb.MongoDb.Extensions;
+﻿using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Keys;
+using Dilcore.MongoDB.Abstractions.Repositories;
+using Dilcore.MongoDB.Extensions;
 using FluentResults;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Newtonsoft.Json.Linq;
 
-namespace Dilcore.DocumentDb.MongoDb.Repositories.IntegrationTests;
+namespace Dilcore.MongoDB.Repositories.IntegrationTests;
 
 public class BsonDocumentRepositoryTests : BaseIntegrationTests
 {
     private const string DatabaseName = "JsonDocuments";
-    private const string Prefix = "prefix";
-    const string CollectionName = "test";
-
-    [Test]
-    public void CustomBsonDocumentRepository_WhenGetRequiredService_ShouldBeResolved()
-    {
-        // Arrange
-        var services = new ServiceCollection();
-        var connectionString = MongoDbContainer.GetConnectionString();
-
-        services.AddMongoDb(builder => builder.UseConnectionString(connectionString), container =>
-        {
-            container.AddDatabase(DatabaseName, databaseContainer =>
-            {
-                databaseContainer.AddBsonDocumentCollectionFactory()
-                    .AddBsonDocumentRepository<IJObjectRepository, JObjectRepository>();
-            });
-        });
-
-        var serviceProvider = services.BuildServiceProvider();
-
-        // Act
-        var repository = serviceProvider.GetRequiredService<IJObjectRepository>();
-
-        // Assert
-        repository.ShouldNotBeNull();
-    }
+    private const string CollectionName = "test";
 
     [Test]
     public async Task CustomBsonDocumentRepository_WhenMethodsCalled_ShouldBeSuccess()
     {
-        // Arrange
         var services = new ServiceCollection();
         var connectionString = MongoDbContainer.GetConnectionString();
 
-        services.AddMongoDb(builder => builder.UseConnectionString(connectionString), container =>
-        {
-            container.AddDatabase(DatabaseName, databaseContainer =>
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(connectionString))
+            .AddDatabase(DatabaseName, db =>
             {
-                databaseContainer.AddBsonDocumentCollectionFactory()
-                    .AddBsonDocumentRepository<IJObjectRepository, JObjectRepository>();
-            });
-        });
+                db.OnCluster("primary");
+                db.AddDocumentBinding<KeepAliveEntity>("keep", d => d
+                    .WithCollectionName("keep"));
+            }));
 
-        var serviceProvider = services.BuildServiceProvider();
+        services.AddScoped<IBsonDocRepository>(sp =>
+            new BsonDocRepository(
+                new MongoDatabaseKey(DatabaseName),
+                sp.GetRequiredService<IMongoDbCollectionFactory>()));
 
-        var repository = serviceProvider.GetRequiredService<IJObjectRepository>();
+        using var provider = AcceptanceServiceProviderFactory.Create(services);
+        using var scope = provider.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IBsonDocRepository>();
 
         var id = Guid.NewGuid().ToString();
-        var entity = JObject.Parse("{ \"name\": \"test\", \"_id\": \"" + id + "\" }");
+        var document = new BsonDocument { ["_id"] = id, ["name"] = "test" };
 
-        // Act
-        var createdEntity = await repository.CreateJObjectAsync(entity);
-
-        var result = await repository.GetJObjectAsync(id);
-
-        // Assert
+        await repository.CreateAsync(document);
+        var result = await repository.GetAsync(id);
         result.ShouldBeSuccess();
+        result.Value!["name"].AsString.ShouldBe("test");
     }
 
     [Test]
-    public async Task CustomBsonDocumentRepository_WithDependencies_WhenMethodsCalled_ShouldBeSuccess()
+    public async Task CustomBsonDocumentRepository_WithCollectionPrefix_ShouldUsePhysicalName()
     {
-        // Arrange
         var services = new ServiceCollection();
         var connectionString = MongoDbContainer.GetConnectionString();
+        const string prefix = "prefix";
 
-        services.AddScoped<SomeDependency>();
-        services.AddMongoDb(builder => builder.UseConnectionString(connectionString), container =>
-        {
-            container.AddDatabase(DatabaseName, databaseContainer =>
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(connectionString))
+            .AddDatabase(DatabaseName, db =>
             {
-                databaseContainer.AddBsonDocumentCollectionFactory()
-                    .AddBsonDocumentRepository<IJObjectRepository, JObjectRepositoryWithDependencies>();
-            });
-        });
+                db.OnCluster("primary");
+                db.AddDocumentBinding<KeepAliveEntity>("keep", d => d
+                    .WithCollectionName("keep"));
+            }));
 
-        var serviceProvider = services.BuildServiceProvider();
+        services.AddScoped<IBsonDocRepository>(sp =>
+            new BsonDocRepository(
+                new MongoDatabaseKey(DatabaseName),
+                sp.GetRequiredService<IMongoDbCollectionFactory>(),
+                staticPrefix: prefix));
 
-        var repository = serviceProvider.GetRequiredService<IJObjectRepository>();
+        using var provider = AcceptanceServiceProviderFactory.Create(services);
+        using var scope = provider.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IBsonDocRepository>();
 
         var id = Guid.NewGuid().ToString();
-        var entity = JObject.Parse("{ \"name\": \"test\", \"_id\": \"" + id + "\" }");
+        await repository.CreateAsync(new BsonDocument { ["_id"] = id, ["name"] = "test" });
 
-        // Act
-        var createdEntity = await repository.CreateJObjectAsync(entity);
-
-        var result = await repository.GetJObjectAsync(id);
-
-        // Assert
-        result.ShouldBeSuccess();
+        var client = scope.ServiceProvider.GetRequiredKeyedService<IMongoClient>("primary");
+        var collection = client.GetDatabase(DatabaseName).GetCollection<BsonDocument>($"{prefix}_{CollectionName}");
+        var fromDb = await collection.Find(Builders<BsonDocument>.Filter.Eq("_id", id)).FirstOrDefaultAsync();
+        fromDb.ShouldNotBeNull();
     }
 
-    [Test]
-    public async Task CustomBsonDocumentRepository_WithDependencies_And_WithCustomCollectionPrefix_WhenMethodsCalled_ShouldBeSuccess()
+    public interface IBsonDocRepository
     {
-        // Arrange
-        var services = new ServiceCollection();
-        var connectionString = MongoDbContainer.GetConnectionString();
-
-        services.AddScoped<SomeDependency>();
-        services.AddMongoDb(builder => builder.UseConnectionString(connectionString), container =>
-        {
-            container.AddDatabase(DatabaseName, databaseContainer =>
-            {
-                databaseContainer
-                    .AddCustomCollectionPrefixResolver<CustomCollectionPrefixProvider>()
-                    .AddBsonDocumentCollectionFactory()
-                    .AddBsonDocumentRepository<IJObjectRepository, JObjectRepositoryWithDependencies>();
-            });
-        });
-
-        var serviceProvider = services.BuildServiceProvider();
-
-        var repository = serviceProvider.GetRequiredService<IJObjectRepository>();
-
-        var id = Guid.NewGuid().ToString();
-        var entity = JObject.Parse("{ \"name\": \"test\", \"_id\": \"" + id + "\" }");
-
-        // Act
-        await repository.CreateJObjectAsync(entity);
-        var result = await repository.GetJObjectAsync(id);
-
-        // Assert
-
-        var mongoDbContainer = serviceProvider.GetRequiredKeyedService<IMongoDatabaseProvider>(DatabaseName);
-
-        var database = await mongoDbContainer.GetDatabaseAsync(DatabaseName);
-        database.ShouldBeSuccess();
-
-        var collectionName = $"{Prefix}_{CollectionName}";
-
-        var collection = database.Value.GetCollection<BsonDocument>(collectionName);
-
-        var filter = Builders<BsonDocument>.Filter.Eq("_id", id);
-        var resultFromDb = await collection.Find(filter).FirstOrDefaultAsync();
-
-        resultFromDb.ShouldNotBeNull();
+        Task<Result<BsonDocument?>> GetAsync(string id);
+        Task CreateAsync(BsonDocument document);
     }
 
-    #region Simple Repository Example
-
-    public interface IJObjectRepository : IBsonDocumentRepository
+    public class BsonDocRepository(
+        MongoDatabaseKey databaseKey,
+        IMongoDbCollectionFactory collectionFactory,
+        string? staticPrefix = null)
+        : BsonDocumentRepository(databaseKey, collectionFactory, staticPrefix: staticPrefix), IBsonDocRepository
     {
-        Task<Result<JObject>> GetJObjectAsync(string id);
-        Task<JObject> CreateJObjectAsync(JObject entity);
-    }
-
-    public class JObjectRepository(string dbName, IBsonDocumentCollectionFactory bsonDocumentCollectionFactory)
-        : BsonDocumentRepository(dbName, bsonDocumentCollectionFactory), IJObjectRepository
-    {
-        public async Task<Result<JObject>> GetJObjectAsync(string id)
-        {
-            return await ExecuteAsync(CollectionName, async collection =>
+        public Task<Result<BsonDocument?>> GetAsync(string id) =>
+            ExecuteAsync(CollectionName, async collection =>
             {
                 var filter = Builders<BsonDocument>.Filter.Eq("_id", id);
                 var result = await collection.Find(filter).FirstOrDefaultAsync();
-
-                return Result.Ok(JObject.Parse(result.ToJson()));
+                return Result.Ok<BsonDocument?>(result);
             });
-        }
 
-        public async Task<JObject> CreateJObjectAsync(JObject entity)
+        public async Task CreateAsync(BsonDocument document)
         {
-            var json = entity.ToString();
-            var document = BsonDocument.Parse(json);
-
             await ExecuteAsync(CollectionName, async collection =>
             {
                 await collection.InsertOneAsync(document);
-
                 return Result.Ok();
             });
-
-            return entity;
         }
     }
 
-    #endregion
-
-    #region Custom Repository with dependencies Example
-
-    public class JObjectRepositoryWithDependencies(SomeDependency dependency, string dbName, IBsonDocumentCollectionFactory bsonDocumentCollectionFactory)
-        : BsonDocumentRepository(dbName, bsonDocumentCollectionFactory), IJObjectRepository
+    public class KeepAliveEntity : IDocumentEntity
     {
-        public async Task<Result<JObject>> GetJObjectAsync(string id)
-        {
-            return await ExecuteAsync(CollectionName, async collection =>
-            {
-                var filter = Builders<BsonDocument>.Filter.Eq("_id", id);
-                var result = await collection.Find(filter).FirstOrDefaultAsync();
-
-                await dependency.Execute();
-
-                return Result.Ok(JObject.Parse(result.ToJson()));
-            });
-        }
-
-        public async Task<JObject> CreateJObjectAsync(JObject entity)
-        {
-            var json = entity.ToString();
-            var document = BsonDocument.Parse(json);
-
-            await ExecuteAsync(CollectionName, async collection =>
-            {
-                await collection.InsertOneAsync(document);
-
-                await dependency.Execute();
-
-                return Result.Ok();
-            });
-
-            return entity;
-        }
+        public Guid Id { get; set; }
+        public long ETag { get; set; }
+        public bool IsDeleted { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
     }
-
-    public class SomeDependency
-    {
-        public async Task Execute()
-        {
-            // Some logic here
-            await Task.Delay(TimeSpan.FromMicroseconds(25));
-        }
-    }
-
-    #endregion
-
-    #region Custom Collection Prefix Example
-
-    public class CustomCollectionPrefixProvider : IDocumentCollectionPrefixProvider
-    {
-        public Task<Result<string>> ResolveAsync(CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(Result.Ok(Prefix));
-        }
-    }
-
-    #endregion
 }

@@ -10,8 +10,44 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: 🏗️ Build & Test
+  architecture:
+    name: 📐 Architecture Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v7
+
+      - name: 🛠️ Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: 📦 Restore dependencies
+        run: dotnet restore Dilcore.MongoDB.sln
+
+      - name: 🔨 Build
+        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release
+
+      - name: 🧪 Architecture + unit tests
+        run: >
+          dotnet test Dilcore.MongoDB.sln
+          --no-build
+          --configuration Release
+          --verbosity normal
+          --filter "FullyQualifiedName~ArchitectureTests|FullyQualifiedName~UnitTests"
+          --logger "trx;LogFileName=architecture.trx"
+
+      - name: 📤 Upload TRX
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-trx
+          path: "**/TestResults/**/*.trx"
+
+  di-acceptance:
+    name: 🧩 DI Acceptance
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -24,11 +60,70 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: 🐳 Docker preflight
+        run: |
+          docker version
+          docker info
+
       - name: 📦 Restore dependencies
-        run: dotnet restore
+        run: dotnet restore Dilcore.MongoDB.sln
 
       - name: 🔨 Build
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release
+
+      - name: 🧪 DI acceptance + integration tests
+        run: >
+          dotnet test Dilcore.MongoDB.sln
+          --no-build
+          --configuration Release
+          --verbosity normal
+          --filter "FullyQualifiedName~IntegrationTests"
+          --logger "trx;LogFileName=di-acceptance.trx"
+
+      - name: 📤 Upload TRX
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: di-acceptance-trx
+          path: "**/TestResults/**/*.trx"
+
+  build:
+    name: 🏗️ Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [architecture]
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v7
+
+      - name: 🛠️ Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: 🐳 Docker preflight
+        run: |
+          docker version
+          docker info
+
+      - name: 📦 Restore dependencies
+        run: dotnet restore Dilcore.MongoDB.sln
+
+      - name: 🔨 Build
+        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release
 
       - name: 🧪 Test
-        run: dotnet test --no-build --configuration Release --verbosity normal
+        run: >
+          dotnet test Dilcore.MongoDB.sln
+          --no-build
+          --configuration Release
+          --verbosity normal
+          --logger "trx;LogFileName=full.trx"
+
+      - name: 📤 Upload TRX
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-trx
+          path: "**/TestResults/**/*.trx"

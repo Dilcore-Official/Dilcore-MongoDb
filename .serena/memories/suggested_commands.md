@@ -1,16 +1,9 @@
 # Suggested commands
 
-## Build / test
-- `dotnet restore`
-- `dotnet build --configuration Release`
-- `dotnet test test/UnitTests --configuration Release`
-- `dotnet test --configuration Release` (needs Docker for Testcontainers integration tests)
-
-## Pack (local)
-- `dotnet pack Dilcore.DocumentDb.sln -c Release -o ./nupkgs`
-
-## Roadmap verification
+- `dotnet restore Dilcore.MongoDB.sln`
+- `dotnet build Dilcore.MongoDB.sln -c Release`
+- `dotnet test Dilcore.MongoDB.sln -c Release` (needs Docker for integration/DI acceptance)
+- `dotnet test test/UnitTests test/ArchitectureTests -c Release` (no Docker)
+- `dotnet test test/IntegrationTests -c Release` (DI acceptance; needs Docker)
+- `dotnet pack Dilcore.MongoDB.sln -c Release -o ./nupkgs`
 - `./scripts/verify-roadmap-coverage.sh`
-
-## System utilities (Darwin)
-- `git`, `ls`, `cd`, `rg`/`grep`, `find`, `gh`, `jq` for GitHub issues and roadmap verification
