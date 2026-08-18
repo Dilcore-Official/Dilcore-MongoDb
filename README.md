@@ -256,6 +256,39 @@ For prefixes that apply across many databases/bindings without per-builder regis
 
 Fail-closed behavior (require a prefix when missing) is an app policy inside your resolver — return `Result.Fail`.
 
+## Serialization conventions
+
+BSON conventions are **process-wide** (MongoDB.Driver's `ConventionRegistry`) and are registered once during `AddMongoDb`. Unconfigured consumers keep these defaults:
+
+- enums as strings (`BsonType.String`)
+- camelCase element names
+- ignore null members
+- ignore extra elements on deserialize
+
+Override them with `ConfigureConventions`. Calling it more than once on the same builder throws. A later `AddMongoDb` in the same process with different settings also throws; identical settings are idempotent.
+
+```csharp
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Conventions;
+
+services.AddMongoDb(mongo => mongo
+    .ConfigureConventions(conventions => conventions
+        .UseEnumRepresentation(BsonType.Int32)
+        .UseElementNameConvention(new CamelCaseElementNameConvention())
+        .IgnoreIfNull(true)
+        .IgnoreExtraElements(true)
+        .AddConvention(new IgnoreIfDefaultConvention(true))
+        .AddConventionPack("orders-only", new ConventionPack(), type => type == typeof(Order)))
+    .AddCluster("primary", c => c.UseConnectionString(connectionString))
+    .AddDatabase("app", db =>
+    {
+        db.OnCluster("primary");
+        db.AddDocumentBinding<Order>("orders", d => d.WithCollectionName("orders"));
+    }));
+```
+
+Decision: [ADR 0003](docs/adr/0003-serialization-conventions.md) (global defaults, not per-cluster / per-document packs).
+
 ## 📋 Usage Examples
 
 ### Basic Setup (from samples/MongoDb.WebApi.Sample)

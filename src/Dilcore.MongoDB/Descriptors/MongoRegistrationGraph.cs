@@ -7,6 +7,7 @@ internal sealed class MongoRegistrationGraph
     public required IReadOnlyList<ClusterDescriptor> Clusters { get; init; }
     public required IReadOnlyList<DatabaseDescriptor> Databases { get; init; }
     public required IReadOnlyList<DocumentBindingDescriptor> Bindings { get; init; }
+    public required ConventionsDescriptor Conventions { get; init; }
 
     public ClusterDescriptor GetCluster(MongoClusterKey key) =>
         Clusters.First(c => c.Key.Equals(key));

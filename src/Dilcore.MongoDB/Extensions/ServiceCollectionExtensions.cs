@@ -27,6 +27,7 @@ public static class ServiceCollectionExtensions
         var builder = new MongoDbBuilder();
         configure(builder);
         var graph = builder.Build();
+        MongoConventionRegistrar.EnsureRegistered(graph.Conventions);
 
         services.AddSingleton(graph);
         // Default static-prefix contributor. Apps may register additional

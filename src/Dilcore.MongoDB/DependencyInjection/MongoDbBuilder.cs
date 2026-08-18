@@ -10,6 +10,23 @@ internal sealed class MongoDbBuilder : IMongoDbBuilder
     private readonly HashSet<string> _clusterNames = new(StringComparer.Ordinal);
     private readonly HashSet<string> _databaseNames = new(StringComparer.Ordinal);
     private readonly HashSet<string> _bindingNames = new(StringComparer.Ordinal);
+    private readonly ConventionsBuilder _conventions = new();
+    private bool _conventionsConfigured;
+
+    public IMongoDbBuilder ConfigureConventions(Action<IConventionsBuilder> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+
+        if (_conventionsConfigured)
+        {
+            throw new InvalidOperationException(
+                "ConfigureConventions has already been called. Call it at most once per AddMongoDb.");
+        }
+
+        _conventionsConfigured = true;
+        configure(_conventions);
+        return this;
+    }
 
     public IMongoDbBuilder AddCluster(string name, Action<IMongoClusterBuilder> configure)
     {
@@ -64,7 +81,8 @@ internal sealed class MongoDbBuilder : IMongoDbBuilder
         {
             Clusters = _clusters.ToList(),
             Databases = _databases.ToList(),
-            Bindings = _bindings.ToList()
+            Bindings = _bindings.ToList(),
+            Conventions = _conventions.Build()
         };
     }
 

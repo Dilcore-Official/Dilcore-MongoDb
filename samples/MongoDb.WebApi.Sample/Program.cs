@@ -3,6 +3,7 @@ using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.Repositories;
+using MongoDB.Bson;
 using Testcontainers.MongoDb;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,6 +19,7 @@ await mongoDbContainer.StartAsync();
 var connectionString = mongoDbContainer.GetConnectionString();
 
 builder.Services.AddMongoDb(mongo => mongo
+    .ConfigureConventions(c => c.UseEnumRepresentation(BsonType.Int32))
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
     .AddDatabase("SampleDB", db =>
     {
@@ -125,8 +127,14 @@ record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }
 
-/// <summary>Minimal document: identifier only, no optional policies.</summary>
-record Note(string Text) : IDocumentEntity<Guid>
+/// <summary>Minimal document: identifier only, no optional policies. Priority is stored as int via ConfigureConventions.</summary>
+record Note(string Text, NotePriority Priority) : IDocumentEntity<Guid>
 {
     public Guid Id { get; set; }
+}
+
+enum NotePriority
+{
+    Low = 0,
+    High = 1
 }
