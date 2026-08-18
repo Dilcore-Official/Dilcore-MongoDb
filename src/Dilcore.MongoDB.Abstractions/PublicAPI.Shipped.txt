@@ -1,9 +1,12 @@
 #nullable enable
 static class Dilcore.MongoDB.Abstractions.Constants
 class Dilcore.MongoDB.Abstractions.Exceptions.DocumentIdentifierIsEmptyException
+class Dilcore.MongoDB.Abstractions.Exceptions.UnsupportedIdentifierTypeException
 static class Dilcore.MongoDB.Abstractions.Extensions.DocumentEntityExtensions
+enum Dilcore.MongoDB.Abstractions.GuidIdGenerationStrategy
 static class Dilcore.MongoDB.Abstractions.Helpers.MongoDbHelper
 interface Dilcore.MongoDB.Abstractions.IDocumentEntity
+interface Dilcore.MongoDB.Abstractions.IDocumentEntity`1
 interface Dilcore.MongoDB.Abstractions.IMongoDatabaseResolver
 interface Dilcore.MongoDB.Abstractions.IMongoDbCollectionFactory
 struct Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey
@@ -16,6 +19,9 @@ class Dilcore.MongoDB.Abstractions.Namespace.NamespaceResolutionRequest
 enum Dilcore.MongoDB.Abstractions.Namespace.NamespaceTarget
 class Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions`1
 enum Dilcore.MongoDB.Abstractions.Ownership.MongoClientOwnership
+interface Dilcore.MongoDB.Abstractions.Policies.IAuditableDocument
+interface Dilcore.MongoDB.Abstractions.Policies.IHasConcurrencyToken
+interface Dilcore.MongoDB.Abstractions.Policies.ISoftDeletable
 class Dilcore.MongoDB.Abstractions.Repositories.BaseMongoDbRepository`1
 class Dilcore.MongoDB.Abstractions.Repositories.BsonDocumentRepository
 interface Dilcore.MongoDB.Abstractions.Repositories.IGenericBulkRepository`1

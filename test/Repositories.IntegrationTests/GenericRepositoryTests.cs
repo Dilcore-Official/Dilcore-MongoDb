@@ -1,8 +1,10 @@
 ﻿using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.Repositories;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 
@@ -214,7 +216,7 @@ public class GenericRepositoryTests : BaseIntegrationTests
 
     [BsonDiscriminator(nameof(TestEntity1))]
     [BsonKnownTypes(typeof(DerivedTestEntity1))]
-    public class TestEntity1 : IDocumentEntity
+    public class TestEntity1 : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
     {
         public Guid Id { get; set; }
         public long ETag { get; set; }
@@ -229,5 +231,118 @@ public class GenericRepositoryTests : BaseIntegrationTests
     public class DerivedTestEntity1 : TestEntity1
     {
         public string? SomeValue { get; set; }
+    }
+
+    public class MinimalEntity : IDocumentEntity<Guid>
+    {
+        public Guid Id { get; set; }
+        public string? Name { get; set; }
+    }
+
+    public class ObjectIdEntity : IDocumentEntity<ObjectId>
+    {
+        public ObjectId Id { get; set; }
+        public string? Name { get; set; }
+    }
+}
+
+public class FlexibleDocumentEntityRepositoryTests : BaseIntegrationTests
+{
+    [Test]
+    public async Task MinimalEntity_StoreGetDelete_WorksWithoutPolicies()
+    {
+        var services = new ServiceCollection();
+        var connectionString = MongoDbContainer.GetConnectionString();
+
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(connectionString))
+            .AddDatabase("MinimalDB", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<GenericRepositoryTests.MinimalEntity>("minimal", d => d
+                    .WithCollectionName("minimalEntities"));
+            }));
+
+        using var provider = AcceptanceServiceProviderFactory.Create(services);
+        using var scope = provider.CreateScope();
+        var repository = scope.ServiceProvider
+            .GetRequiredService<IGenericRepository<GenericRepositoryTests.MinimalEntity>>();
+
+        var entity = new GenericRepositoryTests.MinimalEntity { Name = "min" };
+        var store = await repository.StoreAsync(entity);
+        store.ShouldBeSuccess();
+        store.Value.Id.ShouldNotBe(Guid.Empty);
+        store.Value.Id.Version.ShouldBe(4);
+
+        var get = await repository.GetAsync(
+            Builders<GenericRepositoryTests.MinimalEntity>.Filter.Eq(x => x.Id, store.Value.Id));
+        get.ShouldBeSuccess();
+        get.Value!.Name.ShouldBe("min");
+
+        store.Value.Name = "updated";
+        var update = await repository.StoreAsync(store.Value);
+        update.ShouldBeSuccess();
+        update.Value.Name.ShouldBe("updated");
+
+        var deleted = await repository.DeleteAsync(
+            Builders<GenericRepositoryTests.MinimalEntity>.Filter.Eq(x => x.Id, store.Value.Id));
+        deleted.ShouldBeSuccess();
+        deleted.Value.ShouldBeTrue();
+    }
+
+    [Test]
+    public async Task GuidIdGeneration_SequentialVersion7_ProducesUuidV7()
+    {
+        var services = new ServiceCollection();
+        var connectionString = MongoDbContainer.GetConnectionString();
+
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(connectionString))
+            .AddDatabase("Uuid7DB", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<GenericRepositoryTests.MinimalEntity>("uuid7", d => d
+                    .WithCollectionName("uuid7Entities")
+                    .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
+            }));
+
+        using var provider = AcceptanceServiceProviderFactory.Create(services);
+        using var scope = provider.CreateScope();
+        var repository = scope.ServiceProvider
+            .GetRequiredService<IGenericRepository<GenericRepositoryTests.MinimalEntity>>();
+
+        var store = await repository.StoreAsync(new GenericRepositoryTests.MinimalEntity { Name = "v7" });
+        store.ShouldBeSuccess();
+        store.Value.Id.Version.ShouldBe(7);
+    }
+
+    [Test]
+    public async Task ObjectIdEntity_StoreAndGet_Works()
+    {
+        var services = new ServiceCollection();
+        var connectionString = MongoDbContainer.GetConnectionString();
+
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(connectionString))
+            .AddDatabase("ObjectIdDB", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<GenericRepositoryTests.ObjectIdEntity>("oids", d => d
+                    .WithCollectionName("objectIdEntities"));
+            }));
+
+        using var provider = AcceptanceServiceProviderFactory.Create(services);
+        using var scope = provider.CreateScope();
+        var repository = scope.ServiceProvider
+            .GetRequiredService<IGenericRepository<GenericRepositoryTests.ObjectIdEntity>>();
+
+        var store = await repository.StoreAsync(new GenericRepositoryTests.ObjectIdEntity { Name = "oid" });
+        store.ShouldBeSuccess();
+        store.Value.Id.ShouldNotBe(ObjectId.Empty);
+
+        var get = await repository.GetAsync(
+            Builders<GenericRepositoryTests.ObjectIdEntity>.Filter.Eq(x => x.Id, store.Value.Id));
+        get.ShouldBeSuccess();
+        get.Value!.Name.ShouldBe("oid");
     }
 }

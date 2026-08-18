@@ -1,10 +1,16 @@
 namespace Dilcore.MongoDB.Abstractions;
 
-public interface IDocumentEntity
+/// <summary>
+/// Marker interface for documents managed by Dilcore.MongoDB repositories.
+/// Prefer <see cref="IDocumentEntity{TId}"/> to declare the identifier type.
+/// </summary>
+public interface IDocumentEntity;
+
+/// <summary>
+/// Document with a typed identifier that maps to MongoDB <c>_id</c>.
+/// </summary>
+/// <typeparam name="TId">Identifier type (e.g. <see cref="Guid"/>, <see cref="MongoDB.Bson.ObjectId"/>, <see cref="string"/>).</typeparam>
+public interface IDocumentEntity<TId> : IDocumentEntity
 {
-    Guid Id { get; set; }
-    long ETag { get; set; }
-    bool IsDeleted { get; set; }
-    DateTime CreatedAt { get; set; }
-    DateTime UpdatedAt { get; set; }
+    TId Id { get; set; }
 }

@@ -1,5 +1,7 @@
 using Dilcore.MongoDB.Abstractions.Exceptions;
 using Dilcore.MongoDB.Abstractions.Helpers;
+using Dilcore.MongoDB.Abstractions.Internal;
+using Dilcore.MongoDB.Abstractions.Policies;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
@@ -13,30 +15,44 @@ public static class DocumentEntityExtensions
 
     public static void GenerateETag(this IDocumentEntity document)
     {
-        document.ETag = MongoDbHelper.GenerateEtag();
+        if (document is IHasConcurrencyToken concurrencyToken)
+        {
+            concurrencyToken.ETag = MongoDbHelper.GenerateEtag();
+        }
     }
 
     public static void CreatedNow(this IDocumentEntity document)
     {
-        document.CreatedAt = DateTime.UtcNow;
+        if (document is IAuditableDocument auditable)
+        {
+            auditable.CreatedAt = DateTime.UtcNow;
+        }
     }
 
     public static void UpdatedNow(this IDocumentEntity document)
     {
-        document.UpdatedAt = DateTime.UtcNow;
+        if (document is IAuditableDocument auditable)
+        {
+            auditable.UpdatedAt = DateTime.UtcNow;
+        }
     }
 
-    public static void NewId(this IDocumentEntity document)
+    public static void NewId<TDocument>(
+        this TDocument document,
+        GuidIdGenerationStrategy guidStrategy = GuidIdGenerationStrategy.Random)
+        where TDocument : class, IDocumentEntity
     {
-        document.Id = Guid.NewGuid();
+        DocumentIdAccessorCache.Get<TDocument>().EnsureNewId(document, guidStrategy);
     }
 
-    public static bool IsIdEmpty(this IDocumentEntity document)
+    public static bool IsIdEmpty<TDocument>(this TDocument document)
+        where TDocument : class, IDocumentEntity
     {
-        return document.Id.Equals(Guid.Empty);
+        return DocumentIdAccessorCache.Get<TDocument>().IsEmpty(document);
     }
 
-    public static void CheckId(this IDocumentEntity document)
+    public static void CheckId<TDocument>(this TDocument document)
+        where TDocument : class, IDocumentEntity
     {
         if (document.IsIdEmpty())
         {
@@ -46,7 +62,13 @@ public static class DocumentEntityExtensions
 
     public static bool IsNew(this IDocumentEntity document)
     {
-        return document.ETag.Equals(Constants.EmptyETag);
+        if (document is IHasConcurrencyToken concurrencyToken)
+        {
+            return concurrencyToken.ETag.Equals(Constants.EmptyETag);
+        }
+
+        // No concurrency token: create-vs-update is decided by whether Id is empty.
+        return true;
     }
 
     public static BsonDocument ToBsonUpdateDocument<T>(this T document)

@@ -1,6 +1,8 @@
 using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Bson;
 
 namespace Dilcore.MongoDB.UnitTests;
 
@@ -183,6 +185,44 @@ public class MongoDbBuilderValidationTests
                 })));
     }
 
+    [Test]
+    public void AddMongoDb_SoftDeleteWithoutISoftDeletable_Throws()
+    {
+        var services = new ServiceCollection();
+
+        var ex = Should.Throw<InvalidOperationException>(() =>
+            services.AddMongoDb(mongo => mongo
+                .AddCluster("primary", c => c.UseConnectionString("mongodb://localhost"))
+                .AddDatabase("app", db =>
+                {
+                    db.OnCluster("primary");
+                    db.AddDocumentBinding<MinimalDoc>("orders", d => d
+                        .WithCollectionName("orders")
+                        .WithSoftDelete());
+                })));
+
+        ex.Message.ShouldContain(nameof(ISoftDeletable));
+    }
+
+    [Test]
+    public void AddMongoDb_GuidIdGenerationOnNonGuidId_Throws()
+    {
+        var services = new ServiceCollection();
+
+        var ex = Should.Throw<InvalidOperationException>(() =>
+            services.AddMongoDb(mongo => mongo
+                .AddCluster("primary", c => c.UseConnectionString("mongodb://localhost"))
+                .AddDatabase("app", db =>
+                {
+                    db.OnCluster("primary");
+                    db.AddDocumentBinding<ObjectIdDoc>("orders", d => d
+                        .WithCollectionName("orders")
+                        .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
+                })));
+
+        ex.Message.ShouldContain("IDocumentEntity<Guid>");
+    }
+
     private sealed class NoOpPrefixResolver : Dilcore.MongoDB.Abstractions.Namespace.INamespacePrefixResolver
     {
         public Task<FluentResults.Result<string?>> ResolveAsync(
@@ -191,12 +231,22 @@ public class MongoDbBuilderValidationTests
             Task.FromResult(FluentResults.Result.Ok<string?>(null));
     }
 
-    private class TestDoc : IDocumentEntity
+    private class TestDoc : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
     {
         public Guid Id { get; set; }
         public long ETag { get; set; }
         public bool IsDeleted { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+    }
+
+    private class MinimalDoc : IDocumentEntity<Guid>
+    {
+        public Guid Id { get; set; }
+    }
+
+    private class ObjectIdDoc : IDocumentEntity<ObjectId>
+    {
+        public ObjectId Id { get; set; }
     }
 }

@@ -1,4 +1,5 @@
 using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Abstractions.Namespace;
 using Dilcore.MongoDB.Abstractions.Ownership;
@@ -682,7 +683,7 @@ public class DiAcceptanceTests : BaseIntegrationTests
                 CollectionPrefix: null)));
     }
 
-    public class TestEntity : IDocumentEntity
+    public class TestEntity : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
     {
         public Guid Id { get; set; }
         public long ETag { get; set; }
@@ -692,7 +693,7 @@ public class DiAcceptanceTests : BaseIntegrationTests
         public int Value { get; set; }
     }
 
-    public class TestEntity1 : IDocumentEntity
+    public class TestEntity1 : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
     {
         public Guid Id { get; set; }
         public long ETag { get; set; }
@@ -702,7 +703,7 @@ public class DiAcceptanceTests : BaseIntegrationTests
         public int Value { get; set; }
     }
 
-    public class TestEntity2 : IDocumentEntity
+    public class TestEntity2 : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
     {
         public Guid Id { get; set; }
         public long ETag { get; set; }
@@ -712,7 +713,7 @@ public class DiAcceptanceTests : BaseIntegrationTests
         public string? Value { get; set; }
     }
 
-    public class TestEntity3 : IDocumentEntity
+    public class TestEntity3 : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
     {
         public Guid Id { get; set; }
         public long ETag { get; set; }

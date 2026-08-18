@@ -1,4 +1,5 @@
 using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.Repositories;
@@ -21,9 +22,15 @@ builder.Services.AddMongoDb(mongo => mongo
     .AddDatabase("SampleDB", db =>
     {
         db.OnCluster("primary");
+        // Fully composed document: concurrency + soft delete + audit timestamps.
         db.AddDocumentBinding<WeatherForecast>("weather", d => d
             .WithCollectionName("weatherForecasts")
-            .WithBulkRepository());
+            .WithSoftDelete()
+            .WithBulkRepository()
+            .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
+        // Minimal document: identifier only.
+        db.AddDocumentBinding<Note>("notes", d => d
+            .WithCollectionName("notes"));
     }));
 
 var app = builder.Build();
@@ -90,9 +97,24 @@ app.MapPost("/weather-forecasts", async (IGenericRepository<WeatherForecast> gen
     })
     .WithName("CreateWeatherForecast");
 
+app.MapGet("/notes", async (IGenericRepository<Note> notes) =>
+    {
+        var result = await notes.GetListAsync();
+        return result.IsSuccess ? Results.Ok(result.ValueOrDefault) : Results.BadRequest(result.Errors);
+    })
+    .WithName("GetNotes");
+
+app.MapPost("/notes", async (IGenericRepository<Note> notes, Note note) =>
+    {
+        var result = await notes.StoreAsync(note);
+        return result.IsSuccess ? Results.Ok(result.ValueOrDefault) : Results.BadRequest(result.Errors);
+    })
+    .WithName("CreateNote");
+
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary) : IDocumentEntity
+record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+    : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
 {
     public Guid Id { get; set; }
     public long ETag { get; set; }
@@ -101,4 +123,10 @@ record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary) : IDocu
     public DateTime UpdatedAt { get; set; }
 
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+}
+
+/// <summary>Minimal document: identifier only, no optional policies.</summary>
+record Note(string Text) : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
 }

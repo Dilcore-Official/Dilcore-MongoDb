@@ -1,4 +1,6 @@
+using Dilcore.MongoDB.Abstractions.Internal;
 using Dilcore.MongoDB.Abstractions.Options;
+using Dilcore.MongoDB.Abstractions.Policies;
 using FluentResults;
 using MongoDB.Driver;
 
@@ -6,8 +8,11 @@ namespace Dilcore.MongoDB.Abstractions.Repositories;
 
 public abstract class BaseMongoDbRepository<TDocument> where TDocument : class, IDocumentEntity
 {
+    private static readonly bool IsSoftDeletable =
+        typeof(ISoftDeletable).IsAssignableFrom(typeof(TDocument));
+
     private static readonly FilterDefinition<TDocument> NotDeletedFilter =
-        Builders<TDocument>.Filter.Eq(x => x.IsDeleted, false);
+        SoftDeleteFilterCache.GetNotDeletedFilter<TDocument>();
 
     private readonly Func<CancellationToken, Task<Result<IMongoCollection<TDocument>>>> _collectionProvider;
     private readonly GetCollectionOptions<TDocument> _options;
@@ -62,23 +67,32 @@ public abstract class BaseMongoDbRepository<TDocument> where TDocument : class, 
     protected FilterDefinition<TDerived> ApplyNotDeleteFilter<TDerived>(FilterDefinition<TDerived> filter)
         where TDerived : class, TDocument
     {
-        return _options.SoftDeleteDisabled
-            ? filter
-            : filter & Builders<TDerived>.Filter.Eq(x => x.IsDeleted, false);
+        if (_options.SoftDeleteDisabled || !IsSoftDeletable)
+        {
+            return filter;
+        }
+
+        return filter & SoftDeleteFilterCache.GetNotDeletedFilter<TDerived>();
     }
 
     protected FilterDefinition<TDocument> ApplyNotDeleteFilter(FilterDefinition<TDocument> filter)
     {
-        return _options.SoftDeleteDisabled
-            ? filter
-            : filter & NotDeletedFilter;
+        if (_options.SoftDeleteDisabled || !IsSoftDeletable)
+        {
+            return filter;
+        }
+
+        return filter & NotDeletedFilter;
     }
 
     protected FilterDefinition<TDocument> ApplyNotDeleteFilter()
     {
-        return _options.SoftDeleteDisabled
-            ? Builders<TDocument>.Filter.Empty
-            : NotDeletedFilter;
+        if (_options.SoftDeleteDisabled || !IsSoftDeletable)
+        {
+            return Builders<TDocument>.Filter.Empty;
+        }
+
+        return NotDeletedFilter;
     }
 
     private Task<Result<IMongoCollection<TDocument>>> GetCollectionAsync(CancellationToken cancellationToken = default)
