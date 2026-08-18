@@ -89,6 +89,27 @@ public class ConventionsConfigurationTests
     }
 
     [Test]
+    public void AddMongoDb_ReservedDefaultConventionPackName_Throws()
+    {
+        var services = new ServiceCollection();
+        var pack = new ConventionPack();
+
+        var ex = Should.Throw<ArgumentException>(() =>
+            services.AddMongoDb(mongo => mongo
+                .ConfigureConventions(c => c
+                    .AddConventionPack(MongoConventionRegistrar.DefaultPackName, pack, _ => true))
+                .AddCluster("primary", c => c.UseConnectionString("mongodb://localhost"))
+                .AddDatabase("app", db =>
+                {
+                    db.OnCluster("primary");
+                    db.AddDocumentBinding<TestDoc>("orders", d => d.WithCollectionName("orders"));
+                })));
+
+        ex.ParamName.ShouldBe("name");
+        ex.Message.ShouldContain("reserved");
+    }
+
+    [Test]
     public void AddMongoDb_CalledTwiceWithSameConventions_IsIdempotent()
     {
         var first = new ServiceCollection();
@@ -111,6 +132,39 @@ public class ConventionsConfigurationTests
 
         ex.Message.ShouldContain("Conflicting MongoDB serialization conventions");
         ex.Message.ShouldContain("ConfigureConventions");
+    }
+
+    [Test]
+    public void AddMongoDb_CalledTwiceWithSameCustomConventionInstance_IsIdempotent()
+    {
+        var convention = new IgnoreIfDefaultConvention(true);
+        var pack = new ConventionPack();
+        Func<Type, bool> filter = static _ => true;
+
+        var first = new ServiceCollection();
+        RegisterMinimal(first, mongo => mongo.ConfigureConventions(c => c
+            .AddConvention(convention)
+            .AddConventionPack("custom", pack, filter)));
+
+        var second = new ServiceCollection();
+        Should.NotThrow(() => RegisterMinimal(second, mongo => mongo.ConfigureConventions(c => c
+            .AddConvention(convention)
+            .AddConventionPack("custom", pack, filter))));
+    }
+
+    [Test]
+    public void AddMongoDb_CalledTwiceWithSeparateCustomConventionInstances_Throws()
+    {
+        var first = new ServiceCollection();
+        RegisterMinimal(first, mongo => mongo.ConfigureConventions(c =>
+            c.AddConvention(new IgnoreIfDefaultConvention(true))));
+
+        var second = new ServiceCollection();
+        var ex = Should.Throw<InvalidOperationException>(() =>
+            RegisterMinimal(second, mongo => mongo.ConfigureConventions(c =>
+                c.AddConvention(new IgnoreIfDefaultConvention(true)))));
+
+        ex.Message.ShouldContain("Conflicting MongoDB serialization conventions");
     }
 
     [Test]

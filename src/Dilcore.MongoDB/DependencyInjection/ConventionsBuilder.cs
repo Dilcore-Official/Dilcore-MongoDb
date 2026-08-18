@@ -1,4 +1,5 @@
 using Dilcore.MongoDB.Descriptors;
+using Dilcore.MongoDB.Internal;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Conventions;
 
@@ -61,6 +62,13 @@ internal sealed class ConventionsBuilder : IConventionsBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(pack);
         ArgumentNullException.ThrowIfNull(filter);
+
+        if (name == MongoConventionRegistrar.DefaultPackName)
+        {
+            throw new ArgumentException(
+                $"Convention pack name '{name}' is reserved for the default pack. Choose a different name.",
+                nameof(name));
+        }
 
         if (!_packNames.Add(name))
         {

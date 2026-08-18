@@ -127,7 +127,7 @@ record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }
 
-/// <summary>Minimal document: identifier only, no optional policies. Priority is stored as int via ConfigureConventions.</summary>
+/// <summary>Minimal document with text and priority. Priority is stored as BSON Int32 via ConfigureConventions.</summary>
 record Note(string Text, NotePriority Priority) : IDocumentEntity<Guid>
 {
     public Guid Id { get; set; }

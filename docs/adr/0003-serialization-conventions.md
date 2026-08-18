@@ -31,10 +31,18 @@ MongoDB.Driver's `ConventionRegistry` is static and process-wide. Per-cluster, p
 Serialization conventions are **global (process-wide)** and configured at most once per `AddMongoDb` via `IMongoDbBuilder.ConfigureConventions`.
 
 - Defaults: `BsonType.String` enums, `CamelCaseElementNameConvention`, `IgnoreIfNullConvention(true)`, `IgnoreExtraElementsConvention(true)`.
-- Registration is eager during `AddMongoDb` and idempotent when the structural signature matches.
+- Registration is eager during `AddMongoDb` and idempotent only when additional custom conventions/packs/filters are the exact same instances (or have real value equality); equivalent-but-separately-constructed custom conventions are treated as a conflict.
 - A later `AddMongoDb` in the same process with a different signature throws `InvalidOperationException`.
 - Custom `IConvention` / named `IConventionPack` entries (with a type filter) are supported on the same builder.
 - No per-document overrides in this milestone.
+
+### Rollout guidance
+
+Conventions define *serialization* behavior only; they do not rewrite existing documents. Before changing a convention that affects the on-the-wire BSON shape (enum representation, element naming), plan for the stored data:
+
+- **Enum representation / element naming changes:** existing documents keep the old shape. Either run a migration to rewrite stored documents to the new shape, or keep a custom `IConvention`/serializer that can read both shapes until migration completes.
+- **New collections only:** if only new collections need the new convention, scope it with a named `AddConventionPack` + type filter instead of changing the global defaults.
+- Never change conventions for a type with data already persisted under the old shape without one of the above; deserialization can throw or silently misread fields.
 
 ## Consequences
 

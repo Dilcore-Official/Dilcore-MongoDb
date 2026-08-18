@@ -1,5 +1,9 @@
 # Dilcore MongoDB
 
+[![CI](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Dilcore-Official/Dilcore-MongoDb/graph/badge.svg?token=SZPZ8SWY8K)](https://codecov.io/gh/Dilcore-Official/Dilcore-MongoDb)
+[![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/Dilcore-Official/Dilcore-MongoDb?utm_source=oss&utm_medium=github&utm_campaign=Dilcore-Official%2FDilcore-MongoDb&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)](https://coderabbit.ai)
+
 An opinionated .NET MongoDB application toolkit: validated multi-cluster / multi-database DI, scoped tenant-aware namespace resolution, and repository helpers over `MongoDB.Driver`.
 
 > **v2 roadmap:** See [ROADMAP.md](ROADMAP.md) and [roadmap issues](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues?q=is%3Aissue+label%3Aroadmap). Package selection: [docs/product/package-selection.md](docs/product/package-selection.md). Naming: [ADR 0001](docs/adr/0001-package-naming.md).
@@ -265,7 +269,9 @@ BSON conventions are **process-wide** (MongoDB.Driver's `ConventionRegistry`) an
 - ignore null members
 - ignore extra elements on deserialize
 
-Override them with `ConfigureConventions`. Calling it more than once on the same builder throws. A later `AddMongoDb` in the same process with different settings also throws; identical settings are idempotent.
+Override them with `ConfigureConventions`. Calling it more than once on the same builder throws. A later `AddMongoDb` in the same process with different settings also throws; identical settings are idempotent only when additional custom conventions, packs, and filters are the same instances (or have real value equality). Separately constructed custom conventions with equivalent intent still conflict.
+
+> **Changing conventions after data exists?** See [ADR 0003 – Rollout guidance](docs/adr/0003-serialization-conventions.md#rollout-guidance) before changing enum representation or element naming for a type with existing documents.
 
 ```csharp
 using MongoDB.Bson;

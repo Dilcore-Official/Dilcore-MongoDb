@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Dilcore.MongoDB.Descriptors;
 using MongoDB.Bson.Serialization.Conventions;
 
@@ -89,12 +90,12 @@ internal static class MongoConventionRegistrar
 
     private static string ComputeSignature(ConventionsDescriptor conventions)
     {
-        var additionalConventionTypes = string.Join(
+        var additionalConventions = string.Join(
             ",",
-            conventions.AdditionalConventions.Select(c => c.GetType().FullName));
+            conventions.AdditionalConventions.Select(DescribeConvention));
         var additionalPacks = string.Join(
             ",",
-            conventions.AdditionalPacks.Select(p => $"{p.Name}:{p.Pack.GetType().FullName}"));
+            conventions.AdditionalPacks.Select(DescribePack));
 
         return string.Join(
             "|",
@@ -102,7 +103,23 @@ internal static class MongoConventionRegistrar
             conventions.ElementNameConvention.GetType().FullName,
             conventions.IgnoreIfNull,
             conventions.IgnoreExtraElements,
-            additionalConventionTypes,
+            additionalConventions,
             additionalPacks);
     }
+
+    private static string DescribeConvention(IConvention convention)
+    {
+        var type = convention.GetType();
+        var equalsMethod = type.GetMethod(nameof(Equals), [typeof(object)]);
+        var hasValueEquality = equalsMethod is not null && equalsMethod.DeclaringType != typeof(object);
+        return hasValueEquality
+            ? $"{type.FullName}:{convention}"
+            : $"{type.FullName}#{RuntimeHelpers.GetHashCode(convention)}";
+    }
+
+    private static string DescribeFilter(Func<Type, bool> filter) =>
+        $"{filter.Method.DeclaringType?.FullName}.{filter.Method.Name}#{(filter.Target is null ? 0 : RuntimeHelpers.GetHashCode(filter.Target))}";
+
+    private static string DescribePack(AdditionalConventionPack pack) =>
+        $"{pack.Name}:[{string.Join(",", pack.Pack.Conventions.Select(DescribeConvention))}]:{DescribeFilter(pack.Filter)}";
 }
