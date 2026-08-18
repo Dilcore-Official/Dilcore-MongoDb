@@ -1,4 +1,5 @@
 using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Descriptors;
 using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.Internal;
 using Microsoft.Extensions.DependencyInjection;
@@ -107,6 +108,28 @@ public class ConventionsConfigurationTests
 
         ex.ParamName.ShouldBe("name");
         ex.Message.ShouldContain("reserved");
+    }
+
+    [Test]
+    public void EnsureRegistered_ReservedDefaultConventionPackName_ThrowsWithoutRegistering()
+    {
+        var conventions = ConventionsDescriptor.CreateDefault() with
+        {
+            AdditionalPacks =
+            [
+                new AdditionalConventionPack(
+                    MongoConventionRegistrar.DefaultPackName,
+                    new ConventionPack(),
+                    _ => true)
+            ]
+        };
+
+        var ex = Should.Throw<InvalidOperationException>(() =>
+            MongoConventionRegistrar.EnsureRegistered(conventions));
+
+        ex.Message.ShouldContain("reserved");
+
+        Should.NotThrow(() => MongoConventionRegistrar.EnsureRegistered(ConventionsDescriptor.CreateDefault()));
     }
 
     [Test]

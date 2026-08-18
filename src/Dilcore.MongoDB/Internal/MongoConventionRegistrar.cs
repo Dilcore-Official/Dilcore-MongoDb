@@ -44,6 +44,15 @@ internal static class MongoConventionRegistrar
                 pack.Add(additional);
             }
 
+            foreach (var additionalPack in conventions.AdditionalPacks)
+            {
+                if (additionalPack.Name == DefaultPackName)
+                {
+                    throw new InvalidOperationException(
+                        $"Convention pack name '{DefaultPackName}' is reserved for the default pack. Choose a different name.");
+                }
+            }
+
             ConventionRegistry.Register(DefaultPackName, pack, _ => true);
 
             var packNames = new List<string> { DefaultPackName };
