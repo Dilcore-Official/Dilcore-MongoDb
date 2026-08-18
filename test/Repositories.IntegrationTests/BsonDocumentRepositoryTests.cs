@@ -1,4 +1,5 @@
 ﻿using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Extensions;
@@ -111,7 +112,7 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
         }
     }
 
-    public class KeepAliveEntity : IDocumentEntity
+    public class KeepAliveEntity : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
     {
         public Guid Id { get; set; }
         public long ETag { get; set; }

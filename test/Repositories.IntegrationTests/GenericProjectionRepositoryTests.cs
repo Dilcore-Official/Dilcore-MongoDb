@@ -1,4 +1,5 @@
 using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Extensions;
 using MongoDB.Driver;
@@ -67,7 +68,7 @@ public class GenericProjectionRepositoryTests : BaseIntegrationTests
         projectionResult.ValueOrDefault.Name.ShouldBe(entity.Name);
     }
 
-    public class TestEntity1 : IDocumentEntity
+    public class TestEntity1 : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
     {
         public Guid Id { get; set; }
         public long ETag { get; set; }

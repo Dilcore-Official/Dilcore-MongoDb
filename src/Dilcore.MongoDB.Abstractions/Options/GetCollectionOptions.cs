@@ -14,6 +14,9 @@ public class GetCollectionOptions<TDocument>
     public bool SoftDeleteEnabled { get; private set; }
     public bool SoftDeleteDisabled => !SoftDeleteEnabled;
 
+    public GuidIdGenerationStrategy GuidIdGenerationStrategy { get; private set; } =
+        GuidIdGenerationStrategy.Random;
+
     public GetCollectionOptions<TDocument> WithCollectionName(string collectionName)
     {
         CollectionName = collectionName;
@@ -44,6 +47,12 @@ public class GetCollectionOptions<TDocument>
     public GetCollectionOptions<TDocument> WithSoftDelete()
     {
         SoftDeleteEnabled = true;
+        return this;
+    }
+
+    public GetCollectionOptions<TDocument> WithGuidIdGeneration(GuidIdGenerationStrategy strategy)
+    {
+        GuidIdGenerationStrategy = strategy;
         return this;
     }
 }

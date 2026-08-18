@@ -21,7 +21,7 @@ Roadmap work is tracked in [ROADMAP.md](ROADMAP.md) and issues labeled `roadmap`
 Requirements:
 
 - .NET SDK **10.0.x**
-- Docker (only for integration tests that use Testcontainers)
+- Docker (for integration tests and benchmarks that use Testcontainers)
 
 ```bash
 dotnet restore Dilcore.MongoDB.sln
@@ -32,6 +32,10 @@ dotnet test test/ArchitectureTests --configuration Release
 dotnet test test/IntegrationTests --configuration Release
 # Full suite:
 dotnet test Dilcore.MongoDB.sln --configuration Release
+# Performance benchmarks (needs Docker for repository/bulk/projection tiers):
+dotnet run --project test/Benchmarks/Dilcore.MongoDB.Benchmarks -c Release -- --filter '*'
+# Cold-start only (no Docker):
+dotnet run --project test/Benchmarks/Dilcore.MongoDB.Benchmarks -c Release -- --filter '*ColdStart*'
 ```
 
 Use **Shouldly** for assertions (not FluentAssertions). Architecture tests enforce the
@@ -39,6 +43,11 @@ two-package topology and dependency boundaries without Docker. DI acceptance tes
 build the container with `ValidateScopes` / `ValidateOnBuild` via
 `AcceptanceServiceProviderFactory`. CI runs a dedicated Architecture Tests job and a
 DI Acceptance job (Docker preflight) as required checks alongside the full Build & Test job.
+The **Benchmarks** workflow (`.github/workflows/benchmarks.yml`) runs BenchmarkDotNet on
+PRs that touch `src/` or `test/Benchmarks/`, posts a non-blocking results comment, and
+updates the historical baseline on `main` via `gh-pages`. Create an empty `gh-pages`
+branch once if it does not exist yet (`git checkout --orphan gh-pages && git commit
+--allow-empty -m "bench history" && git push -u origin gh-pages`).
 
 Roadmap issue hygiene (needs `gh` + `jq`):
 

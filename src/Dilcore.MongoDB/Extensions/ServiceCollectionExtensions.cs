@@ -133,6 +133,8 @@ public static class ServiceCollectionExtensions
                 options.WithSoftDelete();
             }
 
+            options.WithGuidIdGeneration(binding.GuidIdGenerationStrategy);
+
             if (binding.Indices is { Count: > 0 })
             {
                 options.WithIndexes(binding.Indices.Cast<CreateIndexModel<TDocument>>().ToArray());
@@ -192,6 +194,8 @@ public static class ServiceCollectionExtensions
             {
                 options.WithSoftDelete();
             }
+
+            options.WithGuidIdGeneration(binding.GuidIdGenerationStrategy);
         };
 
         services.AddScoped<IGenericRepository<TDocument>>(sp =>

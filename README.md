@@ -66,17 +66,55 @@ The library follows Clean Architecture principles with clear separation of conce
 
 ### Document Entity Interface
 
-All entities must implement `IDocumentEntity`:
+Documents implement `IDocumentEntity<TId>` for a typed identifier. Optional policies are composed independently:
 
 ```csharp
-public interface IDocumentEntity
+public interface IDocumentEntity { }
+
+public interface IDocumentEntity<TId> : IDocumentEntity
 {
-    Guid Id { get; set; }
-    long ETag { get; set; }
-    bool IsDeleted { get; set; }
+    TId Id { get; set; }
+}
+
+public interface IHasConcurrencyToken { long ETag { get; set; } }
+public interface ISoftDeletable { bool IsDeleted { get; set; } }
+public interface IAuditableDocument
+{
     DateTime CreatedAt { get; set; }
     DateTime UpdatedAt { get; set; }
 }
+```
+
+Minimal document:
+
+```csharp
+public class Note : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string Text { get; set; } = "";
+}
+```
+
+Fully composed document (concurrency + soft delete + audit):
+
+```csharp
+public class WeatherForecast : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
+{
+    public Guid Id { get; set; }
+    public long ETag { get; set; }
+    public bool IsDeleted { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    // domain properties...
+}
+```
+
+For `Guid` identifiers, opt into RFC 9562 UUID v7 generation per binding:
+
+```csharp
+db.AddDocumentBinding<WeatherForecast>("weather", d => d
+    .WithCollectionName("weatherForecasts")
+    .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
 ```
 
 ### Repository Types
@@ -259,15 +297,23 @@ app.MapPost("/weather-forecasts", async (IGenericRepository<WeatherForecast> rep
 ### Entity Definition
 
 ```csharp
-public record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary) : IDocumentEntity
+// Fully composed: identifier + concurrency + soft delete + audit
+public record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+    : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
 {
     public Guid Id { get; set; }
     public long ETag { get; set; }
     public bool IsDeleted { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    
+
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+}
+
+// Minimal: identifier only
+public record Note(string Text) : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
 }
 ```
 
@@ -395,6 +441,26 @@ The library includes comprehensive test suites demonstrating various usage patte
 ### Unit Tests
 - **DocumentEntityExtensionsTests**: Entity extension methods and utilities
 
+### Benchmarks
+Performance suite under `test/Benchmarks/Dilcore.MongoDB.Benchmarks` (BenchmarkDotNet):
+
+- **ColdStartBenchmarks**: DI registration + first resolve vs raw `MongoClient`
+- **RepositoryCrudBenchmarks**: Store / Get / GetList / streaming / Count / HasAny / soft & hard delete vs raw driver
+- **BulkRepositoryBenchmarks**: `BulkStoreAsync` / `BulkDeleteAsync` at batch sizes 100 and 1000
+- **ProjectionRepositoryBenchmarks**: typed projection get/list vs raw driver projections
+
+Telemetry on/off overhead (v2 budgets ≤1% / ≤3%) is deferred until M6 (`#33` / `#34`).
+
+```bash
+# Full suite (Docker required for CRUD / bulk / projection):
+dotnet run --project test/Benchmarks/Dilcore.MongoDB.Benchmarks -c Release -- --filter '*'
+
+# Cold-start only (no Docker):
+dotnet run --project test/Benchmarks/Dilcore.MongoDB.Benchmarks -c Release -- --filter '*ColdStart*'
+```
+
+CI workflow [`.github/workflows/benchmarks.yml`](.github/workflows/benchmarks.yml) posts results as a PR comment (non-blocking) and stores history on `gh-pages` when merging to `main`.
+
 ### Test Infrastructure
 The tests use Testcontainers for MongoDB to provide isolated, reproducible test environments:
 
@@ -447,15 +513,22 @@ repositoryOptions.WithBulkRepository()             // Enable bulk operations
 
 2. **Define your entities**:
    ```csharp
-   public class MyEntity : IDocumentEntity
+   // Minimal
+   public class MyEntity : IDocumentEntity<Guid>
+   {
+       public Guid Id { get; set; }
+       public string Name { get; set; }
+       public string Description { get; set; }
+   }
+
+   // Or compose optional policies
+   public class MyAuditedEntity : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
    {
        public Guid Id { get; set; }
        public long ETag { get; set; }
        public bool IsDeleted { get; set; }
        public DateTime CreatedAt { get; set; }
        public DateTime UpdatedAt { get; set; }
-       
-       // Your custom properties
        public string Name { get; set; }
        public string Description { get; set; }
    }

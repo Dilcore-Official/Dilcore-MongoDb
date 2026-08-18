@@ -1,4 +1,5 @@
 ﻿using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.Repositories;
@@ -79,7 +80,7 @@ public class GenericBulkRepositoryTests : BaseIntegrationTests
         remaining.ValueOrDefault.Count.ShouldBe(0);
     }
 
-    public class TestEntity1 : IDocumentEntity
+    public class TestEntity1 : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
     {
         public Guid Id { get; set; }
         public long ETag { get; set; }

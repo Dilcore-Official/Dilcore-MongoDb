@@ -1,7 +1,9 @@
 using System.Linq.Expressions;
 using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Internal;
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Abstractions.Namespace;
+using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Descriptors;
 using MongoDB.Driver;
 
@@ -19,6 +21,8 @@ internal sealed class MongoDocumentBindingBuilder<TDocument> : IMongoDocumentBin
     private IReadOnlyList<CreateIndexModel<TDocument>>? _indices;
     private TimeSpan? _ttl;
     private Expression<Func<TDocument, object>>? _ttlSelector;
+    private GuidIdGenerationStrategy _guidIdGenerationStrategy = GuidIdGenerationStrategy.Random;
+    private bool _guidIdGenerationConfigured;
 
     public IMongoDocumentBindingBuilder<TDocument> WithCollectionName(string collectionName)
     {
@@ -29,7 +33,28 @@ internal sealed class MongoDocumentBindingBuilder<TDocument> : IMongoDocumentBin
 
     public IMongoDocumentBindingBuilder<TDocument> WithSoftDelete()
     {
+        if (!typeof(ISoftDeletable).IsAssignableFrom(typeof(TDocument)))
+        {
+            throw new InvalidOperationException(
+                $"WithSoftDelete requires '{typeof(TDocument).Name}' to implement {nameof(ISoftDeletable)}.");
+        }
+
         _softDeleteEnabled = true;
+        return this;
+    }
+
+    public IMongoDocumentBindingBuilder<TDocument> WithGuidIdGeneration(GuidIdGenerationStrategy strategy)
+    {
+        var identifierType = DocumentIdAccessorCache.ResolveIdentifierType(typeof(TDocument));
+        if (identifierType != typeof(Guid))
+        {
+            throw new InvalidOperationException(
+                $"WithGuidIdGeneration requires '{typeof(TDocument).Name}' to implement IDocumentEntity<Guid>, " +
+                $"but its identifier type is '{identifierType.Name}'.");
+        }
+
+        _guidIdGenerationStrategy = strategy;
+        _guidIdGenerationConfigured = true;
         return this;
     }
 
@@ -90,6 +115,9 @@ internal sealed class MongoDocumentBindingBuilder<TDocument> : IMongoDocumentBin
                 $"Document binding '{name}' must call WithCollectionName(\"<collection-name>\").");
         }
 
+        // Ensure the document declares IDocumentEntity<TId> (throws if missing).
+        _ = DocumentIdAccessorCache.ResolveIdentifierType(typeof(TDocument));
+
         return new DocumentBindingDescriptor(
             new MongoDocumentBindingKey(name),
             typeof(TDocument),
@@ -102,6 +130,7 @@ internal sealed class MongoDocumentBindingBuilder<TDocument> : IMongoDocumentBin
             _indices?.Cast<object>().ToList(),
             _ttl,
             _ttlSelector,
-            _namespacePrefixResolverType);
+            _namespacePrefixResolverType,
+            _guidIdGenerationConfigured ? _guidIdGenerationStrategy : GuidIdGenerationStrategy.Random);
     }
 }

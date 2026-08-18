@@ -12,6 +12,8 @@ public interface IMongoDocumentBindingBuilder<TDocument>
 
     IMongoDocumentBindingBuilder<TDocument> WithSoftDelete();
 
+    IMongoDocumentBindingBuilder<TDocument> WithGuidIdGeneration(GuidIdGenerationStrategy strategy);
+
     IMongoDocumentBindingBuilder<TDocument> WithBulkRepository();
 
     IMongoDocumentBindingBuilder<TDocument> WithProjectionRepository();

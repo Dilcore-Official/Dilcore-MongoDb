@@ -67,6 +67,8 @@ internal sealed class MongoDbCollectionFactory(
             options.WithSoftDelete();
         }
 
+        options.WithGuidIdGeneration(binding.GuidIdGenerationStrategy);
+
         if (binding.Indices is { Count: > 0 })
         {
             options.WithIndexes(binding.Indices.Cast<CreateIndexModel<TDocument>>().ToArray());
