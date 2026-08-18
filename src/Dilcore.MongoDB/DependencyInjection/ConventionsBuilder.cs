@@ -63,7 +63,7 @@ internal sealed class ConventionsBuilder : IConventionsBuilder
         ArgumentNullException.ThrowIfNull(pack);
         ArgumentNullException.ThrowIfNull(filter);
 
-        if (name == MongoConventionRegistrar.DefaultPackName)
+        if (name.Equals(MongoConventionRegistrar.DefaultPackName, StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException(
                 $"Convention pack name '{name}' is reserved for the default pack. Choose a different name.",

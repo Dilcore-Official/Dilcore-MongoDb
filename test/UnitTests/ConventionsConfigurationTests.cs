@@ -98,7 +98,7 @@ public class ConventionsConfigurationTests
         var ex = Should.Throw<ArgumentException>(() =>
             services.AddMongoDb(mongo => mongo
                 .ConfigureConventions(c => c
-                    .AddConventionPack(MongoConventionRegistrar.DefaultPackName, pack, _ => true))
+                    .AddConventionPack(MongoConventionRegistrar.DefaultPackName.ToUpperInvariant(), pack, _ => true))
                 .AddCluster("primary", c => c.UseConnectionString("mongodb://localhost"))
                 .AddDatabase("app", db =>
                 {
@@ -118,7 +118,7 @@ public class ConventionsConfigurationTests
             AdditionalPacks =
             [
                 new AdditionalConventionPack(
-                    MongoConventionRegistrar.DefaultPackName,
+                    MongoConventionRegistrar.DefaultPackName.ToLowerInvariant(),
                     new ConventionPack(),
                     _ => true)
             ]
