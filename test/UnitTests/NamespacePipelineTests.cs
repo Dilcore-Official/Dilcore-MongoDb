@@ -12,7 +12,8 @@ public class NamespacePipelineTests
     {
         Clusters = [],
         Databases = [],
-        Bindings = []
+        Bindings = [],
+        Conventions = ConventionsDescriptor.CreateDefault()
     };
 
     [Test]

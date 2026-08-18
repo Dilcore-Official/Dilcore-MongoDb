@@ -38,7 +38,8 @@ public static class V1ParityHarness
         {
             Clusters = [],
             Databases = [],
-            Bindings = []
+            Bindings = [],
+            Conventions = ConventionsDescriptor.CreateDefault()
         });
 
         var database = resolver.ResolveAsync(new NamespaceResolutionRequest

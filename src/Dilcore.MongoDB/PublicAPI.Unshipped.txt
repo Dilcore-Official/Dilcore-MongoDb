@@ -1,1 +1,10 @@
 #nullable enable
+interface Dilcore.MongoDB.DependencyInjection.IConventionsBuilder
+Dilcore.MongoDB.DependencyInjection.IConventionsBuilder.AddConvention(MongoDB.Bson.Serialization.Conventions.IConvention) -> Dilcore.MongoDB.DependencyInjection.IConventionsBuilder
+Dilcore.MongoDB.DependencyInjection.IConventionsBuilder.AddConventionPack(string, MongoDB.Bson.Serialization.Conventions.IConventionPack, System.Func<System.Type, bool>) -> Dilcore.MongoDB.DependencyInjection.IConventionsBuilder
+Dilcore.MongoDB.DependencyInjection.IConventionsBuilder.IgnoreExtraElements(bool) -> Dilcore.MongoDB.DependencyInjection.IConventionsBuilder
+Dilcore.MongoDB.DependencyInjection.IConventionsBuilder.IgnoreIfNull(bool) -> Dilcore.MongoDB.DependencyInjection.IConventionsBuilder
+Dilcore.MongoDB.DependencyInjection.IConventionsBuilder.UseElementNameConvention(MongoDB.Bson.Serialization.Conventions.IConvention) -> Dilcore.MongoDB.DependencyInjection.IConventionsBuilder
+Dilcore.MongoDB.DependencyInjection.IConventionsBuilder.UseEnumRepresentation(MongoDB.Bson.BsonType) -> Dilcore.MongoDB.DependencyInjection.IConventionsBuilder
+Dilcore.MongoDB.DependencyInjection.IMongoDbBuilder.ConfigureConventions(System.Action<Dilcore.MongoDB.DependencyInjection.IConventionsBuilder>) -> Dilcore.MongoDB.DependencyInjection.IMongoDbBuilder
+

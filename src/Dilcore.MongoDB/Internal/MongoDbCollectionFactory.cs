@@ -6,7 +6,6 @@ using Dilcore.MongoDB.Abstractions.Options;
 using Dilcore.MongoDB.Descriptors;
 using FluentResults;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.Internal;
@@ -16,10 +15,6 @@ internal sealed class MongoDbCollectionFactory(
     IMongoDatabaseResolver databaseResolver,
     INamespaceResolver namespaceResolver) : IMongoDbCollectionFactory
 {
-    private const string DefaultConventions = nameof(DefaultConventions);
-    private static readonly object ConventionLock = new();
-    private static bool _conventionsRegistered;
-
     public async Task<Result<IMongoCollection<TDocument>>> GetCollectionAsync<TDocument>(
         MongoDocumentBindingKey bindingKey,
         CancellationToken cancellationToken = default)
@@ -151,8 +146,6 @@ internal sealed class MongoDbCollectionFactory(
         CancellationToken cancellationToken)
         where TDocument : IDocumentEntity
     {
-        EnsureConventions();
-
         if (string.IsNullOrWhiteSpace(options.CollectionName))
         {
             return Result.Fail("Collection name is not provided");
@@ -175,33 +168,6 @@ internal sealed class MongoDbCollectionFactory(
         }
 
         return Result.Ok(collection);
-    }
-
-    private static void EnsureConventions()
-    {
-        if (_conventionsRegistered)
-        {
-            return;
-        }
-
-        lock (ConventionLock)
-        {
-            if (_conventionsRegistered)
-            {
-                return;
-            }
-
-            var pack = new ConventionPack
-            {
-                new EnumRepresentationConvention(BsonType.String),
-                new CamelCaseElementNameConvention(),
-                new IgnoreIfNullConvention(true),
-                new IgnoreExtraElementsConvention(true)
-            };
-
-            ConventionRegistry.Register(DefaultConventions, pack, _ => true);
-            _conventionsRegistered = true;
-        }
     }
 
     private static async Task CreateTimeToLiveIndexAsync<TDocument>(
