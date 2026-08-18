@@ -67,7 +67,9 @@ jobs:
           python3 <<'PY'
           import glob
           import json
+          import os
           import sys
+          from pathlib import Path
 
           files = sorted(
               path for path in glob.glob("BenchmarkDotNet.Artifacts/results/*-report-full-compressed.json")
@@ -91,7 +93,61 @@ jobs:
               json.dump(merged, handle)
           print(f"Merged {len(files)} report(s) into {out}")
           print(f"Benchmarks: {len(merged.get('Benchmarks', []))}")
+
+          markdown_files = sorted(
+              glob.glob("BenchmarkDotNet.Artifacts/results/*-report-github.md")
+          )
+          if not markdown_files:
+              print("No *-report-github.md files found", file=sys.stderr)
+              sys.exit(1)
+
+          summary = "## 📊 Benchmark results\n\n" + "\n\n".join(
+              Path(path).read_text(encoding="utf-8")
+              for path in markdown_files
+          )
+          summary_path = Path("BenchmarkDotNet.Artifacts/results/benchmark-summary.md")
+          summary_path.write_text(summary, encoding="utf-8")
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+              handle.write(summary)
+              handle.write("\n")
           PY
+
+      - name: 💬 Publish benchmark PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        env:
+          BENCHMARK_SUMMARY_PATH: test/Benchmarks/Dilcore.MongoDB.Benchmarks/BenchmarkDotNet.Artifacts/results/benchmark-summary.md
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- dilcore-benchmark-results -->';
+            const summary = fs.readFileSync(process.env.BENCHMARK_SUMMARY_PATH, 'utf8');
+            const body = `${marker}\n${summary}\n\n[View workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              ...context.repo,
+              issue_number: context.issue.number,
+              per_page: 100
+            });
+            const existing = comments.find(comment =>
+              comment.user?.login === 'github-actions[bot]' &&
+              comment.body?.includes(marker)
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                ...context.repo,
+                comment_id: existing.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }
 
       - name: 📈 Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
@@ -101,8 +157,6 @@ jobs:
           output-file-path: test/Benchmarks/Dilcore.MongoDB.Benchmarks/BenchmarkDotNet.Artifacts/results/combined-report-full-compressed.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          comment-always: ${{ github.event_name == 'pull_request' }}
           comment-on-alert: true
           fail-on-alert: false
           alert-threshold: '150%'
-          summary-always: true
