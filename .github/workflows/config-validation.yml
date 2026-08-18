@@ -24,15 +24,15 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: 🐍 Setup Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.12"
 
       - name: 📦 Install check-jsonschema
-        run: pip install --disable-pip-version-check check-jsonschema
+        run: pip install --disable-pip-version-check check-jsonschema==0.38.0
 
       - name: 🔎 Validate Dependabot config
         run: check-jsonschema --builtin-schema vendor.dependabot .github/dependabot.yml
@@ -50,9 +50,14 @@ jobs:
 
       - name: ⬇️ Download actionlint
         run: |
-          bash <(curl --proto '=https' --tlsv1.2 -sSf \
-            https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) \
-            1.7.12
+          set -euo pipefail
+          VERSION=1.7.12
+          ARCHIVE="actionlint_${VERSION}_linux_amd64.tar.gz"
+          curl --proto '=https' --tlsv1.2 -sSfL \
+            -o "${ARCHIVE}" \
+            "https://github.com/rhysd/actionlint/releases/download/v${VERSION}/${ARCHIVE}"
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  ${ARCHIVE}" | sha256sum -c -
+          tar -xzf "${ARCHIVE}" actionlint
 
       - name: 🧪 Run actionlint
         run: ./actionlint -color
