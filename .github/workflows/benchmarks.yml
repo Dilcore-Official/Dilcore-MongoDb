@@ -93,6 +93,15 @@ jobs:
           print(f"Benchmarks: {len(merged.get('Benchmarks', []))}")
           PY
 
+      - name: 🔎 Check gh-pages branch
+        id: gh_pages
+        run: |
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: 📈 Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
@@ -106,3 +115,4 @@ jobs:
           fail-on-alert: false
           alert-threshold: '150%'
           summary-always: true
+          skip-fetch-gh-pages: ${{ steps.gh_pages.outputs.exists != 'true' }}
