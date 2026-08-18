@@ -95,7 +95,7 @@ public abstract class BaseMongoDbRepository<TDocument> where TDocument : class, 
         return NotDeletedFilter;
     }
 
-    private Task<Result<IMongoCollection<TDocument>>> GetCollectionAsync(CancellationToken cancellationToken = default)
+    protected Task<Result<IMongoCollection<TDocument>>> GetCollectionAsync(CancellationToken cancellationToken = default)
     {
         return _collectionProvider(cancellationToken);
     }

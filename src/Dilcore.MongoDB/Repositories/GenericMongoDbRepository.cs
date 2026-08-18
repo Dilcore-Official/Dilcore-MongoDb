@@ -77,7 +77,7 @@ internal class GenericMongoDbRepository<TDocument>(
         FilterDefinition<TDocument> filter,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var collectionResult = await collectionProvider(cancellationToken);
+        var collectionResult = await GetCollectionAsync(cancellationToken);
         if (collectionResult.IsFailed)
         {
             throw new InvalidOperationException(
@@ -102,7 +102,7 @@ internal class GenericMongoDbRepository<TDocument>(
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
         where TDerived : class, TDocument
     {
-        var collectionResult = await collectionProvider(cancellationToken);
+        var collectionResult = await GetCollectionAsync(cancellationToken);
         if (collectionResult.IsFailed)
         {
             throw new InvalidOperationException(

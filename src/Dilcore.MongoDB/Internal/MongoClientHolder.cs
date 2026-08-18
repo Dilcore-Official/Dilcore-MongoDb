@@ -1,4 +1,3 @@
-using System.Security.Authentication;
 using Dilcore.MongoDB.Abstractions.Ownership;
 using Dilcore.MongoDB.Descriptors;
 using MongoDB.Bson;
@@ -32,10 +31,6 @@ internal sealed class MongoClientHolder : IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(descriptor.ConnectionString);
 
         var settings = MongoClientSettings.FromUrl(new MongoUrl(descriptor.ConnectionString));
-        settings.SslSettings = new SslSettings
-        {
-            EnabledSslProtocols = SslProtocols.Tls12
-        };
         settings.MaxConnectionPoolSize = descriptor.MaxConnectionPoolSize;
         settings.MaxConnectionIdleTime = TimeSpan.FromMinutes(MongoDbDefaults.MaxConnectionIdleTimeInMinutes);
 
