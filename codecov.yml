@@ -1,0 +1,13 @@
+# Codecov: upload the merged Cobertura report from CI (not Jest).
+coverage:
+  status:
+    project: on
+    patch: on
+
+ignore:
+  - "test/**"
+  - "samples/**"
+
+comment:
+  layout: "condensed_header, condensed_files, condensed_footer"
+  require_changes: false
