@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Dilcore.MongoDB.Abstractions.Exceptions;
@@ -36,16 +37,16 @@ internal static class DocumentIdAccessorCache
     {
         ArgumentNullException.ThrowIfNull(documentType);
 
-        foreach (var iface in documentType.GetInterfaces())
+        var idInterface = documentType.GetInterfaces()
+            .FirstOrDefault(iface => iface.IsGenericType && iface.GetGenericTypeDefinition() == typeof(IDocumentEntity<>));
+
+        if (idInterface is null)
         {
-            if (iface.IsGenericType && iface.GetGenericTypeDefinition() == typeof(IDocumentEntity<>))
-            {
-                return iface.GetGenericArguments()[0];
-            }
+            throw new InvalidOperationException(
+                $"Type '{documentType.FullName}' must implement IDocumentEntity<TId>.");
         }
 
-        throw new InvalidOperationException(
-            $"Type '{documentType.FullName}' must implement IDocumentEntity<TId>.");
+        return idInterface.GetGenericArguments()[0];
     }
 
     private static class Holder<TDocument>

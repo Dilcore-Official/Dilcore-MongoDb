@@ -157,6 +157,7 @@ public class RepositoryCrudBenchmarks
         {
             foreach (var _ in cursor.Current)
             {
+                // Drain the cursor to measure full enumeration cost.
             }
         }
     }
@@ -167,6 +168,7 @@ public class RepositoryCrudBenchmarks
         await foreach (var _ in _repository.GetAsyncEnumerable(FilterDefinition<BenchmarkEntity>.Empty)
                            .ConfigureAwait(false))
         {
+            // Drain the enumerable to measure full enumeration cost.
         }
     }
 

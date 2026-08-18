@@ -22,6 +22,8 @@ public class ColdStartBenchmarks
     [Benchmark(Baseline = true)]
     public IMongoCollection<BenchmarkEntity> RawDriver_CreateClientAndGetCollection()
     {
+        // Intentionally not disposed: cold-start measures client construction + first collection
+        // resolve only; disposing would close the pool the returned collection depends on.
         var client = new MongoClient(ConnectionString);
         return client.GetDatabase("bench-coldstart").GetCollection<BenchmarkEntity>("entities");
     }
