@@ -4,6 +4,7 @@ Thanks for contributing to **Dilcore MongoDB** (repository:
 [Dilcore-Official/Dilcore-MongoDb](https://github.com/Dilcore-Official/Dilcore-MongoDb)).
 
 Please read the [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
+Coding agents should follow [AGENTS.md](AGENTS.md).
 
 ## Ways to contribute
 
@@ -36,6 +37,13 @@ dotnet test Dilcore.MongoDB.sln --configuration Release
 dotnet run --project test/Benchmarks/Dilcore.MongoDB.Benchmarks -c Release -- --filter '*'
 # Cold-start only (no Docker):
 dotnet run --project test/Benchmarks/Dilcore.MongoDB.Benchmarks -c Release -- --filter '*ColdStart*'
+```
+
+Formatting is defined in [`.editorconfig`](.editorconfig). Prefer editor format-on-save
+and verify changed C# without rewriting the tree:
+
+```bash
+dotnet format Dilcore.MongoDB.sln --verify-no-changes
 ```
 
 Use **Shouldly** for assertions (not FluentAssertions). Architecture tests enforce the

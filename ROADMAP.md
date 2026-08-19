@@ -101,7 +101,7 @@ Milestone: [M0 Product Baseline](https://github.com/Dilcore-Official/Dilcore-Mon
 **M0 decisions recorded**
 
 - Rename to `Dilcore.MongoDB` / `Dilcore.MongoDB.Abstractions`; two-package core goal; no v1 compatibility shims.
-- TFM `net10.0`; MongoDB.Driver pin 3.5.2; server support = driver-supported range (4.2–8.0 today).
+- TFM `net10.0`; MongoDB.Driver pin lives in `Directory.Packages.props`; server support = the pinned driver’s published range (see [versioning and support](docs/policies/versioning-and-support.md)).
 - Balanced budgets: ≥80% line / ≥70% branch coverage; telemetry ≤1% disabled / ≤3% enabled; cold-start regression ≤5%.
 
 **Exit criteria:** Naming ADR accepted; supported matrix published; API baseline captured; Serena memories committed (local overrides remain untracked).

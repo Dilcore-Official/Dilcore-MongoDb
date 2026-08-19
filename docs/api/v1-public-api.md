@@ -1,16 +1,34 @@
-# v1 Public API Inventory
+# Public API inventory
 
-Canonical inventory of the current (v1) public API surface for Dilcore DocumentDB packages.  
 Tracked by [#2](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/2).  
-Machine-readable baselines: `src/*/PublicAPI.Shipped.txt` (ready for `Microsoft.CodeAnalysis.PublicApiAnalyzers` in [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28)).
+Machine-readable **current** baselines: [`src/Dilcore.MongoDB.Abstractions/PublicAPI.*.txt`](../../src/Dilcore.MongoDB.Abstractions/PublicAPI.Shipped.txt) and [`src/Dilcore.MongoDB/PublicAPI.*.txt`](../../src/Dilcore.MongoDB/PublicAPI.Shipped.txt). Analyzer enforcement remains [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28).
 
-**Snapshot date:** 2026-08-02  
-**TFM:** `net10.0`  
-**Driver:** `MongoDB.Driver` 3.5.2
+This file keeps the **historical v1** four-package snapshot (2026-08-02) for migration context. It is **not** the live public API. Inspect `PublicAPI.Shipped.txt` / `PublicAPI.Unshipped.txt` and architecture tests for current truth.
+
+**v1 snapshot date:** 2026-08-02  
+**TFM (then and now):** `net10.0`  
+**Driver at v1 snapshot:** `MongoDB.Driver` 3.5.2 (current pin: [`Directory.Packages.props`](../../Directory.Packages.props))
 
 ---
 
-## Package reference graph
+## Current v2 status (two-package)
+
+Implemented topology ([ADR 0001](../adr/0001-package-naming.md), [package selection](../product/package-selection.md)):
+
+| Package | Role |
+|---------|------|
+| `Dilcore.MongoDB.Abstractions` | Contracts, keys, namespace, policies, repository interfaces |
+| `Dilcore.MongoDB` | DI (`AddMongoDb`), builders, repositories, conventions |
+
+Do not enumerate members here. Shipped types are listed in the two `PublicAPI.Shipped.txt` files. `ConfigureConventions` / `IConventionsBuilder` ([ADR 0003](../adr/0003-serialization-conventions.md)) are implemented and currently recorded in `Dilcore.MongoDB/PublicAPI.Unshipped.txt`.
+
+M2.5 entity model ([ADR 0002](../adr/0002-generic-document-identifier.md)): marker `IDocumentEntity`, `IDocumentEntity<TId>`, opt-in `IHasConcurrencyToken` / `ISoftDeletable` / `IAuditableDocument`, `GuidIdGenerationStrategy`.
+
+v1 risks below (namespace collision, duplicate extensions, public bulk/projection concretes, `MongoDatabaseContainer.Services`) are **resolved in M2**. Remaining correctness defects are tracked in [v1-defects.md](../product/v1-defects.md) (#18).
+
+---
+
+## Historical v1 package graph (superseded)
 
 ```text
 Dilcore.DocumentDb.Abstractions
@@ -25,31 +43,20 @@ Dilcore.DocumentDb.MongoDb.Abstractions
         Dilcore.DocumentDb.MongoDb.Repositories
 ```
 
-| Package | Project | Direct NuGet deps | Project refs |
-|---------|---------|-------------------|--------------|
+| Package | Project (v1) | Direct NuGet deps | Project refs |
+|---------|--------------|-------------------|--------------|
 | `Dilcore.DocumentDb.Abstractions` | `src/Dilcore.DocumentDb.Abstractions/` | FluentResults | — |
 | `Dilcore.DocumentDb.MongoDb.Abstractions` | `src/Dilcore.DocumentDb.MongoDb.Abstractions/` | FluentResults, MongoDB.Driver | Abstractions |
 | `Dilcore.DocumentDb.MongoDb` | `src/Dilcore.DocumentDb.MongoDb/` | FluentValidation, Microsoft.Extensions.DependencyInjection, MongoDB.Driver | Abstractions, MongoDb.Abstractions |
 | `Dilcore.DocumentDb.MongoDb.Repositories` | `src/Dilcore.DocumentDb.MongoDb.Repositories/` | *(transitive)* | MongoDb.Abstractions, MongoDb |
 
-**Primary consumer entry point:** `ServiceCollectionExtensions.AddMongoDb(...)` in `Dilcore.DocumentDb.MongoDb`.
+**v1 primary entry point:** `ServiceCollectionExtensions.AddMongoDb(...)` in `Dilcore.DocumentDb.MongoDb`.
+
+v1 baseline paths under `src/Dilcore.DocumentDb.*` no longer exist; they were captured for #2 and then replaced by the two-package files linked above.
 
 ---
 
-## Baseline artifacts
-
-| Package | Shipped baseline | Unshipped |
-|---------|------------------|-----------|
-| Abstractions | [`PublicAPI.Shipped.txt`](../../src/Dilcore.DocumentDb.Abstractions/PublicAPI.Shipped.txt) | [`PublicAPI.Unshipped.txt`](../../src/Dilcore.DocumentDb.Abstractions/PublicAPI.Unshipped.txt) |
-| MongoDb.Abstractions | [`PublicAPI.Shipped.txt`](../../src/Dilcore.DocumentDb.MongoDb.Abstractions/PublicAPI.Shipped.txt) | [`PublicAPI.Unshipped.txt`](../../src/Dilcore.DocumentDb.MongoDb.Abstractions/PublicAPI.Unshipped.txt) |
-| MongoDb | [`PublicAPI.Shipped.txt`](../../src/Dilcore.DocumentDb.MongoDb/PublicAPI.Shipped.txt) | [`PublicAPI.Unshipped.txt`](../../src/Dilcore.DocumentDb.MongoDb/PublicAPI.Unshipped.txt) |
-| Repositories | [`PublicAPI.Shipped.txt`](../../src/Dilcore.DocumentDb.MongoDb.Repositories/PublicAPI.Shipped.txt) | [`PublicAPI.Unshipped.txt`](../../src/Dilcore.DocumentDb.MongoDb.Repositories/PublicAPI.Unshipped.txt) |
-
-Analyzer activation and CI enforcement are deferred to [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28).
-
----
-
-## 1. Dilcore.DocumentDb.Abstractions
+## 1. Dilcore.DocumentDb.Abstractions (v1)
 
 **Namespace:** `Dilcore.DocumentDb.Abstractions` (+ `.Extensions`, `.Helpers`, `.Exceptions`)
 
@@ -57,8 +64,8 @@ Analyzer activation and CI enforcement are deferred to [#28](https://github.com/
 |------|------|-----------------|
 | `IDocumentEntity` | interface | `Id`, `ETag`, `IsDeleted`, `CreatedAt`, `UpdatedAt` |
 | `IDocumentPrefixProvider` | interface | `ResolveAsync(CancellationToken)` |
-| `IDocumentDatabasePrefixProvider` | interface | extends prefix provider (file name says *Resolver*) |
-| `IDocumentCollectionPrefixProvider` | interface | extends prefix provider (file name says *Resolver*) |
+| `IDocumentDatabasePrefixProvider` | interface | extends prefix provider (file name said *Resolver*) |
+| `IDocumentCollectionPrefixProvider` | interface | extends prefix provider (file name said *Resolver*) |
 | `Constants` | static class | `EmptyETag` |
 | `DocumentEntityExtensions` | static class | `GenerateETag`, `CreatedNow`, `UpdatedNow`, `NewId`, `IsIdEmpty`, `CheckId`, `IsNew` |
 | `DocumentDbHelper` | class | public `GenerateEtag()` |
@@ -66,13 +73,13 @@ Analyzer activation and CI enforcement are deferred to [#28](https://github.com/
 
 ---
 
-## 2. Dilcore.DocumentDb.MongoDb.Abstractions
+## 2. Dilcore.DocumentDb.MongoDb.Abstractions (v1)
 
-**Critical:** `RootNamespace` is `Dilcore.DocumentDb.Abstractions`, so Mongo-specific types ship under the **same namespace** as the core abstractions package despite being a separate NuGet package. See [v1 defects](../product/v1-defects.md).
+**Critical (v1):** `RootNamespace` was `Dilcore.DocumentDb.Abstractions`, so Mongo-specific types shipped under the **same namespace** as the core abstractions package. See [v1 defects](../product/v1-defects.md) D1 (resolved in M2).
 
 | Type | Kind | Namespace shipped | Notes |
 |------|------|-------------------|-------|
-| `GetCollectionOptions<TDocument>` | class | `Dilcore.DocumentDb.Abstractions` | Fluent options; includes unused `WithEmptyCollection` |
+| `GetCollectionOptions<TDocument>` | class | `Dilcore.DocumentDb.Abstractions` | Fluent options; included unused `WithEmptyCollection` |
 | `IMongoDbCollectionFactory` | interface | `Dilcore.DocumentDb.Abstractions` | |
 | `IMongoDbCollectionProvider` | interface | `Dilcore.DocumentDb.Abstractions` | |
 | `IMongoDatabaseProvider` | interface | `Dilcore.DocumentDb.Abstractions` | |
@@ -80,11 +87,11 @@ Analyzer activation and CI enforcement are deferred to [#28](https://github.com/
 | `IBsonDocumentRepository` | interface | `Dilcore.DocumentDb.Abstractions` | **Empty marker** |
 | `BsonDocumentRepository` | abstract class | `Dilcore.DocumentDb.Abstractions` | |
 | `BaseMongoDbRepository<TDocument>` | abstract class | `Dilcore.DocumentDb.Abstractions.Repositories` | |
-| `DocumentEntityExtensions` | static class | `Dilcore.DocumentDb.Abstractions.Extensions` | **Duplicate type name**; adds `ToBsonUpdateDocument<T>` |
+| `DocumentEntityExtensions` | static class | `Dilcore.DocumentDb.Abstractions.Extensions` | **Duplicate type name**; added `ToBsonUpdateDocument<T>` |
 
 ---
 
-## 3. Dilcore.DocumentDb.MongoDb
+## 3. Dilcore.DocumentDb.MongoDb (v1)
 
 **Namespace:** `Dilcore.DocumentDb.MongoDb` (+ `.Extensions`, `.Configuration.Client`, `.Helpers`)
 
@@ -101,7 +108,7 @@ Internal (not in baseline as public API): `MongoClientProvider`, `MongoCollectio
 
 ---
 
-## 4. Dilcore.DocumentDb.MongoDb.Repositories
+## 4. Dilcore.DocumentDb.MongoDb.Repositories (v1)
 
 **Namespace:** `Dilcore.DocumentDb.MongoDb.Repositories` (+ `.Abstractions`)
 
@@ -114,38 +121,17 @@ Internal (not in baseline as public API): `MongoClientProvider`, `MongoCollectio
 | `MongoDatabaseContainerExtensions` | static class | `AddGenericRepository` |
 | `RegisterRepositoryOptions` | class | `WithBulkRepository`, `WithProjectionRepository` |
 | `GenericMongoDbRepository<T>` | class | **internal** (correct) |
-| `GenericMongoDbBulkRepository<T>` | class | **public** (leaks concrete type) |
-| `GenericMongoDbProjectionRepository<T>` | class | **public** (leaks concrete type) |
+| `GenericMongoDbBulkRepository<T>` | class | **public** (leaked concrete type) |
+| `GenericMongoDbProjectionRepository<T>` | class | **public** (leaked concrete type) |
 
 ---
 
-## Notable baseline risks for v2 diffs
+## Notable v1 baseline risks (resolved in M2 unless noted)
 
-1. Namespace collision across two packages under `Dilcore.DocumentDb.Abstractions`.
-2. Duplicate `DocumentEntityExtensions` type name in the same namespace from two assemblies.
-3. Empty `IBsonDocumentRepository` marker and unused `WithEmptyCollection` / `MongoDbIndexFactory`.
-4. Inconsistent concrete repository visibility (generic internal vs bulk/projection public).
-5. Public mutable `MongoDatabaseContainer.Services` service-locator field.
+1. Namespace collision across two packages under `Dilcore.DocumentDb.Abstractions` — **resolved**.
+2. Duplicate `DocumentEntityExtensions` type name — **resolved**.
+3. Empty `IBsonDocumentRepository` marker and unused `WithEmptyCollection` / `MongoDbIndexFactory` — **removed**.
+4. Inconsistent concrete repository visibility — **resolved** (concretes internal).
+5. Public mutable `MongoDatabaseContainer.Services` — **removed** with the container API.
 
-These feed the [defect inventory](../product/v1-defects.md) and [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13).
-
----
-
-## M2.5 update (v2 entity model)
-
-As of [ADR 0002](../adr/0002-generic-document-identifier.md) / milestone M2.5:
-
-| Type | Change |
-|------|--------|
-| `IDocumentEntity` | Empty marker (no longer carries `Guid Id` / ETag / soft-delete / audit members) |
-| `IDocumentEntity<TId>` | Typed identifier contract |
-| `IHasConcurrencyToken` | Opt-in `ETag` |
-| `ISoftDeletable` | Opt-in `IsDeleted` |
-| `IAuditableDocument` | Opt-in `CreatedAt` / `UpdatedAt` |
-| `GuidIdGenerationStrategy` | `Random` (default) or `SequentialVersion7` |
-| `UnsupportedIdentifierTypeException` | Thrown when auto-generating unsupported `TId` |
-| `GetCollectionOptions<TDocument>.WithGuidIdGeneration` | Per-collection Guid generation |
-| `IMongoDocumentBindingBuilder<TDocument>.WithGuidIdGeneration` | Per-binding Guid generation |
-| `DocumentEntityExtensions` | Policy-aware no-ops; `NewId` accepts optional Guid strategy |
-
-Machine-readable baselines live under `src/Dilcore.MongoDB.Abstractions/PublicAPI.*.txt` and `src/Dilcore.MongoDB/PublicAPI.*.txt`.
+These fed the [defect inventory](../product/v1-defects.md) and [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13).

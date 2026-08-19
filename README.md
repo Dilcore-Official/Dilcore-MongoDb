@@ -29,7 +29,7 @@ An opinionated .NET MongoDB application toolkit: validated multi-cluster / multi
 
 ## 🏗️ Architecture Overview
 
-The library follows Clean Architecture principles with clear separation of concerns:
+The library separates contracts, DI/infrastructure, and repository helpers:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -49,8 +49,8 @@ The library follows Clean Architecture principles with clear separation of conce
 ┌─────────────────────────────────────────────────────────────┐
 │                   Abstractions Layer                        │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐ │
-│  │ IDocumentEntity │  │ Repository      │  │ Prefix      │ │
-│  │                 │  │ Interfaces      │  │ Providers   │ │
+│  │ IDocumentEntity │  │ Repository      │  │ Namespace   │ │
+│  │                 │  │ Interfaces      │  │ resolution  │ │
 │  └─────────────────┘  └─────────────────┘  └─────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -59,12 +59,12 @@ The library follows Clean Architecture principles with clear separation of conce
 
 - **Multi-Database Support**: Configure and manage multiple MongoDB databases within a single application
 - **Repository Pattern**: Generic, Bulk, and Projection repositories with FluentResults for error handling
-- **Prefix Resolvers**: Dynamic database and collection naming with custom prefix providers
+- **Namespace resolution**: Dynamic database and collection naming via app-owned prefix resolvers
 - **Type Safety**: Strongly-typed entities with automatic serialization/deserialization
 - **Soft Delete Support**: Built-in soft delete functionality for entities
 - **Index Management**: Automatic index creation and management
 - **Dependency Injection**: Full integration with Microsoft.Extensions.DependencyInjection
-- **Thread Safety**: Thread-safe operations with proper async/await patterns
+- **Async APIs**: Repository and resolution APIs are asynchronous; `IMongoClient` is registered as a singleton per cluster
 
 ## 📦 Core Components
 
@@ -527,7 +527,6 @@ public abstract class BaseIntegrationTests
 ### Collection Options
 ```csharp
 options.WithCollectionName("customName")           // Custom collection name
-       .WithDatabaseName("customDb")               // Target database
        .WithSoftDelete()                           // Enable soft delete
        .WithIndexes(                               // Define indexes
            Builders<T>.IndexKeys.Ascending(x => x.Field1),
@@ -543,12 +542,7 @@ repositoryOptions.WithBulkRepository()             // Enable bulk operations
 
 ## 🚀 Getting Started
 
-1. **Install the packages** (configure in Directory.Packages.props):
-   ```xml
-   <PackageVersion Include="MongoDB.Driver" Version="3.5.0" />
-   <PackageVersion Include="FluentResults" Version="4.0.0" />
-   <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
-   ```
+1. **Install the packages.** Pin versions in `Directory.Packages.props` (see [versioning and support](docs/policies/versioning-and-support.md)); do not copy numbers from this README.
 
 2. **Define your entities**:
    ```csharp
@@ -609,4 +603,4 @@ repositoryOptions.WithBulkRepository()             // Enable bulk operations
 - **Integration Tests**: Explore `test/Repositories.IntegrationTests` for comprehensive usage patterns
 - **Unit Tests**: Check `test/UnitTests` for entity and extension testing examples
 
-The Dilcore DocumentDB library provides a robust, scalable foundation for MongoDB-based applications with clean architecture, comprehensive testing, and flexible configuration options.
+Dilcore MongoDB is an opinionated toolkit for MongoDB-based applications: validated DI, namespace resolution, repository helpers, and direct `MongoDB.Driver` escape hatches.

@@ -1,5 +1,5 @@
 # the name by which the project can be referenced within Serena
-project_name: "DocumentDb"
+project_name: "Dilcore.MongoDB"
 
 # list of languages for which language servers are started
 languages:
@@ -47,11 +47,14 @@ default_modes:
 
 # initial prompt always given on project activation
 initial_prompt: |
-  Dilcore MongoDB toolkit (.NET 10). Current v1 packages are Dilcore.DocumentDb.*;
-  v2 renames to Dilcore.MongoDB (two packages: Abstractions + primary) with a hard break.
-  Prefer Serena symbolic tools for C# edits. Do not invent provider-neutral DocumentDB claims.
-  Integration tests require Docker/Testcontainers. See ROADMAP.md and docs/ for M0 decisions.
-  Never commit .serena/project.local.yml or secrets.
+  Dilcore.MongoDB is an opinionated .NET 10 MongoDB application toolkit (not a driver
+  replacement, not Amazon DocumentDB, not provider-neutral). Read AGENTS.md for What/Why,
+  ROADMAP.md for milestone scope, CONTRIBUTING.md for How to build/test/PR.
+  Prefer Serena symbolic tools for C# discovery and edits. Use Context7 MCP for
+  MongoDB.Driver and third-party library docs; Microsoft Learn MCP for .NET and
+  Microsoft.Extensions APIs. Do not invent provider-neutral DocumentDB claims.
+  Integration tests require Docker/Testcontainers. Never commit .serena/project.local.yml
+  or secrets. Keep documentation and PublicAPI baselines in the same change as code.
 
 # symbol info budget: unset inherits global
 symbol_info_budget:

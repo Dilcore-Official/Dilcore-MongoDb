@@ -7,12 +7,14 @@ on:
       - ".github/workflows/**"
       - ".github/dependabot.yml"
       - ".github/ISSUE_TEMPLATE/**"
+      - ".coderabbit.yaml"
   pull_request:
     branches: [main]
     paths:
       - ".github/workflows/**"
       - ".github/dependabot.yml"
       - ".github/ISSUE_TEMPLATE/**"
+      - ".coderabbit.yaml"
 
 permissions:
   contents: read
@@ -33,6 +35,9 @@ jobs:
 
       - name: 📦 Install check-jsonschema
         run: pip install --disable-pip-version-check check-jsonschema==0.38.0
+
+      - name: 🔎 Validate CodeRabbit config
+        run: check-jsonschema --schemafile https://coderabbit.ai/integrations/schema.v2.json .coderabbit.yaml
 
       - name: 🔎 Validate Dependabot config
         run: check-jsonschema --builtin-schema vendor.dependabot .github/dependabot.yml
