@@ -9,4 +9,4 @@ Test-suite intent:
 - `test/Repositories.IntegrationTests` — repository behavior against real MongoDB; Docker.
 - `test/Benchmarks` — performance; most filters need Docker (cold-start can run without).
 
-Roadmap hygiene: `./scripts/verify-roadmap-coverage.sh` (needs `gh` + `jq`).
+Roadmap hygiene: see CONTRIBUTING.md (do not copy the script or its tool requirements here).

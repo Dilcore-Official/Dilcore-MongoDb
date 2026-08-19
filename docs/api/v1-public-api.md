@@ -6,7 +6,7 @@ Machine-readable **current** baselines: [`src/Dilcore.MongoDB.Abstractions/Publi
 This file keeps the **historical v1** four-package snapshot (2026-08-02) for migration context. It is **not** the live public API. Inspect `PublicAPI.Shipped.txt` / `PublicAPI.Unshipped.txt` and architecture tests for current truth.
 
 **v1 snapshot date:** 2026-08-02  
-**TFM (then and now):** `net10.0`  
+**TFM at v1 snapshot:** `net10.0` (current TFM: [`Directory.Build.props`](../../Directory.Build.props))  
 **Driver at v1 snapshot:** `MongoDB.Driver` 3.5.2 (current pin: [`Directory.Packages.props`](../../Directory.Packages.props))
 
 ---

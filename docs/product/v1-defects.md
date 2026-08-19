@@ -15,7 +15,7 @@ Feeds naming ADR ([#4](https://github.com/Dilcore-Official/Dilcore-MongoDb/issue
 | D2 | **Resolved (M2)** | Duplicate `DocumentEntityExtensions` | v1: two assemblies, one namespace. Current: one type in Abstractions. | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
 | D3 | **Resolved (M2)** | File/type naming drift (`*PrefixProvider` vs `*PrefixResolver`) | Current: `INamespacePrefixResolver` / `INamespaceSegmentContributor`. | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
 | D4 | **Resolved (M2)** | Stale package metadata URLs | `src/Directory.Build.props` points at `Dilcore-Official/Dilcore-MongoDb`. | [#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30), [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5) |
-| D5 | **Partial** | Publish feed / version chaos | Workflow now publishes to `nuget.pkg.github.com/Dilcore-Official`. Still auto patch-bump on `src/**` push; props `Version` placeholder; tags `v0.0.x`; `nuget.config` may still mention legacy feed/package IDs. | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5), [#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30) |
+| D5 | **Partial** | Publish feed / version chaos | Current publish/version source of truth: [`.github/workflows/nuget-publish.yml`](../../.github/workflows/nuget-publish.yml). Remaining: auto-patch on `src/**` push, placeholder `Version` in `src/Directory.Build.props`, possible legacy feed/package IDs in `nuget.config`. | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5), [#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30) |
 
 ---
 
@@ -54,7 +54,7 @@ Feeds naming ADR ([#4](https://github.com/Dilcore-Official/Dilcore-MongoDb/issue
 | ID | Status | Defect | Evidence | Owner |
 |----|--------|--------|----------|-------|
 | D18 | **Resolved** | Missing `ado/` solution items | Current solution is `Dilcore.MongoDB.sln` without ADO refs. | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
-| D19 | **Resolved (M0)** | CI TFM drift (SDK 9.0.x vs net10.0) | Workflows use SDK `10.0.x`. Remaining analyzer/format gates: #28. | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5), [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
+| D19 | **Resolved (M0)** | CI TFM drift (historical: SDK `9.0.x` vs library TFM) | Current SDK pin lives in `.github/workflows` (`actions/setup-dotnet`). Remaining analyzer/format gates: #28. | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5), [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
 | D20 | **Resolved** | CI lacked Docker for Testcontainers | CI runs Docker preflight + integration/DI jobs. Coverage **gates** still M5 (#28). | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28), [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) |
 | D21 | **Open / ongoing** | Transitive vulnerability advisories | Track via Dependabot and security workflows; driver bumps in #32. | [#10](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/10), [#11](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/11), [#32](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/32) |
 | D22 | **Open** | Sample starts Testcontainers in host | `samples/MongoDb.WebApi.Sample/Program.cs` embeds container lifecycle. | [#39](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/39) |
@@ -83,7 +83,7 @@ Source: root [`README.md`](../../README.md). Full rewrite owned by [#39](https:/
 
 | Item | Owner | Status |
 |------|-------|--------|
-| Align GitHub Actions SDK to `10.0.x` | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5) (M0) | **Done** |
+| Align GitHub Actions SDK with library TFM | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5) (M0) | **Done** (pin in `.github/workflows`) |
 | Integration test Docker in CI | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) / [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) | **Done** (jobs exist) |
 | `global.json`, analyzers, warnings-as-errors, format gates | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) (M5) | Deferred |
 
