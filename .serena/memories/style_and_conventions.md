@@ -1,9 +1,8 @@
 # Style and conventions
 
-- C# with nullable enabled, implicit usings, LangVersion latest, net10.0.
-- Central package versions in Directory.Packages.props.
-- Prefer existing patterns: FluentResults for operation outcomes; NUnit + Shouldly in tests (user preference mentions FluentAssertions for new assertions when introduced).
-- Keep imports at top; no inline imports.
-- Exhaustive switch over unions/enums with never default when adding TS (N/A for C# here).
-- Do not expand public API without updating PublicAPI.Shipped.txt / Unshipped.txt baselines under src/*.
-- Product positioning: MongoDB toolkit only — do not claim provider-neutral DocumentDB or Clean Architecture marketing.
+- Product positioning: MongoDB toolkit only. Do not claim provider-neutral DocumentDB or Clean Architecture marketing.
+- Prefer existing patterns: FluentResults for operation outcomes; NUnit + Shouldly in tests (not FluentAssertions).
+- Change C# with Serena (replace/insert/rename/delete symbols or `replace_content`); keep imports at the top of the file; no inline imports.
+- Do not expand public API without updating `PublicAPI.Shipped.txt` / `PublicAPI.Unshipped.txt` under the two `src/Dilcore.MongoDB*` projects.
+- Formatting source of truth: root `.editorconfig`. Verify with `dotnet format` as documented in CONTRIBUTING.md.
+- TFM, nullable, implicit usings, and central package versions live in MSBuild props — do not duplicate pins here.

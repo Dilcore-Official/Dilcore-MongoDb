@@ -1,23 +1,25 @@
 # Package descriptions
 
 Canonical NuGet `PackageDescription` / package-selection copy for Dilcore MongoDB v2.  
-Owned by [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12) (topology) and verified in publish metadata by [#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30).
+Owned by [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12) (topology) and verified in publish metadata by [#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30). Companion: [package-selection.md](package-selection.md). Decisions: [ADR 0001](../adr/0001-package-naming.md), [ADR 0002](../adr/0002-generic-document-identifier.md), [ADR 0003](../adr/0003-serialization-conventions.md).
 
 **Rules**
 
 - Descriptions must say **MongoDB** explicitly; never brand the product as DocumentDB.
-- Core packages ship in M2; optional IDs below are planned only until their milestone creates the project.
+- Core packages below are **shipped** in `src/`. Optional IDs are **planned** until their milestone creates the project.
 - Keep `PackageDescription` ≤ ~300 characters, one sentence when possible, and aligned with this table.
 - Tags should include `mongodb` and role-specific terms; do not include Amazon DocumentDB or competing vendor product names.
 
-## Core (M2)
+## Core (shipped — M2+)
 
 | NuGet ID | When to use | PackageDescription |
 |----------|-------------|--------------------|
 | `Dilcore.MongoDB.Abstractions` | Reference contracts from libraries that must not take a DI host dependency | Contracts, entity and policy abstractions, and MongoDB-facing interfaces for Dilcore.MongoDB without DI host wiring |
 | `Dilcore.MongoDB` | Default application dependency for DI, collections, repositories, and policies | Opinionated MongoDB application toolkit: validated multi-cluster DI, namespace resolution, repositories, document policies, and direct MongoDB.Driver escape hatches |
 
-## Optional integrations (planned)
+Core includes repository interfaces, composable document policies, named bindings, and process-wide serialization conventions. Copy in each `.csproj` `PackageDescription` must stay aligned with this table.
+
+## Optional integrations (planned — not shipped)
 
 Confirm package creation before first publish of each ID ([ADR 0001](../adr/0001-package-naming.md)).
 
@@ -30,7 +32,7 @@ Confirm package creation before first publish of each ID ([ADR 0001](../adr/0001
 
 ## Streaming
 
-Streaming ships as an **independent feature** ([#24](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/24)): prefer a separate namespace / opt-in registration inside `Dilcore.MongoDB` unless M4 proves a separate package is required for dependency lifecycle.
+Streaming ships as an **independent planned feature** ([#24](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/24)): prefer a separate namespace / opt-in registration inside `Dilcore.MongoDB` unless M4 proves a separate package is required for dependency lifecycle. `IAsyncEnumerable` query methods already exist on repositories; the M4 work is cursor lifecycle and change streams, not “introduce IAsyncEnumerable”.
 
 | If kept in core | PackageDescription addition (README / docs, not a separate ID) |
 |-----------------|----------------------------------------------------------------|
@@ -44,7 +46,7 @@ Streaming ships as an **independent feature** ([#24](https://github.com/Dilcore-
 
 | Concern | Lives in | Reason |
 |---------|----------|--------|
-| Repositories / document policies | `Dilcore.MongoDB` | Folded into primary package unless M2 proves independent value |
-| Transactions | `Dilcore.MongoDB` | Thin coordinator over driver sessions (#21) |
-| Provisioning / migrations | `Dilcore.MongoDB` | Idempotent runner outside request hot paths (#22) |
+| Repositories / document policies | `Dilcore.MongoDB` | Folded into primary package (M2 complete) |
+| Transactions | `Dilcore.MongoDB` | Thin coordinator over driver sessions (#21) — **planned** |
+| Provisioning / migrations | `Dilcore.MongoDB` | Idempotent runner outside request hot paths (#22) — **planned** |
 | Azure Monitor / App Insights / CloudWatch exporters | Host samples only | Never core or optional Dilcore packages (#35) |

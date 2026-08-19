@@ -1,9 +1,12 @@
 # Suggested commands
 
-- `dotnet restore Dilcore.MongoDB.sln`
-- `dotnet build Dilcore.MongoDB.sln -c Release`
-- `dotnet test Dilcore.MongoDB.sln -c Release` (needs Docker for integration/DI acceptance)
-- `dotnet test test/UnitTests test/ArchitectureTests -c Release` (no Docker)
-- `dotnet test test/IntegrationTests -c Release` (DI acceptance; needs Docker)
-- `dotnet pack Dilcore.MongoDB.sln -c Release -o ./nupkgs`
-- `./scripts/verify-roadmap-coverage.sh`
+Authoritative command list: [CONTRIBUTING.md](../../CONTRIBUTING.md).
+
+Test-suite intent:
+
+- `test/UnitTests` and `test/ArchitectureTests` — fast; no Docker.
+- `test/IntegrationTests` — DI acceptance / namespace / multi-cluster; Docker + Testcontainers.
+- `test/Repositories.IntegrationTests` — repository behavior against real MongoDB; Docker.
+- `test/Benchmarks` — performance; most filters need Docker (cold-start can run without).
+
+Roadmap hygiene: see CONTRIBUTING.md (do not copy the script or its tool requirements here).

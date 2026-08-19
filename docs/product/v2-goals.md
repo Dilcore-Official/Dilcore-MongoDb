@@ -1,18 +1,20 @@
 # Measurable v2 goals
 
 Tracked by [#6](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/6).  
-Validated later by M5 packaging/benchmarks ([#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28)–[#31](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/31)) and M6 observability ([#33](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/33)–[#34](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/34)).
+Validated later by M5 packaging/benchmarks ([#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28)–[#31](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/31)) and M6 observability ([#33](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/33)–[#34](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/34)). Package catalog: [package-descriptions.md](package-descriptions.md). Support: [versioning policy](../policies/versioning-and-support.md).
+
+**Branch status** is measured against current `src/` and CI, not against the retired four-package v1 tree.
 
 ## Product shape
 
-| Metric | Current (v1) | v2 target | Validated by |
-|--------|--------------|-----------|--------------|
-| Packable core packages | 4 | **2** (`Dilcore.MongoDB.Abstractions`, `Dilcore.MongoDB`) | [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12) |
-| Third-party deps in Abstractions | FluentResults | **0** preferred; FluentResults only if Result remains a public contract and cannot be inlined | [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12) |
-| Direct runtime deps in primary package | FluentValidation + DI + MongoDB.Driver (+ transitive Result) | **≤ 3** direct runtime `PackageReference` items | [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12), [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
-| Consumer single-binding setup | Multi-builder sample | **≤ 15** meaningful C# statements for one cluster + one document binding | [#17](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/17), [#39](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/39) |
+| Metric | v1 baseline | Current branch | v2 target | Validated by |
+|--------|-------------|----------------|-----------|--------------|
+| Packable core packages | 4 | **2** | **2** (`Dilcore.MongoDB.Abstractions`, `Dilcore.MongoDB`) | [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12), `PackageTopologyTests` |
+| Third-party deps in Abstractions | FluentResults | FluentResults + MongoDB.Driver | **0** preferred; FluentResults only if Result remains a public contract | [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12) |
+| Direct runtime deps in primary package | FluentValidation + DI + MongoDB.Driver | DI + MongoDB.Driver | **≤ 3** direct runtime `PackageReference` items | [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12), [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
+| Consumer single-binding setup | Multi-builder sample | Sample is within budget | **≤ 15** meaningful C# statements for one cluster + one document binding | [#17](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/17), [#39](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/39) |
 
-Optional JSON / OpenTelemetry / VectorData packages are extra and do not count against the two-core-package goal.
+Optional JSON / OpenTelemetry / VectorData packages are extra, **not shipped**, and do not count against the two-core-package goal.
 
 ### Counting rules
 
@@ -23,20 +25,22 @@ Optional JSON / OpenTelemetry / VectorData packages are extra and do not count a
 
 | Metric | Current | v2 target | Validated by |
 |--------|---------|-----------|--------------|
-| Line coverage (solution src) | Partial; unit-only Abstractions ~87%; integration Docker-dependent | **≥ 80%** line | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28), [#29](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/29) |
+| Line coverage (solution src) | Collected in CI; not gated at v2 target | **≥ 80%** line | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28), [#29](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/29) |
 | Branch coverage (solution src) | Not gated | **≥ 70%** branch | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
 | Public API XML docs | Missing | **100%** of public APIs documented | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
-| CI integration tests | No Docker service | Green with Testcontainers in CI | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28), [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) |
+| CI integration tests | Docker preflight + DI acceptance + full solution job | Stay green with Testcontainers in CI | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28), [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) |
+
+M2.6 conventions are implemented; promoting `ConfigureConventions` from `PublicAPI.Unshipped.txt` to shipped is part of public-API analyzer work (#28), not a new feature.
 
 ## Performance / telemetry budgets
 
-Baselines must be captured before enforcement. BenchmarkDotNet suite lands in [#31](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/31).
+Baselines must be captured before enforcement. BenchmarkDotNet suite: [#31](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/31) (`test/Benchmarks/`). Telemetry overhead benches are placeholders until M6.
 
 | Metric | v2 budget | Notes |
 |--------|-----------|-------|
 | Cold-start: DI registration + first resolution vs direct driver | **≤ 5%** regression | Median vs recorded baseline |
-| Telemetry disabled overhead | **≤ 1%** | No listeners / meters disabled |
-| Telemetry enabled overhead | **≤ 3%** | Agreed balanced budget; validated in [#34](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/34) |
+| Telemetry disabled overhead | **≤ 1%** | No listeners / meters disabled — **planned (M6)** |
+| Telemetry enabled overhead | **≤ 3%** | Agreed balanced budget; validated in [#34](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/34) — **planned** |
 
 ### Benchmark protocol
 
