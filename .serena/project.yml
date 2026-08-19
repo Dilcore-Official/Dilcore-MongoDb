@@ -50,9 +50,11 @@ initial_prompt: |
   Dilcore.MongoDB is an opinionated .NET 10 MongoDB application toolkit (not a driver
   replacement, not Amazon DocumentDB, not provider-neutral). Read AGENTS.md for What/Why,
   ROADMAP.md for milestone scope, CONTRIBUTING.md for How to build/test/PR.
-  Prefer Serena symbolic tools for C# discovery and edits. Use Context7 MCP for
-  MongoDB.Driver and third-party library docs; Microsoft Learn MCP for .NET and
-  Microsoft.Extensions APIs. Do not invent provider-neutral DocumentDB claims.
+  Use Serena MCP for C# discovery AND edits (replace_symbol_body, insert_*,
+  rename_symbol, safe_delete_symbol, replace_content) — not read-only search.
+  Use Context7 MCP for MongoDB.Driver and third-party library docs; Microsoft
+  Learn MCP for .NET and Microsoft.Extensions APIs. Do not invent
+  provider-neutral DocumentDB claims.
   Integration tests require Docker/Testcontainers. Never commit .serena/project.local.yml
   or secrets. Keep documentation and PublicAPI baselines in the same change as code.
 
