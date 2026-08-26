@@ -3,102 +3,105 @@
 Recorded for [#3](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/3).  
 Feeds naming ADR ([#4](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/4)), dead-API removal ([#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13)), correctness fixes ([#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18)), quality gates ([#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28)), and README rewrite ([#39](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/39)).
 
+**How to read this file:** v1 evidence is preserved. **Status** is against current `src/` (two-package `Dilcore.MongoDB*`). Historical inventory: [v1-public-api.md](../api/v1-public-api.md). Entity model: [ADR 0002](../adr/0002-generic-document-identifier.md). Conventions: [ADR 0003](../adr/0003-serialization-conventions.md).
+
 ---
 
 ## Packaging and namespaces
 
-| ID | Defect | Evidence | Owner |
-|----|--------|----------|-------|
-| D1 | Package/namespace collision | `Dilcore.DocumentDb.MongoDb.Abstractions.csproj` sets `RootNamespace` to `Dilcore.DocumentDb.Abstractions`, so Mongo types ship under the core abstractions namespace from a separate package | [#4](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/4), [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12), [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
-| D2 | Duplicate `DocumentEntityExtensions` type name | Present in both Abstractions packages under `Dilcore.DocumentDb.Abstractions.Extensions` | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
-| D3 | File/type naming drift | `IDocument*PrefixResolver.cs` files define `*PrefixProvider` types; `Default*PrefixResolver.cs` define `Default*PrefixProvider` | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
-| D4 | Stale package metadata URLs | `src/Directory.Build.props` still points at `aytymchuk/Dilcore-Library-DocumentDb` while `origin` is `Dilcore-Official/Dilcore-MongoDb` | [#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30) (packaging), interim note in [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5) |
-| D5 | Publish feed / version chaos | Publish workflow targets `nuget.pkg.github.com/aytymchuk`; props say `1.0.0`; tags are `v0.0.x`; auto patch bump on every `src/**` push | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5), [#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30) |
+| ID | Status | Defect | Evidence | Owner |
+|----|--------|--------|----------|-------|
+| D1 | **Resolved (M2)** | Package/namespace collision | v1 `Dilcore.DocumentDb.MongoDb.Abstractions` set `RootNamespace` to `Dilcore.DocumentDb.Abstractions`. Current: single `Dilcore.MongoDB.Abstractions` namespace. | [#4](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/4), [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12), [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
+| D2 | **Resolved (M2)** | Duplicate `DocumentEntityExtensions` | v1: two assemblies, one namespace. Current: one type in Abstractions. | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
+| D3 | **Resolved (M2)** | File/type naming drift (`*PrefixProvider` vs `*PrefixResolver`) | Current: `INamespacePrefixResolver` / `INamespaceSegmentContributor`. | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
+| D4 | **Resolved (M2)** | Stale package metadata URLs | `src/Directory.Build.props` points at `Dilcore-Official/Dilcore-MongoDb`. | [#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30), [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5) |
+| D5 | **Partial** | Publish feed / version chaos | Current publish/version source of truth: [`.github/workflows/nuget-publish.yml`](../../.github/workflows/nuget-publish.yml). Remaining: auto-patch on `src/**` push, placeholder `Version` in `src/Directory.Build.props`, possible legacy feed/package IDs in `nuget.config`. | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5), [#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30) |
 
 ---
 
-## Dead / redundant APIs (feed M2 removal)
+## Dead / redundant APIs (M2 #13)
 
-| ID | Defect | Evidence | Owner |
-|----|--------|----------|-------|
-| D6 | Empty `IBsonDocumentRepository` marker | Interface has no members | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
-| D7 | Pass-through `BsonDocumentCollectionFactory` | Thin wrapper over `IMongoDbCollectionFactory` | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
-| D8 | Unused `MongoDbIndexFactory` | No in-repo references (Serena reference search empty) | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
-| D9 | Unused `WithEmptyCollection` | No callers outside declaration | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
-| D10 | Public service-locator field | `MongoDatabaseContainer.Services` is a public mutable `IServiceCollection` field | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13), [#14](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/14) |
-| D11 | Inconsistent concrete repository visibility | `GenericMongoDbRepository` is internal; bulk/projection concretes are public | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
-| D12 | FluentValidation for a single guard | Used only in `MongoDbConfigBuilder` validation | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
-| D13 | Empty `Configuration/Database/` folder | Declared in MongoDb `.csproj` with no content | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
+| ID | Status | Defect | Evidence | Owner |
+|----|--------|--------|----------|-------|
+| D6 | **Resolved (M2)** | Empty `IBsonDocumentRepository` marker | Type absent from current public API. | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
+| D7 | **Resolved (M2)** | Pass-through `BsonDocumentCollectionFactory` | Type absent. | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
+| D8 | **Resolved (M2)** | Unused `MongoDbIndexFactory` | Type absent. | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
+| D9 | **Resolved (M2)** | Unused `WithEmptyCollection` | Not on `GetCollectionOptions`. | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
+| D10 | **Resolved (M2)** | Public service-locator field `MongoDatabaseContainer.Services` | Container API removed. | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13), [#14](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/14) |
+| D11 | **Resolved (M2)** | Inconsistent concrete repository visibility | Bulk/projection concretes are internal (`PublicApiBoundaryTests`). | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
+| D12 | **Resolved (M2)** | FluentValidation for a single guard | Not a primary-package dependency. | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
+| D13 | **Resolved (M2)** | Empty `Configuration/Database/` folder | Folder gone with v1 MongoDb project. | [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
 
 ---
 
 ## Correctness defects
 
-| ID | Defect | Evidence | Owner |
-|----|--------|----------|-------|
-| D14 | Soft-delete filter inconsistency | `GetAsync` / `GetListAsync` apply `ApplyNotDeleteFilter`; `HasAnyAsync` and `CountAsync` do not | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
-| D15 | Missing-document returns success with null | `GetAsync` returns `Result.Ok(entity)` after `FirstOrDefaultAsync` without null check | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
-| D16 | Streaming error model break | `GetAsyncEnumerable` throws `InvalidOperationException` on collection failure instead of `Result` | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18), [#25](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/25) |
-| D17 | Primary-constructor capture warning | CS9107 in `GenericMongoDbRepository.cs` | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) / [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
-| D23 | Timestamp ETag is not collision-safe | `DocumentDbHelper.GenerateEtag()` uses `DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()`; concurrent writers can share the same token | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
-| D24 | Entities mutated before write success | `UpdateAsync` / bulk `CreateWriteModels` call `GenerateETag` / `UpdatedNow` before `UpdateOne` / `BulkWrite` succeeds, so failed writes leave in-memory entities dirty | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
-| D25 | Full-document `$set` replace/patch risk | `ToBsonUpdateDocument` wraps `document.ToBsonDocument()` in `$set`, so updates can rewrite `_id` and concurrent fields instead of an explicit replace/patch contract | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
-| D26 | Bulk write edge cases incomplete | `BulkWriteAsync` uses default options; no-op / partial-failure / ordered-vs-unordered / per-item results and chunking are not modeled beyond coarse count checks | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| ID | Status | Defect | Evidence | Owner |
+|----|--------|--------|----------|-------|
+| D14 | **Open** | Soft-delete filter inconsistency | `GetAsync` / `GetListAsync` apply `ApplyNotDeleteFilter`; `HasAnyAsync` and `CountAsync` do not (`GenericMongoDbRepository`). | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D15 | **Open** | Missing-document returns success with null | `GetAsync` returns `Result.Ok(entity)` after `FirstOrDefaultAsync` without null check. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D16 | **Open** | Streaming error model break | `GetAsyncEnumerable` throws `InvalidOperationException` on collection failure instead of `Result`. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18), [#25](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/25) |
+| D17 | **Resolved** | Primary-constructor capture warning CS9107 | Addressed in later hardening; do not reintroduce unused captured primary-constructor parameters. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) / [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
+| D23 | **Open** | Timestamp ETag is not collision-safe | `MongoDbHelper.GenerateEtag()` uses millisecond unix time (v1 type was `DocumentDbHelper`). | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D24 | **Open** | Entities mutated before write success | `GenerateETag` / `UpdatedNow` before `UpdateOne` / `BulkWrite` succeeds. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D25 | **Open** | Full-document `$set` replace/patch risk | `ToBsonUpdateDocument` wraps `ToBsonDocument()` in `$set`. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D26 | **Open** | Bulk write edge cases incomplete | Default `BulkWrite` options; coarse count checks. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
 
 ---
 
 ## Solution / CI / tooling
 
-| ID | Defect | Evidence | Owner |
-|----|--------|----------|-------|
-| D18 | Missing `ado/` solution items | `Dilcore.DocumentDb.sln` references `ado/azure-pipelines.*` and `ado/variables/*`; directory absent | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) (remove refs) or restore if ADO retained |
-| D19 | CI TFM drift | Workflows install SDK `9.0.x` while `Directory.Build.props` targets `net10.0` | **M0 fix in [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5)**; remaining gates in [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
-| D20 | CI lacks Docker for Testcontainers | Integration tests fail without Docker; current CI does not provision it | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28), [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) |
-| D21 | Transitive vulnerability advisories | NU1902/NU1903 on `SharpCompress`, `Snappier` (driver/Testcontainers chain); `Microsoft.OpenApi` in sample | [#10](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/10), [#11](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/11), [#32](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/32) |
-| D22 | Sample starts Testcontainers in host | `samples/MongoDb.WebApi.Sample/Program.cs` embeds container lifecycle in the web app | [#39](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/39) |
+| ID | Status | Defect | Evidence | Owner |
+|----|--------|--------|----------|-------|
+| D18 | **Resolved** | Missing `ado/` solution items | Current solution is `Dilcore.MongoDB.sln` without ADO refs. | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
+| D19 | **Resolved (M0)** | CI TFM drift (historical: SDK `9.0.x` vs library TFM) | Current SDK pin lives in [`ci.yml`](../../.github/workflows/ci.yml), [`benchmarks.yml`](../../.github/workflows/benchmarks.yml), [`codeql.yml`](../../.github/workflows/codeql.yml), and [`nuget-publish.yml`](../../.github/workflows/nuget-publish.yml) (`actions/setup-dotnet`). Remaining analyzer/format gates: #28. | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5), [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
+| D20 | **Resolved** | CI lacked Docker for Testcontainers | CI runs Docker preflight + integration/DI jobs. Coverage **gates** still M5 (#28). | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28), [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) |
+| D21 | **Open / ongoing** | Transitive vulnerability advisories | Track via Dependabot and security workflows; driver bumps in #32. | [#10](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/10), [#11](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/11), [#32](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/32) |
+| D22 | **Open** | Sample starts Testcontainers in host | `samples/MongoDb.WebApi.Sample/Program.cs` embeds container lifecycle. | [#39](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/39) |
 
 ---
 
-## Positioning claims to remove or rewrite (M8)
+## Positioning claims (README / M8 #39)
 
 Source: root [`README.md`](../../README.md). Full rewrite owned by [#39](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/39).
 
-| Claim / content | Problem | Action |
-|-----------------|---------|--------|
-| Title / product name “DocumentDB Library” | Confuses with Amazon DocumentDB; implies provider neutrality | Rename messaging to MongoDB toolkit per [#4](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/4) |
-| “Clean Architecture principles” | Overstated layering for a MongoDB-specific toolkit | Remove / replace with honest architecture section |
-| “abstracted interface for working with MongoDB” implying DB-agnostic repos | Contradicts Mongo-only v2 product definition | Rewrite as opinionated MongoDB application toolkit |
-| “Thread Safety: Thread-safe operations…” | Unverified product claim | Remove or qualify after review |
-| README Getting Started package versions | Documents MongoDB.Driver 3.5.0 and DI 9.0.9; actual are 3.5.2 and 10.0.1 | Update in M8; interim truth in support policy |
-| Documents `IDocumentDatabasePrefixResolver` | Type is `IDocumentDatabasePrefixProvider` | Fix in M8 |
-| Incomplete repository surface in docs | Omits `GetAsyncEnumerable`, derived overloads, `BulkStoreRangeAsync` | Align with API inventory |
-| README ships as package readme | Stale docs ship inside every `.nupkg` | Keep until M8; then replace with concise package readme |
+| Claim / content | Status | Problem | Action |
+|-----------------|--------|---------|--------|
+| Title / product name “DocumentDB Library” | **Partial** | H1 is “Dilcore MongoDB”; closing copy and some phrasing may still say DocumentDB | Finish MongoDB-only messaging in #39 |
+| “Clean Architecture principles” | **Resolved** | README no longer uses this phrasing | None |
+| DB-agnostic repository implication | **Partial** | Product definition is Mongo-only; leftover diagram labels may still overstate | Rewrite as opinionated MongoDB application toolkit |
+| “Thread Safety: Thread-safe operations…” | **Resolved** | Claim removed from README | None |
+| Getting Started package versions | **Resolved** | README now says “Pin versions in `Directory.Packages.props`… do not copy numbers from this README” | None |
+| `IDocumentDatabasePrefixResolver` | **Resolved in README API samples** | Current docs use `INamespacePrefixResolver` | Keep using namespace types |
+| Incomplete repository surface | **Open** | README may omit `GetAsyncEnumerable`, derived overloads, `BulkStoreRangeAsync` | Align with PublicAPI baselines |
+| `WithDatabaseName` in configuration samples | **Resolved** | README samples now use `AddDatabase` + namespace pipeline throughout | None |
+| README ships as package readme | **Open** | Stale docs ship inside every `.nupkg` until dedicated package readme | Keep until M8; then replace |
 
 ---
 
-## CI TFM drift ownership
+## CI / quality gate ownership
 
 | Item | Owner | Status |
 |------|-------|--------|
-| Align GitHub Actions SDK to `10.0.x` | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5) (M0) | Fixed in this milestone |
+| Align GitHub Actions SDK with library TFM | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5) (M0) | **Done** (pin via `actions/setup-dotnet` in [`ci.yml`](../../.github/workflows/ci.yml), [`benchmarks.yml`](../../.github/workflows/benchmarks.yml), [`codeql.yml`](../../.github/workflows/codeql.yml), [`nuget-publish.yml`](../../.github/workflows/nuget-publish.yml)) |
+| Integration test Docker in CI | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) / [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) | **Done** (jobs exist) |
 | `global.json`, analyzers, warnings-as-errors, format gates | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) (M5) | Deferred |
-| Integration test Docker service in CI | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) / [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) | Deferred |
 
 ---
 
-## Dead API list for M2 (#13)
+## Dead API list for M2 (#13) — completed
 
-Explicit removal candidates:
+These were v1 removal candidates; they are **gone** from current `src/` (or folded/internal as designed):
 
-1. Empty `IBsonDocumentRepository` (or promote to a real contract).
-2. Pass-through `BsonDocumentCollectionFactory` / redundant factory boundary.
-3. Unused `MongoDbIndexFactory`.
-4. Unused `GetCollectionOptions.WithEmptyCollection`.
-5. Duplicate `DocumentEntityExtensions` merge/rename.
-6. Public `MongoDatabaseContainer.Services` field.
-7. Public bulk/projection concrete repository types (make internal like generic).
-8. FluentValidation dependency if only used for one config guard.
-9. Empty `Configuration/Database/` project folder.
-10. Redundant `Dilcore.DocumentDb.MongoDb.Abstractions` package boundary after topology redesign ([#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12)).
+1. Empty `IBsonDocumentRepository`
+2. Pass-through `BsonDocumentCollectionFactory`
+3. Unused `MongoDbIndexFactory`
+4. Unused `GetCollectionOptions.WithEmptyCollection`
+5. Duplicate `DocumentEntityExtensions`
+6. Public `MongoDatabaseContainer.Services`
+7. Public bulk/projection concrete repository types (now internal)
+8. FluentValidation dependency
+9. Empty `Configuration/Database/` folder
+10. Separate `Dilcore.DocumentDb.MongoDb.Abstractions` package ([#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12))
 
-See also the [v1 public API inventory](../api/v1-public-api.md).
+Keep this list as the historical M2 checklist. See [v1 public API inventory](../api/v1-public-api.md).

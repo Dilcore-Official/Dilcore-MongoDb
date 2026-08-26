@@ -1,0 +1,86 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en
+early_access: false
+
+chat:
+  auto_reply: true
+  art: false
+
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  high_level_summary: true
+  changed_files_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  sequence_diagrams: true
+  in_progress_fortune: false
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    base_branches:
+      - main
+    ignore_title_keywords:
+      - WIP
+      - "[skip review]"
+    labels:
+      - "!do-not-review"
+  path_filters:
+    - "!**/bin/**"
+    - "!**/obj/**"
+    - "!**/TestResults/**"
+    - "!**/BenchmarkDotNet.Artifacts/**"
+    - "!**/nupkgs/**"
+    - "!**/.vs/**"
+  path_instructions:
+    - path: "src/**/*.cs"
+      instructions: |
+        Review as a public OSS MongoDB toolkit, not an application.
+        - Flag public API additions/removals that lack PublicAPI.Shipped.txt or PublicAPI.Unshipped.txt updates.
+        - Keep IMongoClient singleton-per-cluster; do not create clients per request.
+        - Preserve async + CancellationToken; do not leak undisposed cursors or sessions.
+        - Namespace resolution must fail closed; do not add first-class tenant types.
+        - Soft-delete, ETag, and audit behavior must stay opt-in via policy interfaces; do not widen D14–D26 without tests.
+        - Never log connection strings, credentials, or resume tokens.
+        - Do not register conventions or indexes during ordinary collection resolution.
+        - Prefer existing FluentResults patterns; keep driver types visible (no LCD query abstraction).
+    - path: "test/**/*.cs"
+      instructions: |
+        - Assertions must use Shouldly, not FluentAssertions.
+        - Tests should name behavior and cover failure paths, not only happy paths.
+        - Do not require Docker in UnitTests or ArchitectureTests.
+        - Repository/DI acceptance tests that need MongoDB must use Testcontainers.
+        - Fixes for inventoried defects need regression tests.
+    - path: "samples/**/*.cs"
+      instructions: |
+        - Samples must use current Dilcore.MongoDB APIs (AddMongoDb, bindings, conventions).
+        - Dispose containers and clients; do not leak sample-only patterns into src/.
+        - Do not present the sample as the public API contract.
+    - path: "docs/**/*.md"
+      instructions: |
+        Distinguish historical vs current vs planned claims. Do not copy volatile versions;
+        link Directory.Packages.props, workflows, or PublicAPI files. Flag broken relative
+        links and Dilcore.DocumentDb.* described as current.
+    - path: "{AGENTS.md,CONTRIBUTING.md,README.md,ROADMAP.md}"
+      instructions: |
+        Keep MongoDB-toolkit positioning. AGENTS.md is maintainer What/Why, not a command
+        cookbook. CONTRIBUTING.md owns How. Do not invent provider-neutral DocumentDB claims.
+    - path: ".serena/**"
+      instructions: |
+        Memories must match the two-package Dilcore.MongoDB state and point to ADRs/CONTRIBUTING
+        instead of duplicating pins or command lists.
+    - path: ".github/**"
+      instructions: |
+        - Least privilege permissions; pin GitHub Actions by SHA.
+        - Do not echo secrets. Keep Dependabot and required checks intact.
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "**/AGENTS.md"
+      - "**/CONTRIBUTING.md"
+      - "docs/adr/*.md"
+      - ".editorconfig"
