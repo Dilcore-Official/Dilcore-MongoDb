@@ -63,6 +63,32 @@ Roadmap issue hygiene (needs `gh` + `jq`):
 ./scripts/verify-roadmap-coverage.sh
 ```
 
+## Agent tool workflow
+
+Coding agents change C# via **Serena MCP** (discovery *and* mutation), not whole-file patches:
+
+| Intent | Tools |
+|--------|--------|
+| Orient in a file | `get_symbols_overview` (depth 1) before reading the whole file |
+| Open a type/method | `find_symbol` with `include_body` only when you need the body |
+| Impact of a change | `find_referencing_symbols` before rename/delete/signature edits |
+| Text that is not a symbol | `search_for_pattern` (optionally scoped with `relative_path`) |
+| Replace a method/class/interface | `replace_symbol_body` |
+| Add a neighbor type/method | `insert_after_symbol` / `insert_before_symbol` |
+| Rename across references | `rename_symbol` (prefer this over manual search-replace) |
+| Remove a whole symbol | `safe_delete_symbol` |
+| Small in-method / regex edit | `replace_content` when replacing the entire symbol would be heavier |
+| Durable agent facts | `list_memories` / `read_memory`; `write_memory` / `edit_memory` only for stable invariants + pointers — never version pins or command lists |
+
+Activate/onboard the `Dilcore.MongoDB` project if Serena is not already on this repo. Prefer symbols over whole-file reads; prefer Serena edits over harness patches for C# in `src/` and `test/`. After a public rename/delete, update PublicAPI baselines and docs in the same change. Do not use Serena to rewrite Markdown, YAML, `.csproj`, or `PublicAPI.*.txt` — those stay with harness file tools. Never commit `.serena/project.local.yml`.
+
+Other tools:
+
+1. **SubAgents** — parallel bounded explores (architecture vs tests vs docs vs CI). Return paths + evidence. Do not delegate the whole task.
+2. **Harness** — Glob/Read for docs and configs; Shell for `dotnet` / `gh` (commands above).
+3. **Context7 MCP** — `MongoDB.Driver`, FluentResults, Testcontainers, NUnit, Shouldly, CodeRabbit. Always `resolve-library-id` then `query-docs`.
+4. **Microsoft Learn MCP** — .NET, `Microsoft.Extensions.DependencyInjection`, EditorConfig, `dotnet format`. Search first; fetch the page when you need depth.
+
 ## Pull requests
 
 1. Fork or branch from the latest `main`.

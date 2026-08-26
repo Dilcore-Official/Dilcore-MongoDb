@@ -54,7 +54,7 @@ Feeds naming ADR ([#4](https://github.com/Dilcore-Official/Dilcore-MongoDb/issue
 | ID | Status | Defect | Evidence | Owner |
 |----|--------|--------|----------|-------|
 | D18 | **Resolved** | Missing `ado/` solution items | Current solution is `Dilcore.MongoDB.sln` without ADO refs. | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
-| D19 | **Resolved (M0)** | CI TFM drift (historical: SDK `9.0.x` vs library TFM) | Current SDK pin lives in `.github/workflows` (`actions/setup-dotnet`). Remaining analyzer/format gates: #28. | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5), [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
+| D19 | **Resolved (M0)** | CI TFM drift (historical: SDK `9.0.x` vs library TFM) | Current SDK pin lives in [`ci.yml`](../../.github/workflows/ci.yml), [`benchmarks.yml`](../../.github/workflows/benchmarks.yml), [`codeql.yml`](../../.github/workflows/codeql.yml), and [`nuget-publish.yml`](../../.github/workflows/nuget-publish.yml) (`actions/setup-dotnet`). Remaining analyzer/format gates: #28. | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5), [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
 | D20 | **Resolved** | CI lacked Docker for Testcontainers | CI runs Docker preflight + integration/DI jobs. Coverage **gates** still M5 (#28). | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28), [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) |
 | D21 | **Open / ongoing** | Transitive vulnerability advisories | Track via Dependabot and security workflows; driver bumps in #32. | [#10](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/10), [#11](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/11), [#32](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/32) |
 | D22 | **Open** | Sample starts Testcontainers in host | `samples/MongoDb.WebApi.Sample/Program.cs` embeds container lifecycle. | [#39](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/39) |
@@ -68,13 +68,13 @@ Source: root [`README.md`](../../README.md). Full rewrite owned by [#39](https:/
 | Claim / content | Status | Problem | Action |
 |-----------------|--------|---------|--------|
 | Title / product name “DocumentDB Library” | **Partial** | H1 is “Dilcore MongoDB”; closing copy and some phrasing may still say DocumentDB | Finish MongoDB-only messaging in #39 |
-| “Clean Architecture principles” | **Open** | Overstated layering for a MongoDB-specific toolkit | Remove / replace |
+| “Clean Architecture principles” | **Resolved** | README no longer uses this phrasing | None |
 | DB-agnostic repository implication | **Partial** | Product definition is Mongo-only; leftover diagram labels may still overstate | Rewrite as opinionated MongoDB application toolkit |
-| “Thread Safety: Thread-safe operations…” | **Open** | Unverified product claim | Remove or qualify |
-| Getting Started package versions | **Open** | README must not hard-code driver/DI pins; truth is `Directory.Packages.props` | Point at central packages / support policy |
+| “Thread Safety: Thread-safe operations…” | **Resolved** | Claim removed from README | None |
+| Getting Started package versions | **Resolved** | README now says “Pin versions in `Directory.Packages.props`… do not copy numbers from this README” | None |
 | `IDocumentDatabasePrefixResolver` | **Resolved in README API samples** | Current docs use `INamespacePrefixResolver` | Keep using namespace types |
 | Incomplete repository surface | **Open** | README may omit `GetAsyncEnumerable`, derived overloads, `BulkStoreRangeAsync` | Align with PublicAPI baselines |
-| `WithDatabaseName` in configuration samples | **Open** | v2 uses `AddDatabase` + namespace pipeline | Fix samples in #39 |
+| `WithDatabaseName` in configuration samples | **Resolved** | README samples now use `AddDatabase` + namespace pipeline throughout | None |
 | README ships as package readme | **Open** | Stale docs ship inside every `.nupkg` until dedicated package readme | Keep until M8; then replace |
 
 ---
@@ -83,7 +83,7 @@ Source: root [`README.md`](../../README.md). Full rewrite owned by [#39](https:/
 
 | Item | Owner | Status |
 |------|-------|--------|
-| Align GitHub Actions SDK with library TFM | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5) (M0) | **Done** (pin in `.github/workflows`) |
+| Align GitHub Actions SDK with library TFM | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5) (M0) | **Done** (pin via `actions/setup-dotnet` in [`ci.yml`](../../.github/workflows/ci.yml), [`benchmarks.yml`](../../.github/workflows/benchmarks.yml), [`codeql.yml`](../../.github/workflows/codeql.yml), [`nuget-publish.yml`](../../.github/workflows/nuget-publish.yml)) |
 | Integration test Docker in CI | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) / [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) | **Done** (jobs exist) |
 | `global.json`, analyzers, warnings-as-errors, format gates | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) (M5) | Deferred |
 
