@@ -3,7 +3,7 @@
 Recorded for [#3](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/3).  
 Feeds naming ADR ([#4](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/4)), dead-API removal ([#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13)), correctness fixes ([#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18)), quality gates ([#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28)), and README rewrite ([#39](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/39)).
 
-**How to read this file:** v1 evidence is preserved. **Status** is against current `src/` (two-package `Dilcore.MongoDB*`). Historical inventory: [v1-public-api.md](../api/v1-public-api.md). Entity model: [ADR 0002](../adr/0002-generic-document-identifier.md). Conventions: [ADR 0003](../adr/0003-serialization-conventions.md).
+**How to read this file:** v1 evidence is preserved. **Status** is against current `src/` (two core packages plus optional M3 JSON adapters). Historical inventory: [v1-public-api.md](../api/v1-public-api.md). Entity model: [ADR 0002](../adr/0002-generic-document-identifier.md). Conventions: [ADR 0003](../adr/0003-serialization-conventions.md).
 
 ---
 
@@ -67,13 +67,13 @@ Source: root [`README.md`](../../README.md). Full rewrite owned by [#39](https:/
 
 | Claim / content | Status | Problem | Action |
 |-----------------|--------|---------|--------|
-| Title / product name “DocumentDB Library” | **Partial** | H1 is “Dilcore MongoDB”; closing copy and some phrasing may still say DocumentDB | Finish MongoDB-only messaging in #39 |
+| Title / product name “DocumentDB Library” | **Resolved in README** | H1 and positioning state MongoDB toolkit only; remaining M8 work is Context7/skill | Keep MongoDB-only messaging in #39 remainder |
 | “Clean Architecture principles” | **Resolved** | README no longer uses this phrasing | None |
-| DB-agnostic repository implication | **Partial** | Product definition is Mongo-only; leftover diagram labels may still overstate | Rewrite as opinionated MongoDB application toolkit |
+| DB-agnostic repository implication | **Resolved in README** | README states not a provider-neutral repository; diagram uses current factory/resolver names | None |
 | “Thread Safety: Thread-safe operations…” | **Resolved** | Claim removed from README | None |
 | Getting Started package versions | **Resolved** | README now says “Pin versions in `Directory.Packages.props`… do not copy numbers from this README” | None |
 | `IDocumentDatabasePrefixResolver` | **Resolved in README API samples** | Current docs use `INamespacePrefixResolver` | Keep using namespace types |
-| Incomplete repository surface | **Open** | README may omit `GetAsyncEnumerable`, derived overloads, `BulkStoreRangeAsync` | Align with PublicAPI baselines |
+| Incomplete repository surface | **Resolved in README / guides** | README no longer dumps incomplete interfaces; [repositories.md](../guides/repositories.md) lists the current surface | Keep PublicAPI baselines as the contract |
 | `WithDatabaseName` in configuration samples | **Resolved** | README samples now use `AddDatabase` + namespace pipeline throughout | None |
 | README ships as package readme | **Open** | Stale docs ship inside every `.nupkg` until dedicated package readme | Keep until M8; then replace |
 
@@ -84,7 +84,7 @@ Source: root [`README.md`](../../README.md). Full rewrite owned by [#39](https:/
 | Item | Owner | Status |
 |------|-------|--------|
 | Align GitHub Actions SDK with library TFM | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5) (M0) | **Done** (pin via `actions/setup-dotnet` in [`ci.yml`](../../.github/workflows/ci.yml), [`benchmarks.yml`](../../.github/workflows/benchmarks.yml), [`codeql.yml`](../../.github/workflows/codeql.yml), [`nuget-publish.yml`](../../.github/workflows/nuget-publish.yml)) |
-| Integration test Docker in CI | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) / [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) | **Done** (jobs exist) |
+| Integration test Docker in CI | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) / [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) | **Done** (DI acceptance + integration-matrix jobs) |
 | `global.json`, analyzers, warnings-as-errors, format gates | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) (M5) | Deferred |
 
 ---

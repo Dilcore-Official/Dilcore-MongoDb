@@ -11,20 +11,22 @@ This file keeps the **historical v1** four-package snapshot (2026-08-02) for mig
 
 ---
 
-## Current v2 status (two-package)
+## Current v2 status (core + JSON adapters)
 
 Implemented topology ([ADR 0001](../adr/0001-package-naming.md), [package selection](../product/package-selection.md)):
 
 | Package | Role |
 |---------|------|
 | `Dilcore.MongoDB.Abstractions` | Contracts, keys, namespace, policies, repository interfaces |
-| `Dilcore.MongoDB` | DI (`AddMongoDb`), builders, repositories, conventions |
+| `Dilcore.MongoDB` | DI (`AddMongoDb`), builders, repositories, conventions, provisioning, transactions |
+| `Dilcore.MongoDB.SystemTextJson` | Optional STJ adapters (M3) |
+| `Dilcore.MongoDB.NewtonsoftJson` | Optional Newtonsoft adapters (M3) |
 
-Do not enumerate members here. Shipped types are listed in the two `PublicAPI.Shipped.txt` files. `ConfigureConventions` / `IConventionsBuilder` ([ADR 0003](../adr/0003-serialization-conventions.md)) are implemented and currently recorded in `Dilcore.MongoDB/PublicAPI.Unshipped.txt`.
+Do not enumerate members here. Shipped types are listed in the `PublicAPI.Shipped.txt` files. `ConfigureConventions` / `IConventionsBuilder` ([ADR 0003](../adr/0003-serialization-conventions.md)) and M3 APIs are recorded in `PublicAPI.Unshipped.txt`.
 
 M2.5 entity model ([ADR 0002](../adr/0002-generic-document-identifier.md)): marker `IDocumentEntity`, `IDocumentEntity<TId>`, opt-in `IHasConcurrencyToken` / `ISoftDeletable` / `IAuditableDocument`, `GuidIdGenerationStrategy`.
 
-v1 risks below (namespace collision, duplicate extensions, public bulk/projection concretes, `MongoDatabaseContainer.Services`) are **resolved in M2**. Remaining correctness defects are tracked in [v1-defects.md](../product/v1-defects.md) (#18).
+v1 risks below (namespace collision, duplicate extensions, public bulk/projection concretes, `MongoDatabaseContainer.Services`) are **resolved in M2**. Correctness defects D14–D16 and D23–D26 are **resolved in M3**; see [v1-defects.md](../product/v1-defects.md).
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Current.** Thin coordination over driver sessions. MongoDB multi-document transactions require a **replica set** (or mongos). Standalone `mongo` cannot run them.
 
-Runnable coverage: `test/Repositories.IntegrationTests/TransactionRunnerTests.cs`. Driver session escape hatch: [driver-escape-hatches.md](../product/driver-escape-hatches.md).
+Sample: [samples/MongoDb.Capabilities.Sample](../../samples/MongoDb.Capabilities.Sample) (`POST /transactions/place-order`). Driver session escape hatch: [driver-escape-hatches.md](../product/driver-escape-hatches.md).
 
 ## API
 

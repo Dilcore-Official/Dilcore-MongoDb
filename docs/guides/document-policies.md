@@ -2,7 +2,7 @@
 
 **Current.** Documents implement `IDocumentEntity<TId>` for a typed identifier. Concurrency, soft delete, and audit stamps are **opt-in** interfaces. Decision: [ADR 0002](../adr/0002-generic-document-identifier.md).
 
-Getting-started: [MongoDb.WebApi.Sample](../../samples/MongoDb.WebApi.Sample).
+Getting-started: [MongoDb.WebApi.Sample](../../samples/MongoDb.WebApi.Sample). Catalog: [MongoDb.Capabilities.Sample](../../samples/MongoDb.Capabilities.Sample).
 
 ## Marker and identifier
 
@@ -77,4 +77,4 @@ Enable soft-delete **filters** on the binding (`WithSoftDelete()`). Policy field
 
 `DeleteAsync` with matching `ETag` soft-deletes when the binding has `WithSoftDelete()`. `RestoreAsync` clears the flag; `PurgeAsync` hard-deletes. See [repositories.md](repositories.md).
 
-Wrong `ETag` maps to `ConcurrencyConflictError`. Duplicate-key writes map to `DuplicateKeyError`.
+Wrong `ETag` maps to `ConcurrencyConflictError`.

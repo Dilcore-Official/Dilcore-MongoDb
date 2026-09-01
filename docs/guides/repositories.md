@@ -1,8 +1,8 @@
 # Repositories
 
-**Current.** Typed CRUD, bulk, and projection helpers over `MongoDB.Driver` with FluentResults. They share the same namespace-resolution pipeline as collections.
+**Current.** Typed CRUD, bulk, and projection helpers over `MongoDB.Driver` with FluentResults. They share the same namespace-resolution pipeline as collections and JSON stores.
 
-Sample: [samples/MongoDb.WebApi.Sample](../../samples/MongoDb.WebApi.Sample). Live members: `src/*/PublicAPI.*.txt`.
+Sample: [samples/MongoDb.Capabilities.Sample](../../samples/MongoDb.Capabilities.Sample). Live members: `src/*/PublicAPI.*.txt`.
 
 Enable bulk or projection per binding:
 

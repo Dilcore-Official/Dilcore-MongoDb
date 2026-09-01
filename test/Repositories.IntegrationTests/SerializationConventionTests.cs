@@ -8,6 +8,7 @@ using MongoDB.Driver;
 namespace Dilcore.MongoDB.Repositories.IntegrationTests;
 
 [NonParallelizable]
+[Category("M3Matrix")]
 public class SerializationConventionTests : BaseIntegrationTests
 {
     [SetUp]

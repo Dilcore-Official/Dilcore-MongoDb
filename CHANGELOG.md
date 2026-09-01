@@ -28,6 +28,8 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
   How-to: [json adapters](docs/guides/json-adapters.md).
 - Idempotent `IMongoDbProvisioner` (DryRun/Apply + `IProvisioningStep`) outside collection
   resolution. How-to: [provisioning](docs/guides/provisioning.md).
+- Replica-set capabilities catalog sample, CI `integration-matrix` job (`TestCategory=M3Matrix`),
+  and [production MongoDB security guidance](docs/security/production-mongodb.md).
 
 ## [1.0.0] - 2025
 

@@ -1,0 +1,66 @@
+@host = http://localhost:5250
+
+### Fully composed CRUD
+POST {{host}}/orders
+Content-Type: application/json
+
+{
+  "sku": "SKU-1",
+  "quantity": 2,
+  "expiresAt": "2026-09-01T00:00:00Z"
+}
+
+###
+
+GET {{host}}/orders/00000000-0000-0000-0000-000000000000
+
+###
+
+GET {{host}}/orders/pages?pageSize=2
+
+###
+
+POST {{host}}/orders/bulk
+Content-Type: application/json
+
+[
+  { "sku": "SKU-A", "quantity": 1, "expiresAt": "2026-09-01T00:00:00Z" },
+  { "sku": "SKU-B", "quantity": 2, "expiresAt": "2026-09-01T00:00:00Z" }
+]
+
+### Multi-document transaction (replica set)
+POST {{host}}/transactions/place-order
+Content-Type: application/json
+
+{
+  "sku": "SKU-TX",
+  "quantity": 1,
+  "amount": 19.95
+}
+
+### Canonical Extended JSON payload
+POST {{host}}/json/payloads
+Content-Type: application/json
+
+{
+  "_id": { "$oid": "573a1391f29313caabcd9637" },
+  "count": { "$numberInt": "7" }
+}
+
+###
+
+GET {{host}}/json/payloads/573a1391f29313caabcd9637
+
+###
+
+GET {{host}}/provisioning/dry-run
+
+###
+
+GET {{host}}/escape/collection
+
+###
+
+GET {{host}}/notes
+
+###

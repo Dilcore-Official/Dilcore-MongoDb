@@ -2,7 +2,7 @@
 
 Dilcore MongoDB keeps `MongoDB.Driver` types visible. Use these recipes when repository helpers are not enough. This is **current** M3 guidance.
 
-Getting-started sample: [MongoDb.WebApi.Sample](../../samples/MongoDb.WebApi.Sample).
+Runnable catalog: [samples/MongoDb.Capabilities.Sample](../../samples/MongoDb.Capabilities.Sample) (`/escape/client`, `/escape/collection`). Transactions how-to: [transactions.md](../guides/transactions.md).
 
 ## Clients, databases, collections
 
@@ -15,13 +15,13 @@ var collection = (await factory.GetCollectionAsync<Order>(new MongoDocumentBindi
 
 ## Concerns, preference, retries
 
-Set `WriteConcern`, `ReadConcern`, `ReadPreference`, retry, timeout, compression, and `applicationName` on `MongoClientSettings` when registering the cluster. Collection-level overrides use driver `MongoCollectionSettings` on `GetCollection` after you resolve the database.
+Set `WriteConcern`, `ReadConcern`, `ReadPreference`, retry, timeout, compression, and `applicationName` on `MongoClientSettings` when registering the cluster. Collection-level overrides use driver `CollectionNamespace` / `MongoCollectionSettings` on `GetCollection` after you resolve the database.
 
-## Sessions
+## Sessions and transactions
 
-Use `IClientSessionHandle` from `IMongoClient.StartSession()` with the collection overloads that take a session. Dilcore repositories accept a session when resolved inside a later transaction runner; until then, pass the session on driver APIs directly.
+Prefer `IMongoDbTransactionRunner.WithTransactionAsync`. The callback’s `IMongoDbTransactionContext.Session` is the driver session. For operations Dilcore does not wrap (aggregation, GridFS, time series), use `Session` plus `IMongoCollection<T>` overloads that take `IClientSessionHandle`.
 
-Do not start a second session for work that must stay atomic with an existing session.
+Do not start a second session inside the callback. Cross-cluster work is rejected before dispatch.
 
 ## Aggregation, cursors, GridFS, CSE, time series
 
@@ -31,6 +31,6 @@ These remain driver APIs:
 - Cursors: `collection.Find(filter).ToCursorAsync()` — dispose the cursor
 - GridFS: `new GridFSBucket(database)`
 - Client-side encryption: configure on `MongoClientSettings.AutoEncryptionOptions`
-- Time series: `database.CreateCollection(..., new CreateCollectionOptions { TimeSeriesOptions = ... })`
+- Time series: create the collection in provisioning (`CreateCollectionOptions.TimeSeriesOptions`) or a custom `IProvisioningStep`
 
 Do not hide these behind a provider-neutral abstraction in Dilcore.
