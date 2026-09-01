@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <IsTestProject>false</IsTestProject>
+        <RootNamespace>Dilcore.MongoDB.TestSupport</RootNamespace>
+        <AssemblyName>Dilcore.MongoDB.TestSupport</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Shouldly" />
+        <PackageReference Include="FluentResults" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+        <PackageReference Include="Testcontainers.MongoDb" />
+    </ItemGroup>
+
+</Project>

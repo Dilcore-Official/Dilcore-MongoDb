@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <RootNamespace>Dilcore.MongoDB.SystemTextJson</RootNamespace>
+        <PackageId>Dilcore.MongoDB.SystemTextJson</PackageId>
+        <PackageDescription>System.Text.Json adapters for Dilcore.MongoDB with Extended JSON type fidelity and the same database/collection resolvers as typed documents</PackageDescription>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Dilcore.MongoDB\Dilcore.MongoDB.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+      <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    </ItemGroup>
+</Project>

@@ -47,10 +47,10 @@ dotnet format Dilcore.MongoDB.sln --verify-no-changes
 ```
 
 Use **Shouldly** for assertions (not FluentAssertions). Architecture tests enforce the
-two-package topology and dependency boundaries without Docker. DI acceptance tests
+two-core-package plus optional JSON topology and dependency boundaries without Docker. DI acceptance tests
 build the container with `ValidateScopes` / `ValidateOnBuild` via
-`AcceptanceServiceProviderFactory`. CI runs a dedicated Architecture Tests job and a
-DI Acceptance job (Docker preflight) as required checks alongside the full Build & Test job.
+`AcceptanceServiceProviderFactory` in `test/TestSupport`. CI runs Architecture Tests, DI Acceptance,
+an Integration Matrix job (`TestCategory=M3Matrix`, Docker preflight), and the full Build & Test job.
 The **Benchmarks** workflow (`.github/workflows/benchmarks.yml`) runs BenchmarkDotNet on
 PRs that touch `src/` or `test/Benchmarks/`, posts a non-blocking results comment, and
 updates the historical baseline on `main` via `gh-pages`. Create an empty `gh-pages`

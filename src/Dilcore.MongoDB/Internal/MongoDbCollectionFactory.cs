@@ -140,46 +140,19 @@ internal sealed class MongoDbCollectionFactory(
         }, cancellationToken);
     }
 
-    private static async Task<Result<IMongoCollection<TDocument>>> GetTypedCollectionAsync<TDocument>(
+    private static Task<Result<IMongoCollection<TDocument>>> GetTypedCollectionAsync<TDocument>(
         IMongoDatabase database,
         GetCollectionOptions<TDocument> options,
         CancellationToken cancellationToken)
         where TDocument : IDocumentEntity
     {
+        _ = cancellationToken;
         if (string.IsNullOrWhiteSpace(options.CollectionName))
         {
-            return Result.Fail("Collection name is not provided");
+            return Task.FromResult(Result.Fail<IMongoCollection<TDocument>>("Collection name is not provided"));
         }
 
         var collection = database.GetCollection<TDocument>(options.CollectionName);
-
-        if (options.CollectionItemsTimeToLive.HasValue && options.TimeToLeavePropertySelector is not null)
-        {
-            await CreateTimeToLiveIndexAsync(
-                collection,
-                options.CollectionItemsTimeToLive.Value,
-                options.TimeToLeavePropertySelector,
-                cancellationToken);
-        }
-
-        if (options.Indices is { Count: > 0 })
-        {
-            await collection.Indexes.CreateManyAsync(options.Indices, cancellationToken);
-        }
-
-        return Result.Ok(collection);
-    }
-
-    private static async Task CreateTimeToLiveIndexAsync<TDocument>(
-        IMongoCollection<TDocument> collection,
-        TimeSpan timeToLeave,
-        Expression<Func<TDocument, object>> propertySelector,
-        CancellationToken cancellationToken)
-        where TDocument : IDocumentEntity
-    {
-        var indexKeysDefinition = Builders<TDocument>.IndexKeys.Ascending(propertySelector);
-        var indexOptions = new CreateIndexOptions { ExpireAfter = timeToLeave };
-        var indexModel = new CreateIndexModel<TDocument>(indexKeysDefinition, indexOptions);
-        await collection.Indexes.CreateOneAsync(indexModel, cancellationToken: cancellationToken);
+        return Task.FromResult(Result.Ok(collection));
     }
 }

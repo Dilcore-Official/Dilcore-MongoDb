@@ -2,6 +2,7 @@ using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Benchmarks.Models;
 using Dilcore.MongoDB.DependencyInjection;
 using Dilcore.MongoDB.Extensions;
+using Dilcore.MongoDB.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using Testcontainers.MongoDb;
@@ -45,7 +46,7 @@ public sealed class MongoBenchmarkFixture : IAsyncDisposable
 
     public static async Task<MongoBenchmarkFixture> StartAsync()
     {
-        var container = new MongoDbBuilder("mongo:7.0").Build();
+        var container = MongoTestImages.CreateStandalone();
         await container.StartAsync().ConfigureAwait(false);
         return new MongoBenchmarkFixture(container);
     }

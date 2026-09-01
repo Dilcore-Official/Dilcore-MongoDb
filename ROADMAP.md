@@ -6,7 +6,7 @@ This document is the product roadmap. Implementation work is tracked as GitHub i
 **Repository:** [Dilcore-Official/Dilcore-MongoDb](https://github.com/Dilcore-Official/Dilcore-MongoDb)  
 **Issues filter:** [label:roadmap](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues?q=is%3Aissue+label%3Aroadmap)  
 **GitHub Project:** see [GitHub tracking](#github-tracking)  
-**Status:** M2 Simplification & DI in progress on `feature/m2-simplification-di` (two-package topology + new DI/namespace model).
+**Status:** M3 MongoDB production, JSON, and transactions implemented across stacked branches `#18`–`#23` (correctness, JSON adapters, provisioning, transactions, integration matrix).
 
 ---
 
@@ -187,6 +187,8 @@ Milestone: [M3 MongoDB Production, JSON & Transactions](https://github.com/Dilco
 | [#21](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/21) | Multi-document transactions via `WithTransactionAsync` + client budget guardrails | P0 |
 | [#22](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/22) | Idempotent provisioning / migration runner (indexes, TTL, vector, schema validation) | P0 |
 | [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) | Replica-set integration matrix + production security guidance | P0 |
+
+**Status (current):** Implemented across stacked PRs #18–#23. Soft-delete/concurrency/bulk use typed FluentResults; JSON packages round-trip Canonical Extended JSON; transactions compose existing repositories; provisioning is outside request hot paths; CI has an integration-matrix job.
 
 **Exit criteria:** Soft-delete/concurrency/bulk correct; both JSON stacks round-trip with type fidelity; transactions never silently chunk; budgets are estimates (no false “16 MiB total transaction” claim); provisioning is outside request hot paths.
 

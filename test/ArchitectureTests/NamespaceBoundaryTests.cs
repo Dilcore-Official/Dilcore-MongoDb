@@ -12,7 +12,9 @@ public class NamespaceBoundaryTests
         var assemblies = new[]
         {
             typeof(IDocumentEntity).Assembly,
-            typeof(ServiceCollectionExtensions).Assembly
+            typeof(ServiceCollectionExtensions).Assembly,
+            typeof(Dilcore.MongoDB.SystemTextJson.JsonBsonConvert).Assembly,
+            typeof(Dilcore.MongoDB.NewtonsoftJson.JsonBsonConvert).Assembly
         };
 
         foreach (var assembly in assemblies)

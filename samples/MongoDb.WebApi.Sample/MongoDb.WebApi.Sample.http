@@ -1,6 +1,32 @@
 @MongoDb.WebApi.Sample_HostAddress = http://localhost:5248
 
-GET {{MongoDb.WebApi.Sample_HostAddress}}/weatherforecast/
+GET {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts
 Accept: application/json
+
+###
+
+POST {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts
+Content-Type: application/json
+
+{
+  "date": "2026-08-28",
+  "temperatureC": 21,
+  "summary": "Mild"
+}
+
+###
+
+GET {{MongoDb.WebApi.Sample_HostAddress}}/notes
+Accept: application/json
+
+###
+
+POST {{MongoDb.WebApi.Sample_HostAddress}}/notes
+Content-Type: application/json
+
+{
+  "text": "hello",
+  "priority": "High"
+}
 
 ###

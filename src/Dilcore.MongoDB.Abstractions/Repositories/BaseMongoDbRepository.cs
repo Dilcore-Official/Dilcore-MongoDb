@@ -28,38 +28,88 @@ public abstract class BaseMongoDbRepository<TDocument> where TDocument : class, 
         _options = options;
     }
 
+    protected IClientSessionHandle? Session { get; init; }
+
+    internal IMongoOperationBudget? Budget { get; init; }
+
     protected Task<Result<TDocument>> ExecuteAsync(
         Func<IMongoCollection<TDocument>, CancellationToken, Task<Result<TDocument>>> func,
         CancellationToken cancellationToken = default)
-        => ExecuteAsync(func, result => Result.Fail<TDocument>(result.Errors), cancellationToken);
+        => ExecuteMappedAsync(func, result => Result.Fail<TDocument>(result.Errors), cancellationToken);
 
     protected Task<Result<IReadOnlyList<TDocument>>> ExecuteAsync(
         Func<IMongoCollection<TDocument>, CancellationToken, Task<Result<IReadOnlyList<TDocument>>>> func,
         CancellationToken cancellationToken = default)
-        => ExecuteAsync(func, result => Result.Fail<IReadOnlyList<TDocument>>(result.Errors), cancellationToken);
+        => ExecuteMappedAsync(func, result => Result.Fail<IReadOnlyList<TDocument>>(result.Errors), cancellationToken);
 
-    protected Task<Result> ExecuteAsync(Func<IMongoCollection<TDocument>, CancellationToken, Task<Result>> func,
+    protected Task<Result> ExecuteAsync(
+        Func<IMongoCollection<TDocument>, CancellationToken, Task<Result>> func,
         CancellationToken cancellationToken = default)
-        => ExecuteAsync(func, result => Result.Fail(result.Errors), cancellationToken);
+        => ExecuteMappedAsync(func, result => Result.Fail(result.Errors), cancellationToken);
 
     protected Task<Result<TResult>> ExecuteAsync<TResult>(
         Func<IMongoCollection<TDocument>, CancellationToken, Task<Result<TResult>>> func,
         CancellationToken cancellationToken = default)
-        => ExecuteAsync(func, result => Result.Fail<TResult>(result.Errors), cancellationToken);
+        => ExecuteMappedAsync(func, result => Result.Fail<TResult>(result.Errors), cancellationToken);
 
-    private async Task<TResult> ExecuteAsync<TResult>(
-        Func<IMongoCollection<TDocument>, CancellationToken, Task<TResult>> func,
-        Func<Result<IMongoCollection<TDocument>>, TResult> errorHandler,
-        CancellationToken cancellationToken = default)
+    private async Task<Result<TResult>> ExecuteMappedAsync<TResult>(
+        Func<IMongoCollection<TDocument>, CancellationToken, Task<Result<TResult>>> func,
+        Func<Result<IMongoCollection<TDocument>>, Result<TResult>> errorHandler,
+        CancellationToken cancellationToken)
     {
         var collectionResult = await GetCollectionAsync(cancellationToken);
-
         if (collectionResult.IsFailed)
         {
             return errorHandler(collectionResult);
         }
 
-        return await func(collectionResult.Value, cancellationToken);
+        if (Budget is not null)
+        {
+            var reservation = Budget.Reserve(256);
+            if (reservation.IsFailed)
+            {
+                return Result.Fail<TResult>(reservation.Errors);
+            }
+        }
+
+        try
+        {
+            return await func(collectionResult.Value, cancellationToken);
+        }
+        catch (MongoException exception)
+        {
+            return MongoExceptionMapper.Fail<TResult>(exception);
+        }
+    }
+
+    private async Task<Result> ExecuteMappedAsync(
+        Func<IMongoCollection<TDocument>, CancellationToken, Task<Result>> func,
+        Func<Result<IMongoCollection<TDocument>>, Result> errorHandler,
+        CancellationToken cancellationToken)
+    {
+        var collectionResult = await GetCollectionAsync(cancellationToken);
+        if (collectionResult.IsFailed)
+        {
+            return errorHandler(collectionResult);
+        }
+
+        if (Budget is not null)
+        {
+            var reservation = Budget.Reserve(256);
+            if (reservation.IsFailed)
+            {
+                return Result.Fail(reservation.Errors);
+            }
+        }
+
+        try
+        {
+            return await func(collectionResult.Value, cancellationToken);
+        }
+        catch (MongoException exception)
+        {
+            return MongoExceptionMapper.Fail(exception);
+        }
     }
 
     protected GetCollectionOptions<TDocument> GetOptions() => _options;

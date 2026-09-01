@@ -3,7 +3,7 @@
 Recorded for [#3](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/3).  
 Feeds naming ADR ([#4](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/4)), dead-API removal ([#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13)), correctness fixes ([#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18)), quality gates ([#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28)), and README rewrite ([#39](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/39)).
 
-**How to read this file:** v1 evidence is preserved. **Status** is against current `src/` (two-package `Dilcore.MongoDB*`). Historical inventory: [v1-public-api.md](../api/v1-public-api.md). Entity model: [ADR 0002](../adr/0002-generic-document-identifier.md). Conventions: [ADR 0003](../adr/0003-serialization-conventions.md).
+**How to read this file:** v1 evidence is preserved. **Status** is against current `src/` (two core packages plus optional M3 JSON adapters). Historical inventory: [v1-public-api.md](../api/v1-public-api.md). Entity model: [ADR 0002](../adr/0002-generic-document-identifier.md). Conventions: [ADR 0003](../adr/0003-serialization-conventions.md).
 
 ---
 
@@ -38,14 +38,14 @@ Feeds naming ADR ([#4](https://github.com/Dilcore-Official/Dilcore-MongoDb/issue
 
 | ID | Status | Defect | Evidence | Owner |
 |----|--------|--------|----------|-------|
-| D14 | **Open** | Soft-delete filter inconsistency | `GetAsync` / `GetListAsync` apply `ApplyNotDeleteFilter`; `HasAnyAsync` and `CountAsync` do not (`GenericMongoDbRepository`). | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
-| D15 | **Open** | Missing-document returns success with null | `GetAsync` returns `Result.Ok(entity)` after `FirstOrDefaultAsync` without null check. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
-| D16 | **Open** | Streaming error model break | `GetAsyncEnumerable` throws `InvalidOperationException` on collection failure instead of `Result`. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18), [#25](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/25) |
+| D14 | **Resolved (M3)** | Soft-delete filter inconsistency | `HasAnyAsync` and `CountAsync` apply the same not-deleted filter as reads. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D15 | **Resolved (M3)** | Missing-document returns success with null | `GetAsync` returns `DocumentNotFoundError`. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D16 | **Resolved (M3, streaming exception)** | Streaming error model break | `GetAsyncEnumerable` throws `CollectionResolutionException` on collection failure. M4 may still redesign streaming to Result. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18), [#25](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/25) |
 | D17 | **Resolved** | Primary-constructor capture warning CS9107 | Addressed in later hardening; do not reintroduce unused captured primary-constructor parameters. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) / [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
-| D23 | **Open** | Timestamp ETag is not collision-safe | `MongoDbHelper.GenerateEtag()` uses millisecond unix time (v1 type was `DocumentDbHelper`). | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
-| D24 | **Open** | Entities mutated before write success | `GenerateETag` / `UpdatedNow` before `UpdateOne` / `BulkWrite` succeeds. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
-| D25 | **Open** | Full-document `$set` replace/patch risk | `ToBsonUpdateDocument` wraps `ToBsonDocument()` in `$set`. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
-| D26 | **Open** | Bulk write edge cases incomplete | Default `BulkWrite` options; coarse count checks. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D23 | **Resolved (M3)** | Timestamp ETag is not collision-safe | `MongoDbHelper.GenerateEtag()` uses a non-zero 64-bit random token (`long` type unchanged). | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D24 | **Resolved (M3)** | Entities mutated before write success | Policy fields are staged and applied only after acknowledged writes. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D25 | **Resolved (M3)** | Full-document `$set` replace/patch risk | `ReplaceAsync` replaces stored state; `UpdateSnapshotAsync` `$set`s the mutable snapshot excluding `_id`; `PatchAsync` is caller-supplied. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D26 | **Resolved (M3)** | Bulk write edge cases incomplete | Empty/no-op, chunking, unordered partial failure, and per-item outcomes are covered. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
 
 ---
 
@@ -67,13 +67,13 @@ Source: root [`README.md`](../../README.md). Full rewrite owned by [#39](https:/
 
 | Claim / content | Status | Problem | Action |
 |-----------------|--------|---------|--------|
-| Title / product name “DocumentDB Library” | **Partial** | H1 is “Dilcore MongoDB”; closing copy and some phrasing may still say DocumentDB | Finish MongoDB-only messaging in #39 |
+| Title / product name “DocumentDB Library” | **Resolved in README** | H1 and positioning state MongoDB toolkit only; remaining M8 work is Context7/skill | Keep MongoDB-only messaging in #39 remainder |
 | “Clean Architecture principles” | **Resolved** | README no longer uses this phrasing | None |
-| DB-agnostic repository implication | **Partial** | Product definition is Mongo-only; leftover diagram labels may still overstate | Rewrite as opinionated MongoDB application toolkit |
+| DB-agnostic repository implication | **Resolved in README** | README states not a provider-neutral repository; diagram uses current factory/resolver names | None |
 | “Thread Safety: Thread-safe operations…” | **Resolved** | Claim removed from README | None |
 | Getting Started package versions | **Resolved** | README now says “Pin versions in `Directory.Packages.props`… do not copy numbers from this README” | None |
 | `IDocumentDatabasePrefixResolver` | **Resolved in README API samples** | Current docs use `INamespacePrefixResolver` | Keep using namespace types |
-| Incomplete repository surface | **Open** | README may omit `GetAsyncEnumerable`, derived overloads, `BulkStoreRangeAsync` | Align with PublicAPI baselines |
+| Incomplete repository surface | **Resolved in README / guides** | README no longer dumps incomplete interfaces; [repositories.md](../guides/repositories.md) lists the current surface | Keep PublicAPI baselines as the contract |
 | `WithDatabaseName` in configuration samples | **Resolved** | README samples now use `AddDatabase` + namespace pipeline throughout | None |
 | README ships as package readme | **Open** | Stale docs ship inside every `.nupkg` until dedicated package readme | Keep until M8; then replace |
 
@@ -84,7 +84,7 @@ Source: root [`README.md`](../../README.md). Full rewrite owned by [#39](https:/
 | Item | Owner | Status |
 |------|-------|--------|
 | Align GitHub Actions SDK with library TFM | [#5](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/5) (M0) | **Done** (pin via `actions/setup-dotnet` in [`ci.yml`](../../.github/workflows/ci.yml), [`benchmarks.yml`](../../.github/workflows/benchmarks.yml), [`codeql.yml`](../../.github/workflows/codeql.yml), [`nuget-publish.yml`](../../.github/workflows/nuget-publish.yml)) |
-| Integration test Docker in CI | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) / [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) | **Done** (jobs exist) |
+| Integration test Docker in CI | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) / [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) | **Done** (DI acceptance + integration-matrix jobs) |
 | `global.json`, analyzers, warnings-as-errors, format gates | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) (M5) | Deferred |
 
 ---

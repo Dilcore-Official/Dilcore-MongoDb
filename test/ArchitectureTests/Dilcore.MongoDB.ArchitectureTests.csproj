@@ -25,6 +25,8 @@
     <ItemGroup>
       <ProjectReference Include="..\..\src\Dilcore.MongoDB.Abstractions\Dilcore.MongoDB.Abstractions.csproj" />
       <ProjectReference Include="..\..\src\Dilcore.MongoDB\Dilcore.MongoDB.csproj" />
+      <ProjectReference Include="..\..\src\Dilcore.MongoDB.SystemTextJson\Dilcore.MongoDB.SystemTextJson.csproj" />
+      <ProjectReference Include="..\..\src\Dilcore.MongoDB.NewtonsoftJson\Dilcore.MongoDB.NewtonsoftJson.csproj" />
     </ItemGroup>
 
 </Project>
