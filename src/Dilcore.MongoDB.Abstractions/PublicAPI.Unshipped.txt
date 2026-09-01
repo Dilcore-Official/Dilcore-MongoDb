@@ -6,9 +6,15 @@ class Dilcore.MongoDB.Abstractions.Options.MongoBulkWriteOptions
 class Dilcore.MongoDB.Abstractions.Results.BulkWriteItemResult
 class Dilcore.MongoDB.Abstractions.Results.BulkWritePartialFailureError
 class Dilcore.MongoDB.Abstractions.Results.ConcurrencyConflictError
+class Dilcore.MongoDB.Abstractions.Results.CrossClusterOperationError
 class Dilcore.MongoDB.Abstractions.Results.DocumentNotFoundError
 class Dilcore.MongoDB.Abstractions.Results.DocumentTooLargeError
 class Dilcore.MongoDB.Abstractions.Results.DuplicateKeyError
 class Dilcore.MongoDB.Abstractions.Results.MongoOperationError
 class Dilcore.MongoDB.Abstractions.Results.TransientWriteError
+class Dilcore.MongoDB.Abstractions.Results.TransactionBudgetExceededError
 class Dilcore.MongoDB.Abstractions.Results.WriteConcernFailureError
+interface Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionContext
+interface Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionRunner
+class Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions
+
