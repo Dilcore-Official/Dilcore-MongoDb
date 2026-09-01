@@ -87,6 +87,30 @@ public sealed class DocumentTooLargeError : MongoOperationError
     public override string Code => ErrorCode;
 }
 
+public sealed class CrossClusterOperationError : MongoOperationError
+{
+    public const string ErrorCode = "cross_cluster_operation";
+
+    public CrossClusterOperationError(string? message = null)
+        : base(message ?? "The operation targets a different MongoDB cluster than the current transaction.")
+    {
+    }
+
+    public override string Code => ErrorCode;
+}
+
+public sealed class TransactionBudgetExceededError : MongoOperationError
+{
+    public const string ErrorCode = "transaction_budget_exceeded";
+
+    public TransactionBudgetExceededError(string? message = null)
+        : base(message ?? "The client-side transaction budget was exceeded.")
+    {
+    }
+
+    public override string Code => ErrorCode;
+}
+
 public sealed class BulkWritePartialFailureError : MongoOperationError
 {
     public const string ErrorCode = "bulk_write_partial_failure";
