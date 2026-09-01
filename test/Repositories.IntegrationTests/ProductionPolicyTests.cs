@@ -1,6 +1,7 @@
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Options;
 using Dilcore.MongoDB.Abstractions.Policies;
+using Dilcore.MongoDB.Abstractions.Provisioning;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Extensions;
@@ -85,12 +86,10 @@ public class ProductionPolicyTests : BaseIntegrationTests
 
         var provider = AcceptanceServiceProviderFactory.Create(services);
         using var scope = provider.CreateScope();
-        var factory = scope.ServiceProvider.GetRequiredService<IMongoDbCollectionFactory>();
+        var provisioner = scope.ServiceProvider.GetRequiredService<IMongoDbProvisioner>();
+        (await provisioner.ApplyAsync()).ShouldBeSuccess();
         var repository = scope.ServiceProvider
             .GetRequiredService<IGenericRepository<GenericRepositoryTests.TestEntity1>>();
-
-        (await factory.GetCollectionAsync<GenericRepositoryTests.TestEntity1>(
-            new Abstractions.Keys.MongoDocumentBindingKey("e1"))).ShouldBeSuccess();
 
         (await repository.StoreAsync(new GenericRepositoryTests.TestEntity1 { Name = "unique-name" })).ShouldBeSuccess();
         var duplicate = await repository.StoreAsync(new GenericRepositoryTests.TestEntity1 { Name = "unique-name" });

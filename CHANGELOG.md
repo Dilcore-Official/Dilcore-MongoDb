@@ -26,6 +26,8 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
 - Optional JSON adapter packages `Dilcore.MongoDB.SystemTextJson` and `Dilcore.MongoDB.NewtonsoftJson`
   with Canonical Extended JSON conversion and `JsonDocumentStore`.
   How-to: [json adapters](docs/guides/json-adapters.md).
+- Idempotent `IMongoDbProvisioner` (DryRun/Apply + `IProvisioningStep`) outside collection
+  resolution. How-to: [provisioning](docs/guides/provisioning.md).
 
 ## [1.0.0] - 2025
 

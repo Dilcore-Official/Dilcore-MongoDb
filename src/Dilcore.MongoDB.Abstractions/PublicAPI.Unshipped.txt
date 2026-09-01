@@ -7,6 +7,10 @@ enum Dilcore.MongoDB.Abstractions.Json.OrdinaryJsonNumberMode
 class Dilcore.MongoDB.Abstractions.Options.KeysetPage`1
 class Dilcore.MongoDB.Abstractions.Options.KeysetPageRequest`1
 class Dilcore.MongoDB.Abstractions.Options.MongoBulkWriteOptions
+interface Dilcore.MongoDB.Abstractions.Provisioning.IMongoDbProvisioner
+interface Dilcore.MongoDB.Abstractions.Provisioning.IProvisioningStep
+class Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningReport
+class Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningStepResult
 class Dilcore.MongoDB.Abstractions.Results.BulkWriteItemResult
 class Dilcore.MongoDB.Abstractions.Results.BulkWritePartialFailureError
 class Dilcore.MongoDB.Abstractions.Results.ConcurrencyConflictError
