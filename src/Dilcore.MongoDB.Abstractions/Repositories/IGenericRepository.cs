@@ -8,18 +8,28 @@ public interface IGenericRepository<TDocument>
 {
     Task<Result<TDocument>> StoreAsync(TDocument entity, CancellationToken cancellationToken = default);
 
+    Task<Result<TDocument>> ReplaceAsync(TDocument entity, CancellationToken cancellationToken = default);
+
+    Task<Result<TDocument>> UpdateSnapshotAsync(TDocument entity, CancellationToken cancellationToken = default);
+
+    Task<Result<TDocument>> PatchAsync(
+        FilterDefinition<TDocument> filter,
+        UpdateDefinition<TDocument> update,
+        CancellationToken cancellationToken = default);
+
     Task<Result<TDocument>> GetAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default);
 
-    Task<Result<TDerived>> GetAsync<TDerived>(FilterDefinition<TDerived> filter,
-        CancellationToken cancellationToken = default)
+    Task<Result<TDerived>> GetAsync<TDerived>(FilterDefinition<TDerived> filter, CancellationToken cancellationToken = default)
         where TDerived : class, TDocument;
 
     Task<Result<IReadOnlyList<TDocument>>> GetListAsync(CancellationToken cancellationToken = default);
 
-    Task<Result<IReadOnlyList<TDocument>>> GetListAsync(FilterDefinition<TDocument> filter,
+    Task<Result<IReadOnlyList<TDocument>>> GetListAsync(
+        FilterDefinition<TDocument> filter,
         CancellationToken cancellationToken = default);
 
-    Task<Result<IReadOnlyList<TDerived>>> GetListAsync<TDerived>(FilterDefinition<TDerived> filter,
+    Task<Result<IReadOnlyList<TDerived>>> GetListAsync<TDerived>(
+        FilterDefinition<TDerived> filter,
         CancellationToken cancellationToken = default)
         where TDerived : class, TDocument;
 

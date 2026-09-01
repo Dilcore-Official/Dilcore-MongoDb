@@ -26,6 +26,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\Dilcore.MongoDB\Dilcore.MongoDB.csproj" />
+      <ProjectReference Include="..\TestSupport\Dilcore.MongoDB.TestSupport.csproj" />
     </ItemGroup>
 
 </Project>

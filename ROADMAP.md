@@ -6,7 +6,7 @@ This document is the product roadmap. Implementation work is tracked as GitHub i
 **Repository:** [Dilcore-Official/Dilcore-MongoDb](https://github.com/Dilcore-Official/Dilcore-MongoDb)  
 **Issues filter:** [label:roadmap](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues?q=is%3Aissue+label%3Aroadmap)  
 **GitHub Project:** see [GitHub tracking](#github-tracking)  
-**Status:** M2 Simplification & DI in progress on `feature/m2-simplification-di` (two-package topology + new DI/namespace model).
+**Status:** M3 repository correctness (#18) in progress on `feature/m3-18-repository-correctness`.
 
 ---
 

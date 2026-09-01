@@ -1,6 +1,7 @@
 using FluentResults;
+using Shouldly;
 
-namespace Dilcore.MongoDB.IntegrationTests.Infrastructure;
+namespace Dilcore.MongoDB.TestSupport;
 
 public static class ResultAssertions
 {
@@ -28,5 +29,13 @@ public static class ResultAssertions
     public static void ShouldBeFailure<T>(this Result<T> result)
     {
         result.IsSuccess.ShouldBeFalse("Expected failure but succeeded");
+    }
+
+    public static TError ShouldHaveError<TError>(this ResultBase result)
+        where TError : class, IError
+    {
+        var error = result.Errors.OfType<TError>().FirstOrDefault();
+        error.ShouldNotBeNull($"Expected {typeof(TError).Name} but got: {string.Join(", ", result.Errors.Select(e => e.GetType().Name + ": " + e.Message))}");
+        return error!;
     }
 }

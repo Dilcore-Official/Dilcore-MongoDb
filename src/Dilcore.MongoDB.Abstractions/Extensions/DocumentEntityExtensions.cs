@@ -71,12 +71,24 @@ public static class DocumentEntityExtensions
         return true;
     }
 
-    public static BsonDocument ToBsonUpdateDocument<T>(this T document)
+    /// <summary>
+    /// Builds a <c>$set</c> of the serialized mutable snapshot, excluding <c>_id</c>.
+    /// This overwrites every serialized field except the identifier. Prefer an explicit
+    /// patch when only some fields change.
+    /// </summary>
+    public static BsonDocument ToBsonSnapshotUpdateDocument<T>(this T document)
         where T : IDocumentEntity
     {
         _ = SerializationConfigured.Value;
-        return new BsonDocument(UpdateSetOperator, document.ToBsonDocument());
+        var bson = document.ToBsonDocument();
+        bson.Remove("_id");
+        return new BsonDocument(UpdateSetOperator, bson);
     }
+
+    /// <inheritdoc cref="ToBsonSnapshotUpdateDocument{T}"/>
+    public static BsonDocument ToBsonUpdateDocument<T>(this T document)
+        where T : IDocumentEntity
+        => document.ToBsonSnapshotUpdateDocument();
 
     private static bool RegisterGuidSerializer()
     {

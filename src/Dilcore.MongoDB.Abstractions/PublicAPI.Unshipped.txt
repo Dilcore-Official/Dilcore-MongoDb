@@ -1,1 +1,9 @@
 #nullable enable
+class Dilcore.MongoDB.Abstractions.Exceptions.CollectionResolutionException
+class Dilcore.MongoDB.Abstractions.Options.MongoBulkWriteOptions
+class Dilcore.MongoDB.Abstractions.Results.BulkWriteItemResult
+class Dilcore.MongoDB.Abstractions.Results.BulkWritePartialFailureError
+class Dilcore.MongoDB.Abstractions.Results.ConcurrencyConflictError
+class Dilcore.MongoDB.Abstractions.Results.DocumentNotFoundError
+class Dilcore.MongoDB.Abstractions.Results.DocumentTooLargeError
+class Dilcore.MongoDB.Abstractions.Results.MongoOperationError
