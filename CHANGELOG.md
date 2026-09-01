@@ -18,6 +18,9 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
   replace/snapshot/patch, and bulk write options with chunking and partial-failure results.
 - Consumer how-tos: [document policies](docs/guides/document-policies.md) and
   [repositories](docs/guides/repositories.md).
+- Keyset pagination (`GetPageAsync`), soft-delete `RestoreAsync` / `PurgeAsync`,
+  `FindOptions` list overloads, and typed `DuplicateKeyError` / `TransientWriteError` /
+  `WriteConcernFailureError` mapping.
 
 ## [1.0.0] - 2025
 

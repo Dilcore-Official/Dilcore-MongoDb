@@ -9,6 +9,8 @@ using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Internal;
 using FluentResults;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.Repositories;
@@ -125,16 +127,37 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         }, cancellationToken);
 
     public Task<Result<IReadOnlyList<TDocument>>> GetListAsync(CancellationToken cancellationToken = default) =>
-        GetListAsync(ApplyNotDeleteFilter(), cancellationToken);
+        GetListAsync(ApplyNotDeleteFilter(), options: null, cancellationToken);
 
     public Task<Result<IReadOnlyList<TDocument>>> GetListAsync(
         FilterDefinition<TDocument> filter,
         CancellationToken cancellationToken = default)
+        => GetListAsync(filter, options: null, cancellationToken);
+
+    public Task<Result<IReadOnlyList<TDocument>>> GetListAsync(
+        FilterDefinition<TDocument> filter,
+        FindOptions<TDocument, TDocument>? options,
+        CancellationToken cancellationToken = default)
         => ExecuteAsync(async (collection, token) =>
         {
             filter = ApplyNotDeleteFilter(filter);
-            var entities = await MongoCollectionCalls.Find(collection, _callContext.Session, filter)
-                .ToListAsync(token);
+            var fluent = MongoCollectionCalls.Find(collection, _callContext.Session, filter);
+            if (options?.Sort is not null)
+            {
+                fluent = fluent.Sort(options.Sort);
+            }
+
+            if (options?.Limit is not null)
+            {
+                fluent = fluent.Limit(options.Limit);
+            }
+
+            if (options?.Skip is not null)
+            {
+                fluent = fluent.Skip(options.Skip);
+            }
+
+            var entities = await fluent.ToListAsync(token);
             return Result.Ok<IReadOnlyList<TDocument>>(entities);
         }, cancellationToken);
 
@@ -150,6 +173,46 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                 : collection.OfType<TDerived>().Find(_callContext.Session, filter);
             var entities = await query.ToListAsync(token);
             return Result.Ok<IReadOnlyList<TDerived>>(entities);
+        }, cancellationToken);
+
+    public Task<Result<KeysetPage<TDocument>>> GetPageAsync(
+        KeysetPageRequest<TDocument> request,
+        CancellationToken cancellationToken = default)
+        => ExecuteAsync(async (collection, token) =>
+        {
+            if (request.PageSize <= 0)
+            {
+                return Result.Fail<KeysetPage<TDocument>>("PageSize must be greater than zero.");
+            }
+
+            var filter = ApplyNotDeleteFilter(request.Filter);
+            if (!string.IsNullOrWhiteSpace(request.Cursor))
+            {
+                filter &= DecodeCursor(request.Cursor);
+            }
+
+            var take = request.PageSize + 1;
+            var fluent = MongoCollectionCalls.Find(collection, _callContext.Session, filter)
+                .Sort(request.Sort)
+                .Limit(take);
+
+            var documents = await fluent.ToListAsync(token);
+            var hasMore = documents.Count > request.PageSize;
+            if (hasMore)
+            {
+                documents.RemoveAt(documents.Count - 1);
+            }
+
+            var nextCursor = hasMore && documents.Count > 0
+                ? EncodeCursor(documents[^1])
+                : null;
+
+            return Result.Ok(new KeysetPage<TDocument>
+            {
+                Items = documents,
+                NextCursor = nextCursor,
+                HasMore = hasMore
+            });
         }, cancellationToken);
 
     public async IAsyncEnumerable<TDocument> GetAsyncEnumerable(
@@ -218,6 +281,40 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
 
             filter = ApplyNotDeleteFilter(filter);
             return SoftDeleteOneAsync(collection, filter, token);
+        }, cancellationToken);
+
+    public Task<Result<bool>> RestoreAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
+        => ExecuteAsync(async (collection, token) =>
+        {
+            if (!IsSoftDeletable)
+            {
+                return Result.Fail<bool>("Restore requires ISoftDeletable.");
+            }
+
+            UpdateDefinition<TDocument> update = Builders<TDocument>.Update.Set("isDeleted", false);
+            if (HasConcurrencyToken)
+            {
+                update = update.Set("eTag", MongoDbHelper.GenerateEtag());
+            }
+
+            if (IsAuditable)
+            {
+                update = update.Set("updatedAt", DateTime.UtcNow);
+            }
+
+            var result = await MongoCollectionCalls.UpdateOneAsync(
+                collection, _callContext.Session, filter, update, options: null, token);
+            return result.MatchedCount == 1
+                ? Result.Ok(true)
+                : Result.Fail<bool>(new DocumentNotFoundError());
+        }, cancellationToken);
+
+    public Task<Result<long>> PurgeAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
+        => ExecuteAsync(async (collection, token) =>
+        {
+            var result = await MongoCollectionCalls.DeleteManyAsync(
+                collection, _callContext.Session, filter, token);
+            return Result.Ok(result.DeletedCount);
         }, cancellationToken);
 
     public Task<Result<bool>> HasAnyAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
@@ -458,5 +555,19 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         {
             ((IAuditableDocument)entity).UpdatedAt = previousUpdated;
         }
+    }
+
+    private static string EncodeCursor(TDocument document)
+    {
+        var bson = document.ToBsonDocument();
+        var id = bson["_id"];
+        return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(id.ToJson()));
+    }
+
+    private static FilterDefinition<TDocument> DecodeCursor(string cursor)
+    {
+        var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(cursor));
+        var id = BsonSerializer.Deserialize<BsonValue>(json);
+        return Builders<TDocument>.Filter.Gt("_id", id);
     }
 }
