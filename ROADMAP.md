@@ -6,7 +6,7 @@ This document is the product roadmap. Implementation work is tracked as GitHub i
 **Repository:** [Dilcore-Official/Dilcore-MongoDb](https://github.com/Dilcore-Official/Dilcore-MongoDb)  
 **Issues filter:** [label:roadmap](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues?q=is%3Aissue+label%3Aroadmap)  
 **GitHub Project:** see [GitHub tracking](#github-tracking)  
-**Status:** M3 transactions (#21) stacked on production policies (#19).
+**Status:** Combining M3 JSON and transactions for the integration matrix.
 
 ---
 

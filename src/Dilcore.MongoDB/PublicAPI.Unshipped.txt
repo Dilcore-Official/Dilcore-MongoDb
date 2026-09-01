@@ -7,4 +7,6 @@ Dilcore.MongoDB.DependencyInjection.IConventionsBuilder.IgnoreIfNull(bool) -> Di
 Dilcore.MongoDB.DependencyInjection.IConventionsBuilder.UseElementNameConvention(MongoDB.Bson.Serialization.Conventions.IConvention) -> Dilcore.MongoDB.DependencyInjection.IConventionsBuilder
 Dilcore.MongoDB.DependencyInjection.IConventionsBuilder.UseEnumRepresentation(MongoDB.Bson.BsonType) -> Dilcore.MongoDB.DependencyInjection.IConventionsBuilder
 Dilcore.MongoDB.DependencyInjection.IMongoDbBuilder.ConfigureConventions(System.Action<Dilcore.MongoDB.DependencyInjection.IConventionsBuilder>) -> Dilcore.MongoDB.DependencyInjection.IMongoDbBuilder
+class Dilcore.MongoDB.Json.BsonJsonConverter
+class Dilcore.MongoDB.Json.JsonDocumentStore
 

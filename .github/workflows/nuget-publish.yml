@@ -59,12 +59,18 @@ jobs:
       - name: 🔨 Build
         run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release
 
-      - name: 📦 Pack core packages
+      - name: 📦 Pack packages
         run: |
           dotnet pack src/Dilcore.MongoDB.Abstractions/Dilcore.MongoDB.Abstractions.csproj \
             --no-build --configuration Release --output ./nupkgs \
             -p:Version=${{ steps.version.outputs.version }}
           dotnet pack src/Dilcore.MongoDB/Dilcore.MongoDB.csproj \
+            --no-build --configuration Release --output ./nupkgs \
+            -p:Version=${{ steps.version.outputs.version }}
+          dotnet pack src/Dilcore.MongoDB.SystemTextJson/Dilcore.MongoDB.SystemTextJson.csproj \
+            --no-build --configuration Release --output ./nupkgs \
+            -p:Version=${{ steps.version.outputs.version }}
+          dotnet pack src/Dilcore.MongoDB.NewtonsoftJson/Dilcore.MongoDB.NewtonsoftJson.csproj \
             --no-build --configuration Release --output ./nupkgs \
             -p:Version=${{ steps.version.outputs.version }}
 

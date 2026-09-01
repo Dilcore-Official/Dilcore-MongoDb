@@ -23,6 +23,9 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
   `WriteConcernFailureError` mapping.
 - Budgeted multi-document transactions via `IMongoDbTransactionRunner` over
   `WithTransactionAsync`. How-to: [transactions](docs/guides/transactions.md).
+- Optional JSON adapter packages `Dilcore.MongoDB.SystemTextJson` and `Dilcore.MongoDB.NewtonsoftJson`
+  with Canonical Extended JSON conversion and `JsonDocumentStore`.
+  How-to: [json adapters](docs/guides/json-adapters.md).
 
 ## [1.0.0] - 2025
 

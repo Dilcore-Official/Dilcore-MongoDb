@@ -1,5 +1,9 @@
 #nullable enable
 class Dilcore.MongoDB.Abstractions.Exceptions.CollectionResolutionException
+interface Dilcore.MongoDB.Abstractions.Json.IBsonJsonConverter
+class Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions
+enum Dilcore.MongoDB.Abstractions.Json.JsonBsonOutputMode
+enum Dilcore.MongoDB.Abstractions.Json.OrdinaryJsonNumberMode
 class Dilcore.MongoDB.Abstractions.Options.KeysetPage`1
 class Dilcore.MongoDB.Abstractions.Options.KeysetPageRequest`1
 class Dilcore.MongoDB.Abstractions.Options.MongoBulkWriteOptions
@@ -17,4 +21,3 @@ class Dilcore.MongoDB.Abstractions.Results.WriteConcernFailureError
 interface Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionContext
 interface Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionRunner
 class Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions
-
