@@ -75,6 +75,6 @@ public sealed class Order : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDe
 
 Enable soft-delete **filters** on the binding (`WithSoftDelete()`). Policy fields are staged and applied only after an acknowledged write. `ETag` is a non-zero random 64-bit token.
 
-`DeleteAsync` with matching `ETag` soft-deletes when the binding has `WithSoftDelete()`. Restore and purge APIs are tracked in [#19](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/19).
+`DeleteAsync` with matching `ETag` soft-deletes when the binding has `WithSoftDelete()`. `RestoreAsync` clears the flag; `PurgeAsync` hard-deletes. See [repositories.md](repositories.md).
 
-Wrong `ETag` maps to `ConcurrencyConflictError`.
+Wrong `ETag` maps to `ConcurrencyConflictError`. Duplicate-key writes map to `DuplicateKeyError`.

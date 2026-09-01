@@ -39,6 +39,42 @@ public sealed class ConcurrencyConflictError : MongoOperationError
     public override string Code => ErrorCode;
 }
 
+public sealed class DuplicateKeyError : MongoOperationError
+{
+    public const string ErrorCode = "duplicate_key";
+
+    public DuplicateKeyError(string? message = null)
+        : base(message ?? "A document with the same unique key already exists.")
+    {
+    }
+
+    public override string Code => ErrorCode;
+}
+
+public sealed class TransientWriteError : MongoOperationError
+{
+    public const string ErrorCode = "transient_write";
+
+    public TransientWriteError(string? message = null)
+        : base(message ?? "The write failed due to a transient MongoDB error.")
+    {
+    }
+
+    public override string Code => ErrorCode;
+}
+
+public sealed class WriteConcernFailureError : MongoOperationError
+{
+    public const string ErrorCode = "write_concern_failure";
+
+    public WriteConcernFailureError(string? message = null)
+        : base(message ?? "The write concern was not satisfied.")
+    {
+    }
+
+    public override string Code => ErrorCode;
+}
+
 public sealed class DocumentTooLargeError : MongoOperationError
 {
     public const string ErrorCode = "document_too_large";
