@@ -3,6 +3,7 @@ using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Abstractions.Namespace;
 using Dilcore.MongoDB.Abstractions.Options;
+using Dilcore.MongoDB.Abstractions.Provisioning;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.DependencyInjection;
 using Dilcore.MongoDB.Descriptors;
@@ -42,6 +43,7 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<MongoRegistrationGraph>()));
         services.AddScoped<IMongoDatabaseResolver, MongoDatabaseResolver>();
         services.AddScoped<IMongoDbCollectionFactory, MongoDbCollectionFactory>();
+        services.AddScoped<IMongoDbProvisioner, MongoDbProvisioner>();
         services.AddScoped<IRepositoryResolver, RepositoryResolver>();
 
         foreach (var resolverType in graph.Databases

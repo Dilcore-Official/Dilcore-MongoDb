@@ -18,6 +18,8 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
   replace/snapshot/patch, and bulk write options with chunking and partial-failure results.
 - Consumer how-tos: [document policies](docs/guides/document-policies.md) and
   [repositories](docs/guides/repositories.md).
+- Idempotent `IMongoDbProvisioner` (DryRun/Apply + `IProvisioningStep`) outside collection
+  resolution. How-to: [provisioning](docs/guides/provisioning.md).
 
 ## [1.0.0] - 2025
 
