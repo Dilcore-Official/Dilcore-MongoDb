@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Json;
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Abstractions.Namespace;
 using Dilcore.MongoDB.Abstractions.Options;
@@ -7,6 +8,7 @@ using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.DependencyInjection;
 using Dilcore.MongoDB.Descriptors;
 using Dilcore.MongoDB.Internal;
+using Dilcore.MongoDB.Json;
 using Dilcore.MongoDB.Namespace;
 using Dilcore.MongoDB.Repositories;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,6 +44,7 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<MongoRegistrationGraph>()));
         services.AddScoped<IMongoDatabaseResolver, MongoDatabaseResolver>();
         services.AddScoped<IMongoDbCollectionFactory, MongoDbCollectionFactory>();
+        services.AddSingleton<IBsonJsonConverter, BsonJsonConverter>();
         services.AddScoped<IRepositoryResolver, RepositoryResolver>();
 
         foreach (var resolverType in graph.Databases

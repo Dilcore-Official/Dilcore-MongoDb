@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <RootNamespace>Dilcore.MongoDB.NewtonsoftJson</RootNamespace>
+        <PackageId>Dilcore.MongoDB.NewtonsoftJson</PackageId>
+        <PackageDescription>Newtonsoft.Json adapters for Dilcore.MongoDB with Extended JSON type fidelity; optional so System.Text.Json consumers never take a Newtonsoft dependency</PackageDescription>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Dilcore.MongoDB\Dilcore.MongoDB.csproj" />
+      <PackageReference Include="Newtonsoft.Json" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+      <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    </ItemGroup>
+</Project>

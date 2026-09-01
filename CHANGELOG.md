@@ -18,6 +18,9 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
   replace/snapshot/patch, and bulk write options with chunking and partial-failure results.
 - Consumer how-tos: [document policies](docs/guides/document-policies.md) and
   [repositories](docs/guides/repositories.md).
+- Optional JSON adapter packages `Dilcore.MongoDB.SystemTextJson` and `Dilcore.MongoDB.NewtonsoftJson`
+  with Canonical Extended JSON conversion and `JsonDocumentStore`.
+  How-to: [json adapters](docs/guides/json-adapters.md).
 
 ## [1.0.0] - 2025
 

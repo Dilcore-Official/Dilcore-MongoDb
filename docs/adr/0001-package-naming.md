@@ -37,12 +37,15 @@ v2 packages and namespaces rename to **`Dilcore.MongoDB`**.
 
 NuGet.org availability check on 2026-08-02 returned HTTP 404 for both IDs (not published). Owner still must reserve/claim IDs on first publish.
 
-### Optional integration IDs (confirm in M2 before publishing)
+### Optional integration IDs
 
-Recorded for planning only; do **not** create empty reservation packages in M0:
+**Shipped in M3** (projects exist under `src/`):
 
 - `Dilcore.MongoDB.SystemTextJson`
 - `Dilcore.MongoDB.NewtonsoftJson`
+
+Recorded for later milestones; do **not** create empty reservation packages:
+
 - `Dilcore.MongoDB.OpenTelemetry`
 - `Dilcore.MongoDB.VectorData`
 
@@ -66,4 +69,5 @@ The library is **not** an Amazon DocumentDB client library. Documentation and pa
 - Breaking rename for package IDs, assembly names, and namespaces.
 - No compatibility packages, type forwards, or obsolete aliases for v1 → v2 (see [versioning policy](../policies/versioning-and-support.md)).
 - Repository metadata, README, Context7 library ID, and consumer skill names must follow the MongoDB naming in later milestones.
-- M2 topology work ([#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12), [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13)) implements this decision.
+- M2 topology work ([#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12), [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13)) implements the two-package **core**.
+- M3 ([#20](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/20)) ships the two JSON adapter packages. Newtonsoft remains isolated from core and from System.Text.Json consumers.
