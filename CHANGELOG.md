@@ -21,6 +21,8 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
 - Keyset pagination (`GetPageAsync`), soft-delete `RestoreAsync` / `PurgeAsync`,
   `FindOptions` list overloads, and typed `DuplicateKeyError` / `TransientWriteError` /
   `WriteConcernFailureError` mapping.
+- Budgeted multi-document transactions via `IMongoDbTransactionRunner` over
+  `WithTransactionAsync`. How-to: [transactions](docs/guides/transactions.md).
 
 ## [1.0.0] - 2025
 
