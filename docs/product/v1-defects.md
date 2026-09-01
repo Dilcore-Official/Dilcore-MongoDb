@@ -38,14 +38,14 @@ Feeds naming ADR ([#4](https://github.com/Dilcore-Official/Dilcore-MongoDb/issue
 
 | ID | Status | Defect | Evidence | Owner |
 |----|--------|--------|----------|-------|
-| D14 | **Open** | Soft-delete filter inconsistency | `GetAsync` / `GetListAsync` apply `ApplyNotDeleteFilter`; `HasAnyAsync` and `CountAsync` do not (`GenericMongoDbRepository`). | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
-| D15 | **Open** | Missing-document returns success with null | `GetAsync` returns `Result.Ok(entity)` after `FirstOrDefaultAsync` without null check. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
-| D16 | **Open** | Streaming error model break | `GetAsyncEnumerable` throws `InvalidOperationException` on collection failure instead of `Result`. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18), [#25](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/25) |
+| D14 | **Resolved (M3)** | Soft-delete filter inconsistency | `HasAnyAsync` and `CountAsync` apply the same not-deleted filter as reads. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D15 | **Resolved (M3)** | Missing-document returns success with null | `GetAsync` returns `DocumentNotFoundError`. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D16 | **Resolved (M3, streaming exception)** | Streaming error model break | `GetAsyncEnumerable` throws `CollectionResolutionException` on collection failure. M4 may still redesign streaming to Result. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18), [#25](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/25) |
 | D17 | **Resolved** | Primary-constructor capture warning CS9107 | Addressed in later hardening; do not reintroduce unused captured primary-constructor parameters. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) / [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
-| D23 | **Open** | Timestamp ETag is not collision-safe | `MongoDbHelper.GenerateEtag()` uses millisecond unix time (v1 type was `DocumentDbHelper`). | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
-| D24 | **Open** | Entities mutated before write success | `GenerateETag` / `UpdatedNow` before `UpdateOne` / `BulkWrite` succeeds. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
-| D25 | **Open** | Full-document `$set` replace/patch risk | `ToBsonUpdateDocument` wraps `ToBsonDocument()` in `$set`. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
-| D26 | **Open** | Bulk write edge cases incomplete | Default `BulkWrite` options; coarse count checks. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D23 | **Resolved (M3)** | Timestamp ETag is not collision-safe | `MongoDbHelper.GenerateEtag()` uses a non-zero 64-bit random token (`long` type unchanged). | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D24 | **Resolved (M3)** | Entities mutated before write success | Policy fields are staged and applied only after acknowledged writes. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D25 | **Resolved (M3)** | Full-document `$set` replace/patch risk | `ReplaceAsync` replaces stored state; `UpdateSnapshotAsync` `$set`s the mutable snapshot excluding `_id`; `PatchAsync` is caller-supplied. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
+| D26 | **Resolved (M3)** | Bulk write edge cases incomplete | Empty/no-op, chunking, unordered partial failure, and per-item outcomes are covered. | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) |
 
 ---
 

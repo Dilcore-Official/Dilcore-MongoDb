@@ -43,6 +43,7 @@ Treat this as an **externally consumed library**: public surface is a contract, 
 | How to build, test, PR | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Versioning / support | [docs/policies/versioning-and-support.md](docs/policies/versioning-and-support.md) |
 | Package catalog / selection | [docs/product/](docs/product/) |
+| Consumer how-tos | [docs/guides/](docs/guides/) |
 | Historical v1 API | [docs/api/v1-public-api.md](docs/api/v1-public-api.md) |
 | Open correctness defects | [docs/product/v1-defects.md](docs/product/v1-defects.md) |
 | Live public surface | `src/*/PublicAPI.*.txt` |

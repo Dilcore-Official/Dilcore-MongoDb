@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Dilcore.MongoDB.IntegrationTests.Infrastructure;
+namespace Dilcore.MongoDB.TestSupport;
 
 public static class AcceptanceServiceProviderFactory
 {

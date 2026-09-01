@@ -3,6 +3,7 @@ using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.IntegrationTests.Infrastructure;
+using Dilcore.MongoDB.TestSupport;
 using MongoDB.Driver;
 using Testcontainers.MongoDb;
 
@@ -15,8 +16,8 @@ namespace Dilcore.MongoDB.IntegrationTests;
 /// </summary>
 public class MultiClusterAcceptanceTests
 {
-    private readonly MongoDbContainer _clusterA = new MongoDbBuilder("mongo:7.0").Build();
-    private readonly MongoDbContainer _clusterB = new MongoDbBuilder("mongo:7.0").Build();
+    private readonly MongoDbContainer _clusterA = MongoTestImages.CreateStandalone();
+    private readonly MongoDbContainer _clusterB = MongoTestImages.CreateStandalone();
 
     [OneTimeSetUp]
     public async Task InitializeAsync()
