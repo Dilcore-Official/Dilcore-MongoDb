@@ -1,11 +1,15 @@
 using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Exceptions;
 using Dilcore.MongoDB.Abstractions.Keys;
+using Dilcore.MongoDB.Abstractions.Namespace;
 using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.Repositories;
+using FluentResults;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.Repositories.IntegrationTests;
@@ -48,7 +52,7 @@ public class GenericRepositoryCorrectnessTests : BaseIntegrationTests
     }
 
     [Test]
-    public async Task FailedEtagUpdate_DoesNotMutateEntity()
+    public async Task FailedEtagUpdate_DoesNotMutatePolicyFields()
     {
         var (repository, _) = CreateRepository("etag-restore", enableSoftDelete: false);
         var stored = await repository.StoreAsync(CreateEntity());
@@ -94,6 +98,37 @@ public class GenericRepositoryCorrectnessTests : BaseIntegrationTests
         patched.ShouldBeSuccess();
         patched.Value.Name.ShouldBe("from-client");
         patched.Value.Value.ShouldBe("concurrent");
+        patched.Value.ETag.ShouldNotBe(stored.Value.ETag);
+    }
+
+    [Test]
+    public async Task PatchAsync_StaleETag_ReturnsConcurrencyConflict()
+    {
+        var (repository, _) = CreateRepository("patch-stale", enableSoftDelete: false);
+        var stored = await repository.StoreAsync(CreateEntity());
+        stored.ShouldBeSuccess();
+
+        var patched = await repository.PatchAsync(
+            Builders<GenericRepositoryTests.TestEntity1>.Filter.Eq(x => x.Id, stored.Value.Id)
+                & Builders<GenericRepositoryTests.TestEntity1>.Filter.Eq(x => x.ETag, 999),
+            Builders<GenericRepositoryTests.TestEntity1>.Update.Set(x => x.Name, "nope"));
+        patched.ShouldBeFailure();
+        patched.ShouldHaveError<ConcurrencyConflictError>();
+
+        var loaded = await repository.GetAsync(stored.Value.Id);
+        loaded.Value.Name.ShouldBe(stored.Value.Name);
+        loaded.Value.ETag.ShouldBe(stored.Value.ETag);
+    }
+
+    [Test]
+    public async Task PatchAsync_MissingDocumentWithoutConcurrency_ReturnsNotFound()
+    {
+        var repository = CreateMinimalRepository("patch-min-missing");
+        var patched = await repository.PatchAsync(
+            Builders<GenericRepositoryTests.MinimalEntity>.Filter.Eq(x => x.Id, Guid.NewGuid()),
+            Builders<GenericRepositoryTests.MinimalEntity>.Update.Set(x => x.Name, "nope"));
+        patched.ShouldBeFailure();
+        patched.ShouldHaveError<DocumentNotFoundError>();
     }
 
     [Test]
@@ -109,6 +144,222 @@ public class GenericRepositoryCorrectnessTests : BaseIntegrationTests
         var loaded = await repository.GetAsync(stored.Value.Id);
         loaded.Value.Name.ShouldBe("replaced");
         loaded.Value.Value.ShouldBeNull();
+    }
+
+    [Test]
+    public async Task ReplaceAsync_StaleETag_ReturnsConcurrencyConflictAndRestoresPolicyFields()
+    {
+        var (repository, _) = CreateRepository("replace-stale", enableSoftDelete: false);
+        var stored = await repository.StoreAsync(CreateEntity());
+        stored.ShouldBeSuccess();
+
+        var concurrent = await repository.GetAsync(stored.Value.Id);
+        concurrent.Value.Name = "from-other-writer";
+        (await repository.StoreAsync(concurrent.Value)).ShouldBeSuccess();
+
+        var stale = stored.Value;
+        var staleEtag = stale.ETag;
+        var staleUpdated = stale.UpdatedAt;
+        stale.Name = "stomped";
+        var replaced = await repository.ReplaceAsync(stale);
+        replaced.ShouldBeFailure();
+        replaced.ShouldHaveError<ConcurrencyConflictError>();
+        stale.ETag.ShouldBe(staleEtag);
+        stale.UpdatedAt.ShouldBe(staleUpdated);
+
+        var loaded = await repository.GetAsync(stored.Value.Id);
+        loaded.Value.Name.ShouldBe("from-other-writer");
+        loaded.Value.ETag.ShouldNotBe(staleEtag);
+    }
+
+    [Test]
+    public async Task ReplaceAsync_MissingDocument_ReturnsNotFound()
+    {
+        var (repository, _) = CreateRepository("replace-missing", enableSoftDelete: false);
+        var entity = CreateEntity();
+        entity.Id = Guid.NewGuid();
+        entity.ETag = 1;
+        var replaced = await repository.ReplaceAsync(entity);
+        replaced.ShouldBeFailure();
+        replaced.ShouldHaveError<DocumentNotFoundError>();
+    }
+
+    [Test]
+    public async Task UpdateSnapshotAsync_PreservesUnknownFields_ReplaceDoesNot()
+    {
+        var (repository, factory) = CreateRepository("snapshot-extra", enableSoftDelete: false);
+        var stored = await repository.StoreAsync(CreateEntity());
+        stored.ShouldBeSuccess();
+
+        var collection = (await factory.GetCollectionAsync<GenericRepositoryTests.TestEntity1>(
+            new MongoDocumentBindingKey("e1"))).Value;
+        await collection.UpdateOneAsync(
+            Builders<GenericRepositoryTests.TestEntity1>.Filter.Eq(x => x.Id, stored.Value.Id),
+            Builders<GenericRepositoryTests.TestEntity1>.Update.Set("extra", "keep-me"));
+
+        stored.Value.Name = "snapshot";
+        var snapshot = await repository.UpdateSnapshotAsync(stored.Value);
+        snapshot.ShouldBeSuccess();
+        snapshot.Value.ETag.ShouldNotBe(0);
+
+        var afterSnapshot = await collection.Find(
+                Builders<GenericRepositoryTests.TestEntity1>.Filter.Eq(x => x.Id, stored.Value.Id))
+            .As<BsonDocument>()
+            .FirstAsync();
+        afterSnapshot["extra"].AsString.ShouldBe("keep-me");
+        afterSnapshot["name"].AsString.ShouldBe("snapshot");
+
+        stored.Value.Name = "replaced";
+        (await repository.ReplaceAsync(stored.Value)).ShouldBeSuccess();
+        var afterReplace = await collection.Find(
+                Builders<GenericRepositoryTests.TestEntity1>.Filter.Eq(x => x.Id, stored.Value.Id))
+            .As<BsonDocument>()
+            .FirstAsync();
+        afterReplace.Contains("extra").ShouldBeFalse();
+    }
+
+    [Test]
+    public async Task UpdateSnapshotAsync_MissingDocument_ReturnsNotFound()
+    {
+        var repository = CreateMinimalRepository("snapshot-missing");
+        var missing = new GenericRepositoryTests.MinimalEntity { Id = Guid.NewGuid(), Name = "gone" };
+        var result = await repository.UpdateSnapshotAsync(missing);
+        result.ShouldBeFailure();
+        result.ShouldHaveError<DocumentNotFoundError>();
+    }
+
+    [Test]
+    public async Task StoreAsync_CallerAssignedIdWithoutPolicies_Inserts()
+    {
+        var repository = CreateMinimalRepository("assigned-id");
+        var id = Guid.NewGuid();
+        var stored = await repository.StoreAsync(new GenericRepositoryTests.MinimalEntity
+        {
+            Id = id,
+            Name = "preassigned"
+        });
+        stored.ShouldBeSuccess();
+        stored.Value.Id.ShouldBe(id);
+
+        var loaded = await repository.GetAsync(
+            Builders<GenericRepositoryTests.MinimalEntity>.Filter.Eq(x => x.Id, id));
+        loaded.ShouldBeSuccess();
+        loaded.Value.Name.ShouldBe("preassigned");
+    }
+
+    [Test]
+    public async Task StoreAsync_OversizedDocument_ReturnsDocumentTooLargeAndRestoresPolicyFields()
+    {
+        var (repository, _) = CreateRepository("too-large", enableSoftDelete: false);
+        var entity = CreateEntity();
+        entity.Value = new string('x', 17 * 1024 * 1024);
+        var previousUpdated = entity.UpdatedAt;
+
+        var result = await repository.StoreAsync(entity);
+        result.ShouldBeFailure();
+        result.ShouldHaveError<DocumentTooLargeError>();
+        entity.ETag.ShouldBe(0);
+        entity.UpdatedAt.ShouldBe(previousUpdated);
+    }
+
+    [Test]
+    public async Task StoreAsync_SoftDeletedDocument_ReturnsNotFound()
+    {
+        var (repository, _) = CreateRepository("soft-write", enableSoftDelete: true);
+        var stored = await repository.StoreAsync(CreateEntity());
+        stored.ShouldBeSuccess();
+        (await repository.DeleteAsync(stored.Value.Id, stored.Value.ETag)).ShouldBeSuccess();
+
+        stored.Value.Name = "resurrect";
+        var update = await repository.StoreAsync(stored.Value);
+        update.ShouldBeFailure();
+        update.ShouldHaveError<DocumentNotFoundError>();
+    }
+
+    [Test]
+    public async Task DeleteAsync_WrongETag_ReturnsConcurrencyConflict()
+    {
+        var (repository, _) = CreateRepository("delete-etag", enableSoftDelete: true);
+        var stored = await repository.StoreAsync(CreateEntity());
+        stored.ShouldBeSuccess();
+
+        var deleted = await repository.DeleteAsync(stored.Value.Id, 999);
+        deleted.ShouldBeFailure();
+        deleted.ShouldHaveError<ConcurrencyConflictError>();
+
+        var loaded = await repository.GetAsync(stored.Value.Id);
+        loaded.ShouldBeSuccess();
+        loaded.Value.IsDeleted.ShouldBeFalse();
+    }
+
+    [Test]
+    public async Task DeleteAsync_MissingDocument_ReturnsNotFound()
+    {
+        var repository = CreateMinimalRepository("delete-missing");
+        var deleted = await repository.DeleteAsync(
+            Builders<GenericRepositoryTests.MinimalEntity>.Filter.Eq(x => x.Id, Guid.NewGuid()));
+        deleted.ShouldBeFailure();
+        deleted.ShouldHaveError<DocumentNotFoundError>();
+    }
+
+    [Test]
+    public async Task CustomBsonElementNames_HonorSerializationMappings()
+    {
+        var (repository, factory) = CreateCustomMappedRepository("custom-fields");
+        var stored = await repository.StoreAsync(new CustomMappedEntity { Name = "one" });
+        stored.ShouldBeSuccess();
+        stored.Value.ETag.ShouldNotBe(0);
+
+        var collection = (await factory.GetCollectionAsync<CustomMappedEntity>(
+            new MongoDocumentBindingKey("custom"))).Value;
+        var raw = await collection.Find(Builders<CustomMappedEntity>.Filter.Eq(x => x.Id, stored.Value.Id))
+            .As<BsonDocument>()
+            .FirstAsync();
+        raw.Contains("etag").ShouldBeTrue();
+        raw.Contains("deleted").ShouldBeTrue();
+        raw.Contains("updated").ShouldBeTrue();
+        raw.Contains("eTag").ShouldBeFalse();
+
+        stored.Value.Name = "two";
+        var previousEtag = stored.Value.ETag;
+        var updated = await repository.StoreAsync(stored.Value);
+        updated.ShouldBeSuccess();
+        updated.Value.ETag.ShouldNotBe(previousEtag);
+
+        var deleted = await repository.DeleteAsync(updated.Value.Id, updated.Value.ETag);
+        deleted.ShouldBeSuccess();
+        (await repository.GetAsync(updated.Value.Id)).ShouldHaveError<DocumentNotFoundError>();
+    }
+
+    [Test]
+    public async Task GetAsyncEnumerable_CollectionResolutionFailure_ThrowsCollectionResolutionException()
+    {
+        var services = new ServiceCollection();
+        services.AddScoped<INamespaceSegmentContributor>(_ => new RequiredPrefixContributor());
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(MongoDbContainer.GetConnectionString()))
+            .AddDatabase("StreamFailDB", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<GenericRepositoryTests.MinimalEntity>("stream", d => d
+                    .WithCollectionName("streamEntities"));
+            }));
+
+        using var provider = AcceptanceServiceProviderFactory.Create(services);
+        using var scope = provider.CreateScope();
+        var repository = scope.ServiceProvider
+            .GetRequiredService<IGenericRepository<GenericRepositoryTests.MinimalEntity>>();
+
+        var enumerate = async () =>
+        {
+            await foreach (var _ in repository.GetAsyncEnumerable(
+                Builders<GenericRepositoryTests.MinimalEntity>.Filter.Empty))
+            {
+            }
+        };
+
+        var ex = await Should.ThrowAsync<CollectionResolutionException>(enumerate());
+        ex.Message.ShouldContain("Failed to get collection");
     }
 
     private (IGenericRepository<GenericRepositoryTests.TestEntity1> Repository, IMongoDbCollectionFactory Factory)
@@ -137,10 +388,78 @@ public class GenericRepositoryCorrectnessTests : BaseIntegrationTests
             scope.ServiceProvider.GetRequiredService<IMongoDbCollectionFactory>());
     }
 
+    private IGenericRepository<GenericRepositoryTests.MinimalEntity> CreateMinimalRepository(string collection)
+    {
+        var services = new ServiceCollection();
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(MongoDbContainer.GetConnectionString()))
+            .AddDatabase("MinimalCorrectnessDB", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<GenericRepositoryTests.MinimalEntity>("minimal", d => d
+                    .WithCollectionName(collection));
+            }));
+
+        return AcceptanceServiceProviderFactory.Create(services)
+            .CreateScope()
+            .ServiceProvider
+            .GetRequiredService<IGenericRepository<GenericRepositoryTests.MinimalEntity>>();
+    }
+
+    private (IGenericRepository<CustomMappedEntity> Repository, IMongoDbCollectionFactory Factory)
+        CreateCustomMappedRepository(string collection)
+    {
+        var services = new ServiceCollection();
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(MongoDbContainer.GetConnectionString()))
+            .AddDatabase("CustomMappedDB", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<CustomMappedEntity>("custom", d => d
+                    .WithCollectionName(collection)
+                    .WithSoftDelete());
+            }));
+
+        var provider = AcceptanceServiceProviderFactory.Create(services);
+        var scope = provider.CreateScope();
+        return (
+            scope.ServiceProvider.GetRequiredService<IGenericRepository<CustomMappedEntity>>(),
+            scope.ServiceProvider.GetRequiredService<IMongoDbCollectionFactory>());
+    }
+
     private static GenericRepositoryTests.TestEntity1 CreateEntity()
         => Fixture.Build<GenericRepositoryTests.TestEntity1>()
             .Without(x => x.ETag)
             .Without(x => x.Id)
             .Without(x => x.IsDeleted)
             .Create();
+
+    public sealed class CustomMappedEntity : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
+    {
+        public Guid Id { get; set; }
+
+        [BsonElement("etag")]
+        public long ETag { get; set; }
+
+        [BsonElement("deleted")]
+        public bool IsDeleted { get; set; }
+
+        [BsonElement("created")]
+        public DateTime CreatedAt { get; set; }
+
+        [BsonElement("updated")]
+        public DateTime UpdatedAt { get; set; }
+
+        public string? Name { get; set; }
+    }
+
+    private sealed class RequiredPrefixContributor : INamespaceSegmentContributor
+    {
+        public int Order => 50;
+
+        public Task<Result<string?>> ContributeAsync(
+            NamespaceResolutionRequest request,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(Result.Fail<string?>("A required namespace prefix is missing from the current request context."));
+    }
 }

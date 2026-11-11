@@ -199,13 +199,7 @@ internal static class SoftDeleteFilterCache
                 return Builders<TDocument>.Filter.Empty;
             }
 
-            var document = Expression.Parameter(typeof(TDocument), "document");
-            var isDeleted = Expression.Property(
-                Expression.Convert(document, typeof(ISoftDeletable)),
-                nameof(ISoftDeletable.IsDeleted));
-            var body = Expression.Equal(isDeleted, Expression.Constant(false));
-            var predicate = Expression.Lambda<Func<TDocument, bool>>(body, document);
-            return Builders<TDocument>.Filter.Where(predicate);
+            return Builders<TDocument>.Filter.Eq(PolicyElementNames.IsDeleted<TDocument>(), false);
         }
     }
 }

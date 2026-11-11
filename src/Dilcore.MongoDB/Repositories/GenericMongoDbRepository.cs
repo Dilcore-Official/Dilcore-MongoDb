@@ -45,7 +45,17 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         => ExecuteAsync((collection, ct) => StoreEntityAsync(entity, collection, ct), cancellationToken);
 
     public Task<Result<TDocument>> ReplaceAsync(TDocument entity, CancellationToken cancellationToken = default)
-        => ExecuteAsync((collection, ct) => ReplaceWithoutConcurrencyAsync(entity, collection, replaceEntireDocument: true, ct), cancellationToken);
+        => ExecuteAsync((collection, ct) =>
+        {
+            if (HasConcurrencyToken)
+            {
+                return entity.IsNew()
+                    ? Task.FromResult(Result.Fail<TDocument>(new DocumentNotFoundError()))
+                    : WriteWithConcurrencyAsync(entity, ((IHasConcurrencyToken)entity).ETag, collection, replaceEntireDocument: true, ct);
+            }
+
+            return ReplaceWithoutConcurrencyAsync(entity, collection, replaceEntireDocument: true, ct);
+        }, cancellationToken);
 
     public Task<Result<TDocument>> UpdateSnapshotAsync(TDocument entity, CancellationToken cancellationToken = default)
         => ExecuteAsync((collection, ct) =>
@@ -55,7 +65,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                 var currentEtag = ((IHasConcurrencyToken)entity).ETag;
                 return entity.IsNew()
                     ? CreateAsync(entity, collection, ct)
-                    : UpdateWithConcurrencyAsync(entity, currentEtag, collection, ct);
+                    : WriteWithConcurrencyAsync(entity, currentEtag, collection, replaceEntireDocument: false, ct);
             }
 
             return IdAccessor.IsEmpty(entity)
@@ -72,12 +82,12 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             filter = ApplyNotDeleteFilter(filter);
             if (HasConcurrencyToken)
             {
-                update = update.Set("eTag", MongoDbHelper.GenerateEtag());
+                update = update.Set(PolicyElementNames.ETag<TDocument>(), MongoDbHelper.GenerateEtag());
             }
 
             if (IsAuditable)
             {
-                update = update.Set("updatedAt", DateTime.UtcNow);
+                update = update.Set(PolicyElementNames.UpdatedAt<TDocument>(), DateTime.UtcNow);
             }
 
             var updated = await MongoCollectionCalls.FindOneAndUpdateAsync(
@@ -248,12 +258,20 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         {
             return entity.IsNew()
                 ? CreateAsync(entity, collection, cancellationToken)
-                : UpdateWithConcurrencyAsync(entity, ((IHasConcurrencyToken)entity).ETag, collection, cancellationToken);
+                : WriteWithConcurrencyAsync(
+                    entity,
+                    ((IHasConcurrencyToken)entity).ETag,
+                    collection,
+                    replaceEntireDocument: false,
+                    cancellationToken);
         }
 
-        return IdAccessor.IsEmpty(entity)
-            ? CreateAsync(entity, collection, cancellationToken)
-            : ReplaceWithoutConcurrencyAsync(entity, collection, replaceEntireDocument: false, cancellationToken);
+        if (IdAccessor.IsEmpty(entity))
+        {
+            return CreateAsync(entity, collection, cancellationToken);
+        }
+
+        return StoreAssignedIdWithoutConcurrencyAsync(entity, collection, cancellationToken);
     }
 
     private async Task<Result<TDocument>> CreateAsync(
@@ -289,7 +307,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                 collection, _callContext.Session, entity, new InsertOneOptions(), cancellationToken);
             return Result.Ok(entity);
         }
-        catch (MongoException)
+        catch (Exception exception) when (exception is MongoException or FormatException)
         {
             if (stagedId)
             {
@@ -311,10 +329,11 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         }
     }
 
-    private async Task<Result<TDocument>> UpdateWithConcurrencyAsync(
+    private async Task<Result<TDocument>> WriteWithConcurrencyAsync(
         TDocument entity,
         long currentEtag,
         IMongoCollection<TDocument> collection,
+        bool replaceEntireDocument,
         CancellationToken cancellationToken)
     {
         var previousUpdated = IsAuditable ? ((IAuditableDocument)entity).UpdatedAt : default;
@@ -330,33 +349,74 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         ((IHasConcurrencyToken)entity).ETag = nextEtag;
 
         var filter = IdAccessor.BuildIdFilter(entity);
-        filter &= Builders<TDocument>.Filter.Eq("eTag", currentEtag);
+        filter &= Builders<TDocument>.Filter.Eq(PolicyElementNames.ETag<TDocument>(), currentEtag);
         filter = ApplyNotDeleteFilter(filter);
-        var updateDocument = entity.ToBsonSnapshotUpdateDocument();
 
         try
         {
-            var updateResult = await MongoCollectionCalls.UpdateOneAsync(
-                collection,
-                _callContext.Session,
-                filter,
-                updateDocument,
-                options: null,
-                cancellationToken);
+            long matched;
+            if (replaceEntireDocument)
+            {
+                var replaceResult = await MongoCollectionCalls.ReplaceOneAsync(
+                    collection, _callContext.Session, filter, entity, options: null, cancellationToken);
+                matched = replaceResult.MatchedCount;
+            }
+            else
+            {
+                var updateResult = await MongoCollectionCalls.UpdateOneAsync(
+                    collection,
+                    _callContext.Session,
+                    filter,
+                    entity.ToBsonSnapshotUpdateDocument(),
+                    options: null,
+                    cancellationToken);
+                matched = updateResult.MatchedCount;
+            }
 
-            if (updateResult.MatchedCount == 1)
+            if (matched == 1)
             {
                 return Result.Ok(entity);
             }
 
             RestoreStaged(entity, previousEtag, previousUpdated);
-            return Result.Fail<TDocument>(new ConcurrencyConflictError());
+            return await UnmatchedWriteErrorAsync(entity, collection, cancellationToken);
         }
-        catch (MongoException)
+        catch (Exception exception) when (exception is MongoException or FormatException)
         {
             RestoreStaged(entity, previousEtag, previousUpdated);
             throw;
         }
+    }
+
+    private async Task<Result<TDocument>> StoreAssignedIdWithoutConcurrencyAsync(
+        TDocument entity,
+        IMongoCollection<TDocument> collection,
+        CancellationToken cancellationToken)
+    {
+        var update = await ReplaceWithoutConcurrencyAsync(
+            entity, collection, replaceEntireDocument: false, cancellationToken);
+        if (update.IsSuccess || !update.HasError<DocumentNotFoundError>())
+        {
+            return update;
+        }
+
+        return await CreateAsync(entity, collection, cancellationToken);
+    }
+
+    private async Task<Result<TDocument>> UnmatchedWriteErrorAsync(
+        TDocument entity,
+        IMongoCollection<TDocument> collection,
+        CancellationToken cancellationToken)
+    {
+        var exists = await MongoCollectionCalls.Find(
+                collection,
+                _callContext.Session,
+                ApplyNotDeleteFilter(IdAccessor.BuildIdFilter(entity)))
+            .Limit(1)
+            .AnyAsync(cancellationToken);
+        return exists
+            ? Result.Fail<TDocument>(new ConcurrencyConflictError())
+            : Result.Fail<TDocument>(new DocumentNotFoundError());
     }
 
     private async Task<Result<TDocument>> ReplaceWithoutConcurrencyAsync(
@@ -404,7 +464,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             RestoreAudit(entity, previousUpdated);
             return Result.Fail<TDocument>(new DocumentNotFoundError());
         }
-        catch (MongoException)
+        catch (Exception exception) when (exception is MongoException or FormatException)
         {
             RestoreAudit(entity, previousUpdated);
             throw;
@@ -416,20 +476,28 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         FilterDefinition<TDocument> filter,
         CancellationToken cancellationToken = default)
     {
-        UpdateDefinition<TDocument> update = Builders<TDocument>.Update.Set("isDeleted", true);
+        UpdateDefinition<TDocument> update = Builders<TDocument>.Update.Set(
+            PolicyElementNames.IsDeleted<TDocument>(), true);
         if (HasConcurrencyToken)
         {
-            update = update.Set("eTag", MongoDbHelper.GenerateEtag());
+            update = update.Set(PolicyElementNames.ETag<TDocument>(), MongoDbHelper.GenerateEtag());
         }
 
         if (IsAuditable)
         {
-            update = update.Set("updatedAt", DateTime.UtcNow);
+            update = update.Set(PolicyElementNames.UpdatedAt<TDocument>(), DateTime.UtcNow);
         }
 
         var result = await MongoCollectionCalls.UpdateOneAsync(
             collection, _callContext.Session, filter, update, options: null, cancellationToken);
-        return Result.Ok(result.ModifiedCount == 1 || result.MatchedCount == 1);
+        if (result.ModifiedCount == 1 || result.MatchedCount == 1)
+        {
+            return Result.Ok(true);
+        }
+
+        return HasConcurrencyToken
+            ? Result.Fail<bool>(new ConcurrencyConflictError())
+            : Result.Fail<bool>(new DocumentNotFoundError());
     }
 
     private async Task<Result<bool>> PermanentDeleteOneAsync(
@@ -439,7 +507,14 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
     {
         var result = await MongoCollectionCalls.DeleteOneAsync(
             collection, _callContext.Session, filter, cancellationToken);
-        return Result.Ok(result.DeletedCount == 1);
+        if (result.DeletedCount == 1)
+        {
+            return Result.Ok(true);
+        }
+
+        return HasConcurrencyToken
+            ? Result.Fail<bool>(new ConcurrencyConflictError())
+            : Result.Fail<bool>(new DocumentNotFoundError());
     }
 
     private static void RestoreStaged(TDocument entity, long previousEtag, DateTime previousUpdated)

@@ -14,6 +14,7 @@ internal static class MongoExceptionMapper
             MongoBulkWriteException bulk => MapBulk(bulk),
             MongoCommandException command => MapCommand(command),
             MongoException mongo => MapMongo(mongo),
+            FormatException format when IsDocumentTooLarge(0, format.Message) => new DocumentTooLargeError(format.Message),
             _ => new Error(exception.Message)
         };
     }
@@ -73,6 +74,8 @@ internal static class MongoExceptionMapper
     }
 
     private static bool IsDocumentTooLarge(int code, string message)
-        => code is 10334 || message.Contains("object to insert too large", StringComparison.OrdinalIgnoreCase)
-            || message.Contains("BSONObj size", StringComparison.OrdinalIgnoreCase);
+        => code is 10334
+            || message.Contains("object to insert too large", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("BSONObj size", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("MaxDocumentSize", StringComparison.OrdinalIgnoreCase);
 }

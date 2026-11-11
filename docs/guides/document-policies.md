@@ -77,4 +77,4 @@ Enable soft-delete **filters** on the binding (`WithSoftDelete()`). Policy field
 
 `DeleteAsync` with matching `ETag` soft-deletes when the binding has `WithSoftDelete()`. Restore and purge APIs are tracked in [#19](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/19).
 
-Wrong `ETag` maps to `ConcurrencyConflictError`.
+Wrong `ETag` on `StoreAsync` / `ReplaceAsync` / `UpdateSnapshotAsync` / `DeleteAsync(id, eTag)` maps to `ConcurrencyConflictError`. Policy filters and stamps use each document type's BSON element names.

@@ -21,23 +21,23 @@ Unkeyed `IGenericRepository<T>` is registered only when a type has a single bind
 
 | Method | Role |
 |--------|------|
-| `StoreAsync` | Insert (applies configured Guid generation and policies after ack) |
-| `ReplaceAsync` | Replace stored document |
-| `UpdateSnapshotAsync` | `$set` mutable snapshot; excludes `_id` |
-| `PatchAsync` | Caller-supplied `UpdateDefinition` |
+| `StoreAsync` | Insert or update. Empty Id inserts; a caller-assigned Id inserts when missing and snapshots when present. Policy fields (ETag, audit) are staged, then restored on failure. |
+| `ReplaceAsync` | Full stored-document replacement. With `IHasConcurrencyToken`, a stale ETag returns `ConcurrencyConflictError`; a missing document returns `DocumentNotFoundError`. |
+| `UpdateSnapshotAsync` | `$set` mutable snapshot; excludes `_id` (unknown stored fields are kept). Honors the same ETag rules as `StoreAsync`. |
+| `PatchAsync` | Caller-supplied `UpdateDefinition`. Miss with a concurrency token → `ConcurrencyConflictError`; without a token → `DocumentNotFoundError`. |
 | `GetAsync` / `GetAsync<TDerived>` | Single document; missing → `DocumentNotFoundError` |
 | `GetListAsync` (several overloads) | Lists with optional filter and derived types |
 | `GetAsyncEnumerable` | Streaming read (see caveat below) |
-| `DeleteAsync` | Soft-delete when `WithSoftDelete()` is on the binding |
+| `DeleteAsync` | Soft-delete when `WithSoftDelete()` is on the binding. No match → `DocumentNotFoundError`; `DeleteAsync(id, eTag)` with a stale token → `ConcurrencyConflictError`. |
 | `HasAnyAsync` / `CountAsync` | Same not-deleted filter as reads when soft delete is enabled |
 
 `Dilcore.MongoDB.Repositories.GenericRepositoryExtensions` adds `GetAsync(id)`, `GetListAsync(expression)`, and `DeleteAsync(id, eTag)` for `IDocumentEntity<TId>` / `IHasConcurrencyToken`.
 
 ### Replace vs snapshot vs patch
 
-- **Replace** — full stored document replacement.
-- **UpdateSnapshot** — `$set` of the mutable snapshot without `_id`.
-- **Patch** — only the `UpdateDefinition` you pass; Dilcore does not invent a full-document `$set`.
+- **Replace** — full stored document replacement; ETag-guarded when the document implements `IHasConcurrencyToken`.
+- **UpdateSnapshot** — `$set` of the mutable snapshot without `_id`; extra BSON fields not on the CLR type remain.
+- **Patch** — only the `UpdateDefinition` you pass; Dilcore does not invent a full-document `$set`. Policy field names follow the document's BSON mapping (`[BsonElement]`), not hardcoded camelCase.
 
 ### Streaming caveat
 
@@ -51,7 +51,7 @@ Unkeyed `IGenericRepository<T>` is registered only when a type has a single bind
 - Overloads that take `MongoBulkWriteOptions` (`IsOrdered`, default `true`; `MaxOperationsPerBatch`)
 - `BulkDeleteAsync(Expression<Func<TDocument, bool>>)`
 
-Unordered writes that partially fail return `BulkWritePartialFailureError` with `Items` (`BulkWriteItemResult`: index, succeeded, errorMessage).
+Partial failures return `BulkWritePartialFailureError` with `Items` (`BulkWriteItemResult`: original input index, succeeded, errorMessage). Indices stay aligned across `MaxOperationsPerBatch` chunks. Unmatched ETag updates are failures, not silent success. Entities whose writes committed keep staged ETag/audit values; uncommitted items are restored. A bulk delete that matches nothing returns `DocumentNotFoundError`.
 
 ## Projection repository
 
