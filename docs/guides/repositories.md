@@ -2,7 +2,7 @@
 
 **Current.** Typed CRUD, bulk, and projection helpers over `MongoDB.Driver` with FluentResults. They share the same namespace-resolution pipeline as collections.
 
-Sample: [samples/MongoDb.WebApi.Sample](../../samples/MongoDb.WebApi.Sample). Live members: `src/*/PublicAPI.*.txt`.
+Sample: [samples/MongoDb.WebApi.Sample](../../samples/MongoDb.WebApi.Sample). Live members: [Abstractions Shipped](../../src/Dilcore.MongoDB.Abstractions/PublicAPI.Shipped.txt) / [Unshipped](../../src/Dilcore.MongoDB.Abstractions/PublicAPI.Unshipped.txt), [MongoDB Shipped](../../src/Dilcore.MongoDB/PublicAPI.Shipped.txt) / [Unshipped](../../src/Dilcore.MongoDB/PublicAPI.Unshipped.txt).
 
 Enable bulk or projection per binding:
 
@@ -21,7 +21,7 @@ Unkeyed `IGenericRepository<T>` is registered only when a type has a single bind
 
 | Method | Role |
 |--------|------|
-| `StoreAsync` | Insert or update. Empty Id inserts; a caller-assigned Id inserts when missing and snapshots when present. Policy fields (ETag, audit) are staged, then restored on failure. |
+| `StoreAsync` | Insert or update. Empty Id inserts; a caller-assigned Id inserts when missing and snapshots when present. Policy fields (ETag, audit) are staged before the write and restored on `MongoException`, oversized BSON `FormatException`, or cancellation (generated Id cleared only on cancellation). |
 | `ReplaceAsync` | Full stored-document replacement. With `IHasConcurrencyToken`, a stale ETag returns `ConcurrencyConflictError`; a missing document returns `DocumentNotFoundError`. |
 | `UpdateSnapshotAsync` | `$set` mutable snapshot; excludes `_id` (unknown stored fields are kept). Honors the same ETag rules as `StoreAsync`. |
 | `PatchAsync` | Caller-supplied `UpdateDefinition`. Miss with a concurrency token → `ConcurrencyConflictError`; without a token → `DocumentNotFoundError`. |

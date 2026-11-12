@@ -132,7 +132,6 @@ public class GenericBulkRepositoryCorrectnessTests : BaseIntegrationTests
         var duplicate = CreateEntity();
         (await bulk.BulkStoreAsync([duplicate])).ShouldBeSuccess();
         duplicate.ETag = 0;
-        duplicate.Id = duplicate.Id;
 
         var colliding = CreateEntity();
         colliding.Id = duplicate.Id;

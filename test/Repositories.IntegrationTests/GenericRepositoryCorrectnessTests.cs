@@ -263,6 +263,40 @@ public class GenericRepositoryCorrectnessTests : BaseIntegrationTests
     }
 
     [Test]
+    public async Task StoreAsync_CanceledCreate_RestoresStagedIdAndPolicyFields()
+    {
+        var (repository, _) = CreateRepository("cancel-create", enableSoftDelete: false);
+        var entity = CreateEntity();
+        var previousUpdated = entity.UpdatedAt;
+
+        await Should.ThrowAsync<OperationCanceledException>(async () =>
+            await repository.StoreAsync(entity, new CancellationToken(canceled: true)));
+
+        entity.Id.ShouldBe(Guid.Empty);
+        entity.ETag.ShouldBe(0);
+        entity.UpdatedAt.ShouldBe(previousUpdated);
+    }
+
+    [Test]
+    public async Task StoreAsync_CanceledUpdate_RestoresPolicyFields()
+    {
+        var (repository, _) = CreateRepository("cancel-update", enableSoftDelete: false);
+        var stored = await repository.StoreAsync(CreateEntity());
+        stored.ShouldBeSuccess();
+
+        var entity = stored.Value;
+        var originalEtag = entity.ETag;
+        var originalUpdated = entity.UpdatedAt;
+        entity.Name = "canceled";
+
+        await Should.ThrowAsync<OperationCanceledException>(async () =>
+            await repository.StoreAsync(entity, new CancellationToken(canceled: true)));
+
+        entity.ETag.ShouldBe(originalEtag);
+        entity.UpdatedAt.ShouldBe(originalUpdated);
+    }
+
+    [Test]
     public async Task StoreAsync_SoftDeletedDocument_ReturnsNotFound()
     {
         var (repository, _) = CreateRepository("soft-write", enableSoftDelete: true);
@@ -355,6 +389,7 @@ public class GenericRepositoryCorrectnessTests : BaseIntegrationTests
             await foreach (var _ in repository.GetAsyncEnumerable(
                 Builders<GenericRepositoryTests.MinimalEntity>.Filter.Empty))
             {
+                // Expect CollectionResolutionException before any yield.
             }
         };
 

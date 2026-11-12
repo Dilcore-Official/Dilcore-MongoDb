@@ -19,6 +19,8 @@ internal interface IDocumentIdAccessor<TDocument>
 
     void EnsureNewId(TDocument document, GuidIdGenerationStrategy guidStrategy = GuidIdGenerationStrategy.Random);
 
+    void ClearId(TDocument document);
+
     FilterDefinition<TDocument> BuildIdFilter(TDocument document);
 }
 
@@ -97,6 +99,8 @@ internal sealed class DocumentIdAccessor<TDocument, TId> : IDocumentIdAccessor<T
 
         SetId(document, GenerateId(guidStrategy));
     }
+
+    public void ClearId(TDocument document) => SetId(document, default!);
 
     public FilterDefinition<TDocument> BuildIdFilter(TDocument document)
         => Builders<TDocument>.Filter.Eq(IdExpression, GetId(document));

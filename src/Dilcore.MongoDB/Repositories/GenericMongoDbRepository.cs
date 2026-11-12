@@ -307,12 +307,14 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                 collection, _callContext.Session, entity, new InsertOneOptions(), cancellationToken);
             return Result.Ok(entity);
         }
-        catch (Exception exception) when (exception is MongoException or FormatException)
+        catch (Exception exception) when (exception is MongoException or FormatException or OperationCanceledException)
         {
-            if (stagedId)
+            if (stagedId && exception is OperationCanceledException)
             {
-                // Best-effort: leave generated id; insert retry with same id is safer than clearing.
+                IdAccessor.ClearId(entity);
             }
+
+            // Best-effort: leave generated id after Mongo/format failure; insert retry with same id is safer than clearing.
 
             if (IsAuditable)
             {
@@ -381,7 +383,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             RestoreStaged(entity, previousEtag, previousUpdated);
             return await UnmatchedWriteErrorAsync(entity, collection, cancellationToken);
         }
-        catch (Exception exception) when (exception is MongoException or FormatException)
+        catch (Exception exception) when (exception is MongoException or FormatException or OperationCanceledException)
         {
             RestoreStaged(entity, previousEtag, previousUpdated);
             throw;
@@ -464,7 +466,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             RestoreAudit(entity, previousUpdated);
             return Result.Fail<TDocument>(new DocumentNotFoundError());
         }
-        catch (Exception exception) when (exception is MongoException or FormatException)
+        catch (Exception exception) when (exception is MongoException or FormatException or OperationCanceledException)
         {
             RestoreAudit(entity, previousUpdated);
             throw;

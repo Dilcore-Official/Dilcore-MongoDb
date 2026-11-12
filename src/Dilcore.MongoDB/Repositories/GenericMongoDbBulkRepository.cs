@@ -10,6 +10,7 @@ using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Internal;
 using FluentResults;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.Repositories;
@@ -295,9 +296,18 @@ internal class GenericMongoDbBulkRepository<TDocument> : BaseMongoDbRepository<T
         {
             InsertOneModel<TDocument> insert => insert.Document.ToBsonDocument().ToBson().Length,
             ReplaceOneModel<TDocument> replace => replace.Replacement.ToBsonDocument().ToBson().Length,
-            UpdateOneModel<TDocument> update => 1024,
+            UpdateOneModel<TDocument> update => EstimateUpdateBytes(update),
             _ => 512
         };
+
+    private static int EstimateUpdateBytes(UpdateOneModel<TDocument> update)
+    {
+        var rendered = update.Update.Render(
+            new RenderArgs<TDocument>(
+                BsonSerializer.LookupSerializer<TDocument>(),
+                BsonSerializer.SerializerRegistry));
+        return rendered.ToBson().Length;
+    }
 
     private static EntitySnapshot Capture(TDocument entity) => new()
     {
