@@ -2,7 +2,7 @@
 
 **Current.** Declare collections, indexes, and TTL on document bindings. Apply them with `IMongoDbProvisioner` **outside the request hot path**. Collection resolution does not create indexes.
 
-Sample: [MongoDb.WebApi.Sample](../../samples/MongoDb.WebApi.Sample) (`ApplyAsync` at startup).
+Sample: [samples/MongoDb.Capabilities.Sample](../../samples/MongoDb.Capabilities.Sample) (`DryRunAsync`, `ApplyAsync`, custom `IProvisioningStep`). Getting-started: [MongoDb.WebApi.Sample](../../samples/MongoDb.WebApi.Sample) (`ApplyAsync` at startup).
 
 ## Binding declarations
 

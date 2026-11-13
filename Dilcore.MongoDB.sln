@@ -45,6 +45,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Json.IntegrationTests", "Js
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dilcore.MongoDB.Json.IntegrationTests", "test\Json.IntegrationTests\Dilcore.MongoDB.Json.IntegrationTests.csproj", "{F2F35769-0EEA-4562-86AF-4DEC377ADF51}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MongoDb.Capabilities.Sample", "samples\MongoDb.Capabilities.Sample\MongoDb.Capabilities.Sample.csproj", "{468032C0-4148-4713-878A-15FD25F19E0C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -199,6 +201,18 @@ Global
 		{F2F35769-0EEA-4562-86AF-4DEC377ADF51}.Release|x64.Build.0 = Release|Any CPU
 		{F2F35769-0EEA-4562-86AF-4DEC377ADF51}.Release|x86.ActiveCfg = Release|Any CPU
 		{F2F35769-0EEA-4562-86AF-4DEC377ADF51}.Release|x86.Build.0 = Release|Any CPU
+		{468032C0-4148-4713-878A-15FD25F19E0C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{468032C0-4148-4713-878A-15FD25F19E0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{468032C0-4148-4713-878A-15FD25F19E0C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{468032C0-4148-4713-878A-15FD25F19E0C}.Debug|x64.Build.0 = Debug|Any CPU
+		{468032C0-4148-4713-878A-15FD25F19E0C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{468032C0-4148-4713-878A-15FD25F19E0C}.Debug|x86.Build.0 = Debug|Any CPU
+		{468032C0-4148-4713-878A-15FD25F19E0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{468032C0-4148-4713-878A-15FD25F19E0C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{468032C0-4148-4713-878A-15FD25F19E0C}.Release|x64.ActiveCfg = Release|Any CPU
+		{468032C0-4148-4713-878A-15FD25F19E0C}.Release|x64.Build.0 = Release|Any CPU
+		{468032C0-4148-4713-878A-15FD25F19E0C}.Release|x86.ActiveCfg = Release|Any CPU
+		{468032C0-4148-4713-878A-15FD25F19E0C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -221,5 +235,6 @@ Global
 		{565331FF-0CB5-43E3-8C14-3E29B602CE40} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{1F998E13-D159-B558-1023-EE5AC2750C9D} = {0C88DD14-F956-CE84-757C-A364CCF449FC}
 		{F2F35769-0EEA-4562-86AF-4DEC377ADF51} = {1F998E13-D159-B558-1023-EE5AC2750C9D}
+		{468032C0-4148-4713-878A-15FD25F19E0C} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
 	EndGlobalSection
 EndGlobal
