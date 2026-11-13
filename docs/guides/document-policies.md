@@ -73,8 +73,8 @@ public sealed class Order : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDe
 }
 ```
 
-Enable soft-delete **filters** on the binding (`WithSoftDelete()`). Policy fields are staged and applied only after an acknowledged write. `ETag` is a non-zero random 64-bit token.
+Enable soft-delete **filters** on the binding (`WithSoftDelete()`). Policy fields (ETag, audit, and a generated Id on create) are staged on the caller entity before the write; on `MongoException`, oversized BSON `FormatException`, or cancellation they are restored (a generated Id is cleared only on cancellation—failed inserts keep the Id so retries stay on the insert path). `ETag` is a non-zero random 64-bit token.
 
 `DeleteAsync` with matching `ETag` soft-deletes when the binding has `WithSoftDelete()`. `RestoreAsync` clears the flag; `PurgeAsync` hard-deletes. See [repositories.md](repositories.md).
 
-Wrong `ETag` maps to `ConcurrencyConflictError`. Duplicate-key writes map to `DuplicateKeyError`.
+Wrong `ETag` on `StoreAsync` / `ReplaceAsync` / `UpdateSnapshotAsync` / `DeleteAsync(id, eTag)` maps to `ConcurrencyConflictError`. Duplicate-key writes map to `DuplicateKeyError`. Policy filters and stamps use each document type's BSON element names.

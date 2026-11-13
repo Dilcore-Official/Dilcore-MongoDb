@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura,json</Format>
+          <!-- Attributes whose code is excluded from coverage -->
+          <ExcludeByAttribute>GeneratedCodeAttribute,CompilerGeneratedAttribute,ExcludeFromCodeCoverageAttribute</ExcludeByAttribute>
+          <!-- Files -->
+          <ExcludeByFile>**/Migrations/**/*.cs,**/obj/**/*.cs</ExcludeByFile>
+          <!-- Assemblies/types in [Assembly]Type format; test projects are not measured -->
+          <Exclude>[*.Tests]*,[*.Tests.*]*</Exclude>
+          <SkipAutoProps>true</SkipAutoProps>
+          <DeterministicReport>true</DeterministicReport>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
