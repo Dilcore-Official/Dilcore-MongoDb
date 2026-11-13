@@ -1,5 +1,6 @@
 using System.Globalization;
 using Dilcore.MongoDB.Abstractions.Json;
+using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Json;
 using FluentResults;
 using MongoDB.Bson;
@@ -28,11 +29,29 @@ public static class JsonBsonConvert
         {
             return Result.Ok(ConvertToken(token, converter, options, depth: 0));
         }
-        catch (Exception exception) when (exception is JsonException or FormatException or BsonException
-                                              or InvalidOperationException or OverflowException
-                                              or ArgumentException)
+        catch (JsonException exception)
         {
-            return Result.Fail(new Error(exception.Message));
+            return ConversionFailed(exception);
+        }
+        catch (FormatException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (BsonException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (OverflowException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (ArgumentException exception)
+        {
+            return ConversionFailed(exception);
         }
     }
 
@@ -66,12 +85,30 @@ public static class JsonBsonConvert
             };
             return Result.Ok(JToken.Load(reader));
         }
-        catch (Exception exception) when (exception is JsonException or FormatException or BsonException
-                                              or InvalidOperationException or ArgumentException)
+        catch (JsonException exception)
         {
-            return Result.Fail(new Error(exception.Message));
+            return ConversionFailed(exception);
+        }
+        catch (FormatException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (BsonException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (ArgumentException exception)
+        {
+            return ConversionFailed(exception);
         }
     }
+
+    private static Result ConversionFailed(Exception exception)
+        => Result.Fail(new JsonConversionError(exception.Message));
 
     public static Result<JObject> ToJObject(
         this BsonValue value,

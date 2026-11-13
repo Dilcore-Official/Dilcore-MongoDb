@@ -39,6 +39,18 @@ public sealed class ConcurrencyConflictError : MongoOperationError
     public override string Code => ErrorCode;
 }
 
+public sealed class JsonConversionError : MongoOperationError
+{
+    public const string ErrorCode = "json_conversion";
+
+    public JsonConversionError(string? message = null)
+        : base(message ?? "The JSON value could not be converted.")
+    {
+    }
+
+    public override string Code => ErrorCode;
+}
+
 public sealed class DuplicateKeyError : MongoOperationError
 {
     public const string ErrorCode = "duplicate_key";

@@ -40,12 +40,27 @@ public sealed class BsonJsonConverter : IBsonJsonConverter
         }
         catch (JsonException exception)
         {
-            return Result.Fail(new Error(exception.Message));
+            return ConversionFailed(exception);
         }
-        catch (Exception exception) when (exception is FormatException or BsonSerializationException or BsonException
-                                              or InvalidOperationException or OverflowException)
+        catch (FormatException exception)
         {
-            return Result.Fail(new Error(exception.Message));
+            return ConversionFailed(exception);
+        }
+        catch (BsonSerializationException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (BsonException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (OverflowException exception)
+        {
+            return ConversionFailed(exception);
         }
     }
 
@@ -61,12 +76,30 @@ public sealed class BsonJsonConverter : IBsonJsonConverter
         {
             return Result.Ok(value.ToJson(new JsonWriterSettings { OutputMode = mode }));
         }
-        catch (Exception exception) when (exception is FormatException or BsonSerializationException or BsonException
-                                              or InvalidOperationException or ArgumentException)
+        catch (FormatException exception)
         {
-            return Result.Fail(new Error(exception.Message));
+            return ConversionFailed(exception);
+        }
+        catch (BsonSerializationException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (BsonException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (ArgumentException exception)
+        {
+            return ConversionFailed(exception);
         }
     }
+
+    private static Result ConversionFailed(Exception exception)
+        => Result.Fail(new JsonConversionError(exception.Message));
 
     /// <summary>
     /// Maps an ordinary JSON number token (not an Extended JSON wrapper) using <paramref name="mode"/>.

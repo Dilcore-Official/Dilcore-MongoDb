@@ -21,6 +21,7 @@ class Dilcore.MongoDB.Abstractions.Results.CrossClusterOperationError
 class Dilcore.MongoDB.Abstractions.Results.DocumentNotFoundError
 class Dilcore.MongoDB.Abstractions.Results.DocumentTooLargeError
 class Dilcore.MongoDB.Abstractions.Results.DuplicateKeyError
+class Dilcore.MongoDB.Abstractions.Results.JsonConversionError
 class Dilcore.MongoDB.Abstractions.Results.MongoOperationError
 class Dilcore.MongoDB.Abstractions.Results.TransientWriteError
 class Dilcore.MongoDB.Abstractions.Results.TransactionBudgetExceededError
