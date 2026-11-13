@@ -8,11 +8,22 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
 
 ## [Unreleased]
 
+### Fixed
+
+- Repository writes honor BSON policy element names, ETag-guarded replace, assigned-id inserts
+  without concurrency, typed delete misses, oversized-document `FormatException` mapping, and
+  bulk unmatched-ETag / chunk-index / in-memory restore outcomes.
+
 ### Added
 
 - Open-source trust foundation: MIT `LICENSE`, contribution and security policies,
   community templates, CODEOWNERS, Dependabot for NuGet and GitHub Actions, and
   security automation (CodeQL, dependency review, Scorecard, workflow validation).
+- M3 repository correctness: typed `DocumentNotFoundError` / `ConcurrencyConflictError` /
+  `DocumentTooLargeError` / `BulkWritePartialFailureError`, collision-safe ETags,
+  replace/snapshot/patch, and bulk write options with chunking and partial-failure results.
+- Consumer how-tos: [document policies](docs/guides/document-policies.md) and
+  [repositories](docs/guides/repositories.md).
 
 ## [1.0.0] - 2025
 

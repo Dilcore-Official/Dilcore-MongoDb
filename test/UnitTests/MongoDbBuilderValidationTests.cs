@@ -9,6 +9,17 @@ namespace Dilcore.MongoDB.UnitTests;
 public class MongoDbBuilderValidationTests
 {
     [Test]
+    public void AddMongoDb_NoClusters_Throws()
+    {
+        var services = new ServiceCollection();
+
+        var ex = Should.Throw<InvalidOperationException>(() =>
+            services.AddMongoDb(_ => { }));
+
+        ex.Message.ShouldContain("AddMongoDb requires at least one AddCluster");
+    }
+
+    [Test]
     public void AddMongoDb_EmptyConnectionString_Throws()
     {
         var services = new ServiceCollection();

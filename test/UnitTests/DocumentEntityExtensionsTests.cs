@@ -4,6 +4,7 @@ using Dilcore.MongoDB.Abstractions.Extensions;
 using Dilcore.MongoDB.Abstractions.Helpers;
 using Dilcore.MongoDB.Abstractions.Policies;
 using AutoFixture.NUnit4;
+using MongoDB.Bson;
 using AbstractionsConstants = Dilcore.MongoDB.Abstractions.Constants;
 
 namespace Dilcore.MongoDB.UnitTests;
@@ -25,8 +26,15 @@ public class DocumentEntityExtensionsTests
         var entity = new FullPolicyEntity();
         entity.GenerateETag();
 
-        var expected = MongoDbHelper.GenerateEtag();
-        entity.ETag.ShouldBeInRange(expected - 100, expected + 100);
+        entity.ETag.ShouldNotBe(AbstractionsConstants.EmptyETag);
+    }
+
+    [Test]
+    public void MongoDbHelper_GenerateEtag_IsCollisionResistant()
+    {
+        var values = Enumerable.Range(0, 10_000).Select(_ => MongoDbHelper.GenerateEtag()).ToHashSet();
+        values.Count.ShouldBe(10_000);
+        values.ShouldNotContain(AbstractionsConstants.EmptyETag);
     }
 
     [Test]
@@ -88,11 +96,12 @@ public class DocumentEntityExtensionsTests
     }
 
     [Test]
-    public void DocumentEntity_ToBsonUpdateDocument_WrapsInSetOperator()
+    public void DocumentEntity_ToBsonUpdateDocument_ExcludesId()
     {
         var entity = new FullPolicyEntity { Id = Guid.NewGuid(), Value = "x" };
-        var bson = entity.ToBsonUpdateDocument();
+        var bson = entity.ToBsonSnapshotUpdateDocument();
         bson.Contains("$set").ShouldBeTrue();
+        bson["$set"].AsBsonDocument.Contains("_id").ShouldBeFalse();
     }
 
     [Test]
