@@ -276,8 +276,8 @@
       },
       "MongoDB.Bson": {
         "type": "Transitive",
-        "resolved": "3.11.1",
-        "contentHash": "sCHXQZ5GzQy/e7/EVuC+YWoUzHg/V0dB3OfiU5lgG78jrODfsZq53K6h5yskH7Pd2aRmeiPjpIi/u80TxnjxKg=="
+        "resolved": "3.14.0",
+        "contentHash": "JrfJx2od1ly90rECMNC8z58NQtnOd76nzp8osX3nkI/F8DUjf6sp6CtFJhIIMrrNR6qxuRvn1yly6f45GiJZqQ=="
       },
       "NETStandard.Library": {
         "type": "Transitive",
@@ -346,14 +346,14 @@
         "dependencies": {
           "Dilcore.MongoDB.Abstractions": "[1.0.0, )",
           "Microsoft.Extensions.DependencyInjection": "[10.0.11, )",
-          "MongoDB.Driver": "[3.11.1, )"
+          "MongoDB.Driver": "[3.14.0, )"
         }
       },
       "dilcore.mongodb.abstractions": {
         "type": "Project",
         "dependencies": {
           "FluentResults": "[4.0.0, )",
-          "MongoDB.Driver": "[3.11.1, )"
+          "MongoDB.Driver": "[3.14.0, )"
         }
       },
       "dilcore.mongodb.testsupport": {
@@ -376,13 +376,13 @@
       },
       "MongoDB.Driver": {
         "type": "CentralTransitive",
-        "requested": "[3.11.1, )",
-        "resolved": "3.11.1",
-        "contentHash": "FzzXI2pFVjKUeFz3fTAmjuyavzy6HwO/V9+7WX48y6Se+2JfHR+KLmedN9IrAnLQLB8wfHErLyRxFxD29uL2gw==",
+        "requested": "[3.14.0, )",
+        "resolved": "3.14.0",
+        "contentHash": "fQjD3gFTQqEWplOZ66/jCXxvixFEZjlHgDuziPXK7CxMla7n+O9LTxW3KqfN0/mWWYKsBv1vxmsm0qm07smPzA==",
         "dependencies": {
           "DnsClient": "1.6.1",
           "Microsoft.Extensions.Logging.Abstractions": "2.0.0",
-          "MongoDB.Bson": "3.11.1",
+          "MongoDB.Bson": "3.14.0",
           "SharpCompress": "0.48.1",
           "Snappier": "1.3.1",
           "ZstdSharp.Port": "0.7.3"

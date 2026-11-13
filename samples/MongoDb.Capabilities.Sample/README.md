@@ -6,7 +6,7 @@ For a shorter first-run host, use [`../MongoDb.WebApi.Sample`](../MongoDb.WebApi
 
 ## Requirements
 
-- Docker (Testcontainers starts `mongo:7.0` as a **replica set** so transactions work)
+- Docker (Testcontainers starts `mongo:9.0` as a **replica set** so transactions work)
 - .NET SDK 10.0.x
 
 Standalone MongoDB cannot run multi-document transactions. This sample is not a production host pattern; inject a connection string instead of embedding Testcontainers.

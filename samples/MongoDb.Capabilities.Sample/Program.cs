@@ -18,7 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var mongoDbContainer = new MongoDbBuilder("mongo:7.0")
+var mongoDbContainer = new MongoDbBuilder("mongo:9.0")
     .WithReplicaSet("rs0")
     .Build();
 

@@ -5,6 +5,12 @@ namespace Dilcore.MongoDB.ArchitectureTests;
 
 public class PackageUsageTests
 {
+    private static readonly string ObjDirectorySegment = $"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}";
+
+    private static readonly string BinDirectorySegment = $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}";
+
+    private static readonly string SrcDirectorySegment = $"{Path.DirectorySeparatorChar}src{Path.DirectorySeparatorChar}";
+
     private static readonly HashSet<string> BuildOnlyPackages = new(StringComparer.OrdinalIgnoreCase)
     {
         "Microsoft.CodeAnalysis.PublicApiAnalyzers",
@@ -36,8 +42,7 @@ public class PackageUsageTests
         var root = RepoLocator.FindRepoRoot();
         var referenced = GetAllPackageReferences(root);
         var versions = GetCentralPackageVersions(root);
-
-        var unused = versions.Where(version => !referenced.Contains(version)).ToList();
+        var unused = versions.Where(version => !referenced.Contains(version));
         unused.ShouldBeEmpty();
     }
 
@@ -46,28 +51,11 @@ public class PackageUsageTests
     {
         var root = RepoLocator.FindRepoRoot();
         var failures = new List<string>();
+        var projects = GetProjectFiles(root);
 
-        foreach (var project in GetProjectFiles(root))
+        foreach (var project in projects)
         {
-            var source = ReadProjectSource(project);
-            foreach (var package in GetPackageReferences(project, root))
-            {
-                if (BuildOnlyPackages.Contains(package))
-                {
-                    continue;
-                }
-
-                if (!UsageTokens.TryGetValue(package, out var tokens))
-                {
-                    failures.Add($"{Path.GetFileName(project)} references {package}, which has no usage token.");
-                    continue;
-                }
-
-                if (!tokens.Any(token => source.Contains(token, StringComparison.Ordinal)))
-                {
-                    failures.Add($"{Path.GetFileName(project)} references {package} but does not use it.");
-                }
-            }
+            CollectPackageFailures(project, root, failures);
         }
 
         failures.ShouldBeEmpty();
@@ -75,7 +63,8 @@ public class PackageUsageTests
 
     private static HashSet<string> GetCentralPackageVersions(string root)
     {
-        var doc = XDocument.Load(Path.Join(root, "Directory.Packages.props"));
+        var packagesPropsPath = Path.Join(root, "Directory.Packages.props");
+        var doc = XDocument.Load(packagesPropsPath);
         return doc.Descendants("PackageVersion")
             .Select(element => (string?)element.Attribute("Include"))
             .Where(name => !string.IsNullOrWhiteSpace(name))
@@ -86,19 +75,23 @@ public class PackageUsageTests
     private static HashSet<string> GetAllPackageReferences(string root)
     {
         var packages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var props in Directory.GetFiles(root, "Directory.Build.props", SearchOption.AllDirectories))
-        {
-            if (props.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-            {
-                continue;
-            }
+        var propsFiles = Directory.GetFiles(root, "Directory.Build.props", SearchOption.AllDirectories);
+        var buildProps = propsFiles.Where(path => !path.Contains(ObjDirectorySegment, StringComparison.Ordinal));
 
-            packages.UnionWith(RepoLocator.GetPackageReferences(XDocument.Load(props)));
+        foreach (var props in buildProps)
+        {
+            var propsDocument = XDocument.Load(props);
+            var propsPackages = RepoLocator.GetPackageReferences(propsDocument);
+            packages.UnionWith(propsPackages);
         }
 
-        foreach (var project in GetProjectFiles(root))
+        var projects = GetProjectFiles(root);
+
+        foreach (var project in projects)
         {
-            packages.UnionWith(RepoLocator.GetPackageReferences(XDocument.Load(project)));
+            var projectDocument = XDocument.Load(project);
+            var projectPackages = RepoLocator.GetPackageReferences(projectDocument);
+            packages.UnionWith(projectPackages);
         }
 
         return packages;
@@ -106,38 +99,82 @@ public class PackageUsageTests
 
     private static IEnumerable<string> GetPackageReferences(string projectPath, string root)
     {
-        var packages = RepoLocator.GetPackageReferences(XDocument.Load(projectPath)).ToList();
-        packages.AddRange(RepoLocator.GetPackageReferences(XDocument.Load(Path.Join(root, "Directory.Build.props"))));
+        var projectDocument = XDocument.Load(projectPath);
+        var projectPackages = RepoLocator.GetPackageReferences(projectDocument);
 
-        var srcProps = Path.Join(root, "src", "Directory.Build.props");
-        if (projectPath.Contains($"{Path.DirectorySeparatorChar}src{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+        var rootPropsPath = Path.Join(root, "Directory.Build.props");
+        var rootPropsDocument = XDocument.Load(rootPropsPath);
+        var rootPropsPackages = RepoLocator.GetPackageReferences(rootPropsDocument);
+        var packages = projectPackages.Concat(rootPropsPackages);
+
+        if (!projectPath.Contains(SrcDirectorySegment, StringComparison.Ordinal))
         {
-            packages.AddRange(RepoLocator.GetPackageReferences(XDocument.Load(srcProps)));
+            return packages.Distinct(StringComparer.OrdinalIgnoreCase);
         }
 
-        return packages.Distinct(StringComparer.OrdinalIgnoreCase);
+        var srcPropsPath = Path.Join(root, "src", "Directory.Build.props");
+        var srcPropsDocument = XDocument.Load(srcPropsPath);
+        var srcPropsPackages = RepoLocator.GetPackageReferences(srcPropsDocument);
+        var withSrcProps = packages.Concat(srcPropsPackages);
+        return withSrcProps.Distinct(StringComparer.OrdinalIgnoreCase);
     }
 
     private static IEnumerable<string> GetProjectFiles(string root)
     {
-        foreach (var folder in new[] { "src", "test", "samples" })
+        var folders = new[] { "src", "test", "samples" };
+        return folders.SelectMany(folder => ProjectFiles(root, folder));
+    }
+
+    private static IEnumerable<string> ProjectFiles(string root, string folder)
+    {
+        var folderPath = Path.Join(root, folder);
+        var projectFiles = Directory.GetFiles(folderPath, "*.csproj", SearchOption.AllDirectories);
+        return projectFiles.Where(path => !path.Contains(ObjDirectorySegment, StringComparison.Ordinal));
+    }
+
+    private static void CollectPackageFailures(string project, string root, List<string> failures)
+    {
+        var source = ReadProjectSource(project);
+        var packages = GetPackageReferences(project, root);
+
+        foreach (var package in packages)
         {
-            foreach (var project in Directory.GetFiles(Path.Join(root, folder), "*.csproj", SearchOption.AllDirectories))
-            {
-                if (!project.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-                {
-                    yield return project;
-                }
-            }
+            RecordPackageFailure(project, source, package, failures);
         }
+    }
+
+    private static void RecordPackageFailure(string project, string source, string package, List<string> failures)
+    {
+        if (BuildOnlyPackages.Contains(package))
+        {
+            return;
+        }
+
+        var projectName = Path.GetFileName(project);
+        if (!UsageTokens.TryGetValue(package, out var tokens))
+        {
+            failures.Add($"{projectName} references {package}, which has no usage token.");
+            return;
+        }
+
+        var used = tokens.Any(token => source.Contains(token, StringComparison.Ordinal));
+        if (used)
+        {
+            return;
+        }
+
+        failures.Add($"{projectName} references {package} but does not use it.");
     }
 
     private static string ReadProjectSource(string projectPath)
     {
         var directory = Path.GetDirectoryName(projectPath)!;
-        var files = Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories)
-            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
-                && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal));
-        return string.Join('\n', files.Select(File.ReadAllText));
+        var sourceFiles = Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories);
+
+        var files = sourceFiles.Where(path => !path.Contains(ObjDirectorySegment, StringComparison.Ordinal)
+            && !path.Contains(BinDirectorySegment, StringComparison.Ordinal));
+
+        var contents = files.Select(File.ReadAllText);
+        return string.Join('\n', contents);
     }
 }

@@ -24,6 +24,11 @@ Formatting source of truth is [`.editorconfig`](.editorconfig). After each imple
 
 - One method, one purpose. Split mixed work into named helpers.
 - The name states the outcome (`ResolveDatabaseName`, `StampAudit`, `MapDuplicateKey`). Avoid `Handle`, `Process`, `DoWork`.
+- A `foreach` source that is a method call or a LINQ chain is assigned to a named local on the lines above the loop.
+- A method argument is a variable, literal, `nameof`, `default`, property, or `new`. It is not a method invocation. Lambdas are allowed as arguments, and calls inside a lambda are allowed.
+- Keep a LINQ chain deferred when the sequence is enumerated once. Call `ToList`, `ToArray`, `ToHashSet`, or `ToDictionary` only when the next step needs a concrete collection, indexing, or a second pass. `CA1851` (multiple enumeration of `IEnumerable`) is an error.
+- Separate setup, the query, and the result with a blank line. Do not leave a method as one solid block of statements.
+- A method body has at most one nested block (`if`, `else`, `foreach`, `for`, `while`, `switch`, `try`). A loop or branch whose body is another block moves that work into its own method.
 
 ## XML documentation
 

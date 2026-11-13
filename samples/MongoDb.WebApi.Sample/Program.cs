@@ -24,7 +24,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var mongoDbContainer =
-    new MongoDbBuilder("mongo:7.0").Build();
+    new MongoDbBuilder("mongo:9.0").Build();
 
 await mongoDbContainer.StartAsync();
 

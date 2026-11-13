@@ -31,6 +31,10 @@ dotnet test test/UnitTests --configuration Release
 dotnet test test/ArchitectureTests --configuration Release
 # DI acceptance / integration (needs Docker for Testcontainers):
 dotnet test test/IntegrationTests --configuration Release
+# Point an integration project at another official mongo tag (default is 9.0):
+MONGODB_IMAGE_TAG=8.0 dotnet test test/IntegrationTests --configuration Release
+MONGODB_IMAGE_TAG=7.0 dotnet test test/Json.IntegrationTests --configuration Release
+MONGODB_IMAGE_TAG=7.0 dotnet test test/Repositories.IntegrationTests --configuration Release
 # Full suite:
 dotnet test Dilcore.MongoDB.sln --configuration Release
 # Performance benchmarks (needs Docker for repository/bulk/projection tiers):
@@ -55,6 +59,11 @@ two-core-package plus optional JSON topology and dependency boundaries without D
 build the container with `ValidateScopes` / `ValidateOnBuild` via
 `AcceptanceServiceProviderFactory` in `test/TestSupport`. CI runs Architecture Tests, DI Acceptance,
 an Integration Matrix job (`TestCategory=M3Matrix`, Docker preflight), and the full Build & Test job.
+CI also runs `.github/workflows/mongo-7.0.yml`, `mongo-8.0.yml`, and `mongo-9.0.yml`.
+Each calls `.github/workflows/mongo-compat.yml` with `MONGODB_IMAGE_TAG` set to that
+major.minor tag and runs the integration projects. The existing DI Acceptance and
+Integration Matrix jobs in `ci.yml` stay on the default `9.0` image. A weekly schedule
+on those version workflows picks up new patch tags of the same major.minor image.
 The **Benchmarks** workflow (`.github/workflows/benchmarks.yml`) runs BenchmarkDotNet on
 PRs that touch `src/` or `test/Benchmarks/`, posts a non-blocking results comment, and
 updates the historical baseline on `main` via `gh-pages`. Create an empty `gh-pages`

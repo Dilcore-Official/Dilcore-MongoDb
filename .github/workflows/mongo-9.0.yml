@@ -1,0 +1,19 @@
+name: MongoDB 9.0
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compat:
+    uses: ./.github/workflows/mongo-compat.yml
+    with:
+      mongo-version: "9.0"
