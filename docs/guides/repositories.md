@@ -94,6 +94,8 @@ Expected failures are `MongoOperationError` subtypes (FluentResults `Error`). Ma
 | `TransientWriteError` | `transient_write` |
 | `WriteConcernFailureError` | `write_concern_failure` |
 | `DocumentTooLargeError` | `document_too_large` |
+| `CrossClusterOperationError` | `cross_cluster_operation` |
+| `TransactionBudgetExceededError` | `transaction_budget_exceeded` |
 | `BulkWritePartialFailureError` | `bulk_write_partial_failure` |
 
 ```csharp
@@ -102,3 +104,7 @@ if (result.HasError<DocumentNotFoundError>())
 if (result.HasError<ConcurrencyConflictError>())
     return Results.Conflict();
 ```
+
+## Transaction-scoped repositories
+
+Inside `IMongoDbTransactionRunner` callbacks, resolve through `IMongoDbTransactionContext.Repositories` (`IRepositoryResolver`) so work uses the session. See [transactions.md](transactions.md).

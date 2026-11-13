@@ -10,6 +10,10 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
 
 ### Fixed
 
+- Transaction budgets reserve rendered BSON size for document and bulk writes, reject negative
+  estimates without integer wrap, and enforce the elapsed-time budget when the callback returns.
+  Estimating a document before the client exists no longer breaks Guid serializer registration.
+  Session-bound repository calls rethrow retryable transaction errors so the driver can retry.
 - Repository writes honor BSON policy element names, ETag-guarded replace, assigned-id inserts
   without concurrency, typed delete misses, oversized-document `FormatException` mapping, and
   bulk unmatched-ETag / chunk-index / in-memory restore outcomes.
@@ -24,6 +28,10 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
   replace/snapshot/patch, and bulk write options with chunking and partial-failure results.
 - Consumer how-tos: [document policies](docs/guides/document-policies.md) and
   [repositories](docs/guides/repositories.md).
+- Idempotent `IMongoDbProvisioner` (DryRun/Apply + `IProvisioningStep`) outside collection
+  resolution. Desired-state index reconcile: create, recreate (drop+create on definition drift),
+  and remove indexes dropped from bindings; documents and `_id_` are preserved.
+  How-to: [provisioning](docs/guides/provisioning.md).
 - Optional JSON adapter packages `Dilcore.MongoDB.SystemTextJson` and `Dilcore.MongoDB.NewtonsoftJson`
   with Canonical Extended JSON conversion and `JsonDocumentStore`.
   How-to: [json adapters](docs/guides/json-adapters.md).
@@ -31,6 +39,8 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
   tie-breaker), soft-delete `RestoreAsync` / `PurgeAsync`, `FindOptions` list
   overloads, and typed `DuplicateKeyError` / `TransientWriteError` /
   `WriteConcernFailureError` mapping.
+- Budgeted multi-document transactions via `IMongoDbTransactionRunner` over
+  `WithTransactionAsync`. How-to: [transactions](docs/guides/transactions.md).
 
 ## [1.0.0] - 2025
 

@@ -1,8 +1,11 @@
+// Getting-started sample: one cluster, two document bindings, CRUD, and startup provisioning.
+// Production hosts should inject a connection string instead of starting Testcontainers here (see D22).
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Json;
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Abstractions.Options;
 using Dilcore.MongoDB.Abstractions.Policies;
+using Dilcore.MongoDB.Abstractions.Provisioning;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Extensions;
@@ -39,7 +42,10 @@ builder.Services.AddMongoDb(mongo => mongo
             .WithCollectionName("weatherForecasts")
             .WithSoftDelete()
             .WithBulkRepository()
-            .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
+            .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7)
+            .WithIndexes(new CreateIndexModel<WeatherForecast>(
+                Builders<WeatherForecast>.IndexKeys.Ascending(x => x.Date),
+                new CreateIndexOptions { Name = "weather_date" })));
         // Minimal document: identifier only.
         db.AddDocumentBinding<Note>("notes", d => d
             .WithCollectionName("notes"));
@@ -67,6 +73,13 @@ app.UseHttpsRedirection();
 
 var scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
 using var scope = scopeFactory.CreateScope();
+
+var provisioner = scope.ServiceProvider.GetRequiredService<IMongoDbProvisioner>();
+var provisioned = await provisioner.ApplyAsync();
+if (provisioned.IsFailed)
+{
+    throw new InvalidOperationException(string.Join("; ", provisioned.Errors.Select(e => e.Message)));
+}
 
 var repository = scope.ServiceProvider.GetRequiredService<IGenericBulkRepository<WeatherForecast>>();
 
