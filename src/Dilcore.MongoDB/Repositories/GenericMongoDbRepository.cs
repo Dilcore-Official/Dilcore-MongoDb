@@ -9,8 +9,6 @@ using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Internal;
 using FluentResults;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.Repositories;
@@ -151,23 +149,11 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         => ExecuteAsync(async (collection, token) =>
         {
             filter = ApplyNotDeleteFilter(filter);
-            var fluent = MongoCollectionCalls.Find(collection, _callContext.Session, filter);
-            if (options?.Sort is not null)
-            {
-                fluent = fluent.Sort(options.Sort);
-            }
-
-            if (options?.Limit is not null)
-            {
-                fluent = fluent.Limit(options.Limit);
-            }
-
-            if (options?.Skip is not null)
-            {
-                fluent = fluent.Skip(options.Skip);
-            }
-
-            var entities = await fluent.ToListAsync(token);
+            using var cursor = _callContext.Session is null
+                ? await MongoCollectionCalls.FindAsync(collection, filter, options, token)
+                : await MongoCollectionCalls.FindAsync(
+                    collection, _callContext.Session, filter, options, token);
+            var entities = await cursor.ToListAsync(token);
             return Result.Ok<IReadOnlyList<TDocument>>(entities);
         }, cancellationToken);
 
@@ -195,16 +181,41 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                 return Result.Fail<KeysetPage<TDocument>>("PageSize must be greater than zero.");
             }
 
+            var sortResult = KeysetCursor.NormalizeSort(request.Sort);
+            if (sortResult.IsFailed)
+            {
+                return Result.Fail<KeysetPage<TDocument>>(sortResult.Errors);
+            }
+
+            var sortKeys = sortResult.Value;
+            var projectionResult = KeysetCursor.ValidateProjection(request.Projection, sortKeys);
+            if (projectionResult.IsFailed)
+            {
+                return Result.Fail<KeysetPage<TDocument>>(projectionResult.Errors);
+            }
+
             var filter = ApplyNotDeleteFilter(request.Filter);
             if (!string.IsNullOrWhiteSpace(request.Cursor))
             {
-                filter &= DecodeCursor(request.Cursor);
+                var seekResult = KeysetCursor.TryDecodeSeekFilter<TDocument>(request.Cursor, sortKeys);
+                if (seekResult.IsFailed)
+                {
+                    return Result.Fail<KeysetPage<TDocument>>(seekResult.Errors);
+                }
+
+                filter &= seekResult.Value;
             }
 
             var take = request.PageSize + 1;
             var fluent = MongoCollectionCalls.Find(collection, _callContext.Session, filter)
-                .Sort(request.Sort)
+                .Sort(KeysetCursor.ToSortDefinition<TDocument>(sortKeys))
                 .Limit(take);
+
+            if (request.Projection is not null)
+            {
+                ProjectionDefinition<TDocument, TDocument> projection = request.Projection;
+                fluent = fluent.Project(projection);
+            }
 
             var documents = await fluent.ToListAsync(token);
             var hasMore = documents.Count > request.PageSize;
@@ -214,7 +225,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             }
 
             var nextCursor = hasMore && documents.Count > 0
-                ? EncodeCursor(documents[^1])
+                ? KeysetCursor.Encode(documents[^1], sortKeys)
                 : null;
 
             return Result.Ok(new KeysetPage<TDocument>
@@ -300,6 +311,8 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             {
                 return Result.Fail<bool>("Restore requires ISoftDeletable.");
             }
+
+            filter &= Builders<TDocument>.Filter.Eq(PolicyElementNames.IsDeleted<TDocument>(), true);
 
             UpdateDefinition<TDocument> update = Builders<TDocument>.Update.Set(
                 PolicyElementNames.IsDeleted<TDocument>(), false);
@@ -635,17 +648,4 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         }
     }
 
-    private static string EncodeCursor(TDocument document)
-    {
-        var bson = document.ToBsonDocument();
-        var id = bson["_id"];
-        return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(id.ToJson()));
-    }
-
-    private static FilterDefinition<TDocument> DecodeCursor(string cursor)
-    {
-        var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(cursor));
-        var id = BsonSerializer.Deserialize<BsonValue>(json);
-        return Builders<TDocument>.Filter.Gt("_id", id);
-    }
 }

@@ -126,6 +126,81 @@ public class MongoExceptionMapperTests
         failT.Errors[0].ShouldBeOfType<DocumentTooLargeError>();
     }
 
+    [Test]
+    public void ToError_RetryableWriteErrorLabel_IsTransientWriteError()
+    {
+        var exception = new MongoException("retryable write failed");
+        exception.AddErrorLabel("RetryableWriteError");
+
+        var error = MongoExceptionMapper.ToError(exception);
+        error.ShouldBeOfType<TransientWriteError>();
+    }
+
+    [Test]
+    public void ToError_CommandCode121_WithDuplicateKeyMessage_IsNotDuplicateKey()
+    {
+        var error = MongoExceptionMapper.ToError(
+            CreateCommandException(121, "Document failed validation: duplicate key mentioned"));
+
+        error.ShouldNotBeOfType<DuplicateKeyError>();
+        error.Message.ShouldContain("duplicate key");
+    }
+
+    [Test]
+    public void ToError_CommandCode11000_IsDuplicateKey()
+    {
+        var error = MongoExceptionMapper.ToError(CreateCommandException(11000, "E11000 duplicate key"));
+        error.ShouldBeOfType<DuplicateKeyError>();
+    }
+
+    [Test]
+    public void ToError_MongoWriteException_WriteConcernOnly_IsWriteConcernFailure()
+    {
+        var exception = new MongoWriteException(
+            CreateConnectionId(),
+            writeError: null,
+            CreateWriteConcernError(64, "wtimeout", "waiting for replication timed out"),
+            innerException: null);
+
+        var error = MongoExceptionMapper.ToError(exception);
+        error.ShouldBeOfType<WriteConcernFailureError>();
+    }
+
+    [Test]
+    public void ToError_MongoWriteConcernException_IsWriteConcernFailure()
+    {
+        var exception = new MongoWriteConcernException(
+            CreateConnectionId(),
+            "waiting for replication timed out",
+            new WriteConcernResult(new BsonDocument("ok", 1)));
+
+        var error = MongoExceptionMapper.ToError(exception);
+        error.ShouldBeOfType<WriteConcernFailureError>();
+    }
+
+    [Test]
+    public void ToError_MongoWriteException_GenericWriteError_FallsThroughToPlainError()
+    {
+        var error = MongoExceptionMapper.ToError(CreateWriteException(2, "BadValue"));
+
+        error.ShouldNotBeOfType<DuplicateKeyError>();
+        error.ShouldNotBeOfType<DocumentTooLargeError>();
+        error.ShouldNotBeOfType<WriteConcernFailureError>();
+        error.ShouldNotBeOfType<TransientWriteError>();
+        error.Message.ShouldContain("BadValue");
+    }
+
+    [Test]
+    public void ToError_MongoBulkWriteException_SingleDuplicate_IsDuplicateKey()
+    {
+        var error = MongoExceptionMapper.ToError(CreateBulkWriteException(
+        [
+            CreateBulkWriteError(0, 11000, "E11000 duplicate key")
+        ]));
+
+        error.ShouldBeOfType<DuplicateKeyError>();
+    }
+
     private static ConnectionId CreateConnectionId()
         => new(new ServerId(new ClusterId(), new DnsEndPoint("localhost", 27017)));
 
@@ -174,6 +249,25 @@ public class MongoExceptionMapperTests
             code,
             message,
             null
+        ]);
+    }
+
+    private static WriteConcernError CreateWriteConcernError(int code, string codeName, string message)
+    {
+        var ctor = typeof(WriteConcernError).GetConstructor(
+            BindingFlags.Instance | BindingFlags.NonPublic,
+            binder: null,
+            [typeof(int), typeof(string), typeof(string), typeof(BsonDocument), typeof(IEnumerable<string>)],
+            modifiers: null)
+            ?? throw new InvalidOperationException("WriteConcernError constructor not found.");
+
+        return (WriteConcernError)ctor.Invoke(
+        [
+            code,
+            codeName,
+            message,
+            null,
+            Array.Empty<string>()
         ]);
     }
 

@@ -37,6 +37,11 @@ internal static class MongoExceptionMapper
             return new DocumentTooLargeError(exception.Message);
         }
 
+        if (exception.WriteConcernError is not null)
+        {
+            return new WriteConcernFailureError(exception.Message);
+        }
+
         return MapMongo(exception);
     }
 
@@ -87,7 +92,8 @@ internal static class MongoExceptionMapper
     private static Error MapMongo(MongoException exception)
     {
         if (exception.HasErrorLabel("TransientTransactionError")
-            || exception.HasErrorLabel("UnknownTransactionCommitResult"))
+            || exception.HasErrorLabel("UnknownTransactionCommitResult")
+            || exception.HasErrorLabel("RetryableWriteError"))
         {
             return new TransientWriteError(exception.Message);
         }
@@ -101,7 +107,8 @@ internal static class MongoExceptionMapper
     }
 
     private static bool IsDuplicateKey(int code, string message)
-        => code is 11000 or 11001 || message.Contains("duplicate key", StringComparison.OrdinalIgnoreCase);
+        => code is 11000 or 11001
+            || (code == 0 && message.Contains("duplicate key", StringComparison.OrdinalIgnoreCase));
 
     private static bool IsDocumentTooLarge(int code, string message)
         => code is 10334

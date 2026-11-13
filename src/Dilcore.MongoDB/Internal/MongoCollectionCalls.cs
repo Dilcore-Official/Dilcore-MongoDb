@@ -117,6 +117,21 @@ internal static class MongoCollectionCalls
             ? collection.Find(filter)
             : collection.Find(session, filter);
 
+    public static Task<IAsyncCursor<TDocument>> FindAsync<TDocument>(
+        IMongoCollection<TDocument> collection,
+        FilterDefinition<TDocument> filter,
+        FindOptions<TDocument, TDocument>? options,
+        CancellationToken cancellationToken)
+        => collection.FindAsync(filter, options, cancellationToken);
+
+    public static Task<IAsyncCursor<TDocument>> FindAsync<TDocument>(
+        IMongoCollection<TDocument> collection,
+        IClientSessionHandle session,
+        FilterDefinition<TDocument> filter,
+        FindOptions<TDocument, TDocument>? options,
+        CancellationToken cancellationToken)
+        => collection.FindAsync(session, filter, options, cancellationToken);
+
     public static Task<long> CountDocumentsAsync<TDocument>(
         IMongoCollection<TDocument> collection,
         IClientSessionHandle? session,

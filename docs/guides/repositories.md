@@ -47,13 +47,20 @@ Unkeyed `IGenericRepository<T>` is registered only when a type has a single bind
 var page = await repository.GetPageAsync(new KeysetPageRequest<Order>
 {
     Filter = Builders<Order>.Filter.Empty,
-    Sort = Builders<Order>.Sort.Ascending(x => x.Id),
+    Sort = Builders<Order>.Sort.Descending(x => x.CreatedAt),
     PageSize = 50,
     Cursor = previous?.NextCursor
 });
 ```
 
 `KeysetPage<T>` returns `Items`, `NextCursor`, and `HasMore`.
+
+`NextCursor` is an opaque token bound to the sort that produced it. Reusing a
+cursor with a different sort fails. The repository appends `_id` ascending as a
+tie-breaker when the requested sort does not already include `_id`, so pages stay
+stable when sort values collide. Sort directions must be `1` or `-1` (no `$meta`
+sorts). Optional `Projection` must keep every sort key (including `_id`).
+Malformed cursors return a failed `Result` instead of throwing.
 
 ### Streaming caveat
 
