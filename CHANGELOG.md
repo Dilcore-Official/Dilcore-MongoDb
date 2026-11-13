@@ -41,6 +41,8 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
   `WriteConcernFailureError` mapping.
 - Budgeted multi-document transactions via `IMongoDbTransactionRunner` over
   `WithTransactionAsync`. How-to: [transactions](docs/guides/transactions.md).
+- Replica-set capabilities catalog sample, CI `integration-matrix` job (`TestCategory=M3Matrix`),
+  and [production MongoDB security guidance](docs/security/production-mongodb.md).
 
 ## [1.0.0] - 2025
 

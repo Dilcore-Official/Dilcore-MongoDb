@@ -2,7 +2,7 @@
 
 **Current.** Documents implement `IDocumentEntity<TId>` for a typed identifier. Concurrency, soft delete, and audit stamps are **opt-in** interfaces. Decision: [ADR 0002](../adr/0002-generic-document-identifier.md).
 
-Getting-started: [MongoDb.WebApi.Sample](../../samples/MongoDb.WebApi.Sample).
+Getting-started: [MongoDb.WebApi.Sample](../../samples/MongoDb.WebApi.Sample). Catalog: [MongoDb.Capabilities.Sample](../../samples/MongoDb.Capabilities.Sample).
 
 ## Marker and identifier
 

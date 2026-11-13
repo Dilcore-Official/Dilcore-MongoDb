@@ -2,7 +2,7 @@
 
 **Current.** Typed CRUD, bulk, and projection helpers over `MongoDB.Driver` with FluentResults. They share the same namespace-resolution pipeline as collections.
 
-Sample: [samples/MongoDb.WebApi.Sample](../../samples/MongoDb.WebApi.Sample). Live members: [Abstractions Shipped](../../src/Dilcore.MongoDB.Abstractions/PublicAPI.Shipped.txt) / [Unshipped](../../src/Dilcore.MongoDB.Abstractions/PublicAPI.Unshipped.txt), [MongoDB Shipped](../../src/Dilcore.MongoDB/PublicAPI.Shipped.txt) / [Unshipped](../../src/Dilcore.MongoDB/PublicAPI.Unshipped.txt).
+Samples: [samples/MongoDb.Capabilities.Sample](../../samples/MongoDb.Capabilities.Sample), [samples/MongoDb.WebApi.Sample](../../samples/MongoDb.WebApi.Sample). Live members: [Abstractions Shipped](../../src/Dilcore.MongoDB.Abstractions/PublicAPI.Shipped.txt) / [Unshipped](../../src/Dilcore.MongoDB.Abstractions/PublicAPI.Unshipped.txt), [MongoDB Shipped](../../src/Dilcore.MongoDB/PublicAPI.Shipped.txt) / [Unshipped](../../src/Dilcore.MongoDB/PublicAPI.Unshipped.txt).
 
 Enable bulk or projection per binding:
 

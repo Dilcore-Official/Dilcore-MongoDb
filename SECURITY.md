@@ -41,6 +41,9 @@ upstream dependency constraints.
   workflow YAML validation. Findings appear in pull requests and the repository
   Security tab when enabled.
 
+Production host guidance (TLS, secrets, redaction, least privilege, tenant
+namespace isolation): [docs/security/production-mongodb.md](docs/security/production-mongodb.md).
+
 ## Coordinated disclosure
 
 Please allow time for a fix and advisory before public disclosure. Credit will

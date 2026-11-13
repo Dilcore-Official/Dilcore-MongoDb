@@ -2,7 +2,7 @@
 
 **Current (M3).** Optional packages convert JSON ↔ BSON through `IBsonJsonConverter` and persist untyped documents with `IJsonDocumentStore` using the same database / collection resolvers as typed documents.
 
-System.Text.Json and Newtonsoft conversion live in optional packages. Runnable coverage: `test/Json.IntegrationTests`. Sample endpoints: `samples/MongoDb.WebApi.Sample` (`/json/*`, `/ns-json/*`).
+System.Text.Json and Newtonsoft conversion live in optional packages. Runnable coverage: `test/Json.IntegrationTests`. Sample endpoints: `samples/MongoDb.WebApi.Sample` (`/json/*`, `/ns-json/*`). Catalog: [samples/MongoDb.Capabilities.Sample](../../samples/MongoDb.Capabilities.Sample) (`/json/payloads`). There is no Newtonsoft sample project.
 
 ## Packages
 
