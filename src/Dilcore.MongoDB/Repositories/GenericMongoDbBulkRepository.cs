@@ -84,6 +84,18 @@ internal class GenericMongoDbBulkRepository<TDocument> : BaseMongoDbRepository<T
             {
                 foreach (var batch in batches)
                 {
+                    if (Budget is not null)
+                    {
+                        var failedReservation = batch
+                            .Select(model => Budget.Reserve(EstimateBytes(model)))
+                            .FirstOrDefault(reservation => reservation.IsFailed);
+                        if (failedReservation is not null)
+                        {
+                            RestoreUncommitted(snapshots, processed, entityList.Count);
+                            return Result.Fail<IReadOnlyList<TDocument>>(failedReservation.Errors);
+                        }
+                    }
+
                     try
                     {
                         var result = await MongoCollectionCalls.BulkWriteAsync(
@@ -143,7 +155,7 @@ internal class GenericMongoDbBulkRepository<TDocument> : BaseMongoDbRepository<T
                 RestoreUncommitted(snapshots, processed, entityList.Count);
                 throw;
             }
-        }, cancellationToken);
+        }, cancellationToken, estimatedBytes: null);
 
     public Task<Result> BulkDeleteAsync(
         Expression<Func<TDocument, bool>> expression,

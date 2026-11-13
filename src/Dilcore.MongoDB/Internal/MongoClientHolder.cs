@@ -74,7 +74,15 @@ internal sealed class MongoClientHolder : IDisposable
                 return;
             }
 
-            BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+            try
+            {
+                BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+            }
+            catch (BsonSerializationException)
+            {
+                // Already registered by document serialization or another component.
+            }
+
             _serializationConfigured = true;
         }
     }
