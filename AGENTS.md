@@ -12,19 +12,19 @@ It is **not** a replacement for `MongoDB.Driver`, **not** Amazon DocumentDB, and
 
 Teams copy the same MongoDB host wiring into every service: client lifetime, database/collection naming for tenants, soft delete, ETags, audit stamps, and “just give me the collection.” That copy-paste diverges. Dilcore MongoDB centralizes those policies **once**, keeps `IMongoClient` / `IMongoDatabase` / `IMongoCollection<T>` reachable, and fails closed at startup or namespace resolution instead of on first request.
 
-The completion mission is a production-ready OSS integration for **common MongoDB application cases** already in scope: multi-cluster DI, named bindings, prefix resolvers, generic/bulk/projection repositories, BsonDocument path, Guid/ObjectId identifiers, global conventions. Planned work (JSON adapters, multi-document transactions, provisioning runners, streaming lifecycle, observability, vector search) is owned by [ROADMAP.md](ROADMAP.md). Do not add those to core unless the current milestone owns them.
+The completion mission is a production-ready OSS integration for **common MongoDB application cases** already in scope: multi-cluster DI, named bindings, prefix resolvers, generic/bulk/projection repositories, BsonDocument path, Guid/ObjectId identifiers, global conventions, typed operation errors, and JSON adapters. Planned work (provisioning runners, multi-document transactions, streaming lifecycle, observability, vector search) is owned by [ROADMAP.md](ROADMAP.md). Do not add those to core unless the current milestone owns them.
 
 Treat this as an **externally consumed library**: public surface is a contract, samples must compile against shipped APIs, and breaking changes follow the versioning policy. Prefer small, tested, documented PRs over silent refactors.
 
 ## Architecture decisions (do not re-litigate)
 
-- [ADR 0001](docs/adr/0001-package-naming.md) — two packages (`Dilcore.MongoDB.Abstractions`, `Dilcore.MongoDB`); MongoDB-first naming; no v1 shims.
+- [ADR 0001](docs/adr/0001-package-naming.md) — core packages `Dilcore.MongoDB.Abstractions` and `Dilcore.MongoDB`; optional M3 JSON packages `Dilcore.MongoDB.SystemTextJson` and `Dilcore.MongoDB.NewtonsoftJson`; MongoDB-first naming; no v1 shims.
 - [ADR 0002](docs/adr/0002-generic-document-identifier.md) — marker `IDocumentEntity` + `IDocumentEntity<TId>`; repositories stay single-generic; policies are opt-in interfaces.
 - [ADR 0003](docs/adr/0003-serialization-conventions.md) — process-wide BSON conventions configured once on `AddMongoDb`; never during collection resolution.
 
 ## Constraints
 
-- Two packable `src/` projects only. Abstractions has no DI host wiring.
+- Two core packable `src/` projects plus two optional JSON adapter packages. Abstractions has no DI host wiring. `Newtonsoft.Json` stays out of core and out of `Dilcore.MongoDB.SystemTextJson`.
 - Single public DI entry: `AddMongoDb`.
 - No first-class tenant APIs; apps own `INamespacePrefixResolver`; missing prefixes fail closed.
 - Optional policies compose on document types; DI features that require a capability fail closed at registration.

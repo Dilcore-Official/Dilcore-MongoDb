@@ -6,7 +6,7 @@ Owned by [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12) (t
 **Rules**
 
 - Descriptions must say **MongoDB** explicitly; never brand the product as DocumentDB.
-- Core packages below are **shipped** in `src/`. Optional IDs are **planned** until their milestone creates the project.
+- Core packages below are **shipped** in `src/`. Optional JSON packages are **shipped in M3**. OpenTelemetry and VectorData remain **planned** until their milestone creates the project.
 - Keep `PackageDescription` ≤ ~300 characters, one sentence when possible, and aligned with this table.
 - Tags should include `mongodb` and role-specific terms; do not include Amazon DocumentDB or competing vendor product names.
 
@@ -19,16 +19,14 @@ Owned by [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12) (t
 
 Core includes repository interfaces, composable document policies, named bindings, and process-wide serialization conventions. Copy in each `.csproj` `PackageDescription` must stay aligned with this table.
 
-## Optional integrations (planned — not shipped)
-
-Confirm package creation before first publish of each ID ([ADR 0001](../adr/0001-package-naming.md)).
+## Optional integrations
 
 | NuGet ID | Milestone | When to use | PackageDescription |
 |----------|-----------|-------------|--------------------|
-| `Dilcore.MongoDB.SystemTextJson` | M3 (#20) | Apps that store or convert documents via System.Text.Json | System.Text.Json adapters for Dilcore.MongoDB with Extended JSON type fidelity and the same database/collection resolvers as typed documents |
-| `Dilcore.MongoDB.NewtonsoftJson` | M3 (#20) | Apps that store or convert documents via Newtonsoft.Json | Newtonsoft.Json adapters for Dilcore.MongoDB with Extended JSON type fidelity; optional so System.Text.Json consumers never take a Newtonsoft dependency |
-| `Dilcore.MongoDB.OpenTelemetry` | M6 (#33) | Hosts that want library sources/meters registered without exporters | OpenTelemetry registration helpers for Dilcore.MongoDB ActivitySource and Meter; exporters remain host-owned |
-| `Dilcore.MongoDB.VectorData` | M7 (#36–#38) | Vector / semantic search on MongoDB Atlas or Search-capable servers | MongoDB Vector Search helpers for Dilcore.MongoDB, interoperable with Microsoft.Extensions.AI embeddings without owning embedding models |
+| `Dilcore.MongoDB.SystemTextJson` | **Shipped M3** (#20) | Apps that store or convert documents via System.Text.Json | System.Text.Json adapters for Dilcore.MongoDB with Extended JSON type fidelity and the same database/collection resolvers as typed documents |
+| `Dilcore.MongoDB.NewtonsoftJson` | **Shipped M3** (#20) | Apps that store or convert documents via Newtonsoft.Json | Newtonsoft.Json adapters for Dilcore.MongoDB with Extended JSON type fidelity; optional so System.Text.Json consumers never take a Newtonsoft dependency |
+| `Dilcore.MongoDB.OpenTelemetry` | Planned M6 (#33) | Hosts that want library sources/meters registered without exporters | OpenTelemetry registration helpers for Dilcore.MongoDB ActivitySource and Meter; exporters remain host-owned |
+| `Dilcore.MongoDB.VectorData` | Planned M7 (#36–#38) | Vector / semantic search on MongoDB Atlas or Search-capable servers | MongoDB Vector Search helpers for Dilcore.MongoDB, interoperable with Microsoft.Extensions.AI embeddings without owning embedding models |
 
 ## Streaming
 
@@ -47,6 +45,6 @@ Streaming ships as an **independent planned feature** ([#24](https://github.com/
 | Concern | Lives in | Reason |
 |---------|----------|--------|
 | Repositories / document policies | `Dilcore.MongoDB` | Folded into primary package (M2 complete) |
-| Transactions | `Dilcore.MongoDB` | Thin coordinator over driver sessions (#21) — **planned** |
-| Provisioning / migrations | `Dilcore.MongoDB` | Idempotent runner outside request hot paths (#22) — **planned** |
+| Transactions | `Dilcore.MongoDB` | Thin coordinator over driver sessions (#21) — **current** |
+| Provisioning / migrations | `Dilcore.MongoDB` | Idempotent runner outside request hot paths (#22) — **current** |
 | Azure Monitor / App Insights / CloudWatch exporters | Host samples only | Never core or optional Dilcore packages (#35) |
