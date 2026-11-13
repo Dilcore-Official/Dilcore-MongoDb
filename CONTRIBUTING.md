@@ -47,7 +47,7 @@ dotnet format Dilcore.MongoDB.sln --verify-no-changes
 ```
 
 Use **Shouldly** for assertions (not FluentAssertions). Architecture tests enforce the
-two-package topology and dependency boundaries without Docker. DI acceptance tests
+two-core-package plus optional JSON topology and dependency boundaries without Docker. DI acceptance tests
 build the container with `ValidateScopes` / `ValidateOnBuild` via
 `AcceptanceServiceProviderFactory` in `test/TestSupport`. CI runs a dedicated Architecture Tests job and a
 DI Acceptance job (Docker preflight) as required checks alongside the full Build & Test job.

@@ -8,6 +8,12 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
 
 ## [Unreleased]
 
+### Fixed
+
+- Repository writes honor BSON policy element names, ETag-guarded replace, assigned-id inserts
+  without concurrency, typed delete misses, oversized-document `FormatException` mapping, and
+  bulk unmatched-ETag / chunk-index / in-memory restore outcomes.
+
 ### Added
 
 - Open-source trust foundation: MIT `LICENSE`, contribution and security policies,
@@ -20,6 +26,13 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
   [repositories](docs/guides/repositories.md).
 - Idempotent `IMongoDbProvisioner` (DryRun/Apply + `IProvisioningStep`) outside collection
   resolution. How-to: [provisioning](docs/guides/provisioning.md).
+- Optional JSON adapter packages `Dilcore.MongoDB.SystemTextJson` and `Dilcore.MongoDB.NewtonsoftJson`
+  with Canonical Extended JSON conversion and `JsonDocumentStore`.
+  How-to: [json adapters](docs/guides/json-adapters.md).
+- Keyset pagination (`GetPageAsync`) with sort-aware opaque cursors (implicit `_id`
+  tie-breaker), soft-delete `RestoreAsync` / `PurgeAsync`, `FindOptions` list
+  overloads, and typed `DuplicateKeyError` / `TransientWriteError` /
+  `WriteConcernFailureError` mapping.
 
 ## [1.0.0] - 2025
 
