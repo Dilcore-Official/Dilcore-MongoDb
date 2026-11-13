@@ -45,6 +45,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMongoDatabaseResolver, MongoDatabaseResolver>();
         services.AddScoped<IMongoDbCollectionFactory, MongoDbCollectionFactory>();
         services.AddSingleton<IBsonJsonConverter, BsonJsonConverter>();
+        services.AddScoped<IJsonDocumentStoreFactory, JsonDocumentStoreFactory>();
         services.AddScoped<IRepositoryResolver, RepositoryResolver>();
 
         foreach (var resolverType in graph.Databases

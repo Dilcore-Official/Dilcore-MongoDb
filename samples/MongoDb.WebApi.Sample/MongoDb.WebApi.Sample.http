@@ -54,3 +54,38 @@ Content-Type: application/json
   "text": "hello",
   "priority": "High"
 }
+
+### Insert JSON document (System.Text.Json) with Extended JSON type fidelity
+POST {{MongoDb.WebApi.Sample_HostAddress}}/json/payloads
+Content-Type: application/json
+
+{
+  "_id": { "$oid": "573a1391f29313caabcd9801" },
+  "count": { "$numberInt": "7" },
+  "when": { "$date": { "$numberLong": "0" } },
+  "items": [ { "$numberLong": "2" }, { "nested": true } ]
+}
+
+### Get JSON document by ObjectId
+GET {{MongoDb.WebApi.Sample_HostAddress}}/json/payloads/573a1391f29313caabcd9801
+Accept: application/json
+
+### Failure: JSON root must be a document (array root)
+POST {{MongoDb.WebApi.Sample_HostAddress}}/json/payloads
+Content-Type: application/json
+
+[1, 2, 3]
+
+### Failure: missing document id
+GET {{MongoDb.WebApi.Sample_HostAddress}}/json/payloads/573a1391f29313caabcd9999
+Accept: application/json
+
+### Insert via Newtonsoft.Json facade
+POST {{MongoDb.WebApi.Sample_HostAddress}}/ns-json/payloads
+Content-Type: application/json
+
+{
+  "_id": { "$oid": "573a1391f29313caabcd9802" },
+  "label": "from-newtonsoft",
+  "money": { "$numberDecimal": "10.50" }
+}

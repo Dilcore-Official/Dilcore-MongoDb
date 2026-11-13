@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Dilcore.MongoDB.Abstractions.Json;
-using Dilcore.MongoDB.Json;
 using FluentResults;
 using MongoDB.Bson;
 
@@ -10,7 +9,7 @@ namespace Dilcore.MongoDB.SystemTextJson;
 public static class JsonDocumentStoreExtensions
 {
     public static Task<Result<BsonDocument>> InsertAsync(
-        this JsonDocumentStore store,
+        this IJsonDocumentStore store,
         string logicalCollectionName,
         JsonDocument document,
         JsonBsonConversionOptions? options = null,
@@ -22,7 +21,7 @@ public static class JsonDocumentStoreExtensions
     }
 
     public static Task<Result<BsonDocument>> InsertAsync(
-        this JsonDocumentStore store,
+        this IJsonDocumentStore store,
         string logicalCollectionName,
         JsonElement element,
         JsonBsonConversionOptions? options = null,
@@ -33,7 +32,7 @@ public static class JsonDocumentStoreExtensions
     }
 
     public static Task<Result<BsonDocument>> InsertAsync(
-        this JsonDocumentStore store,
+        this IJsonDocumentStore store,
         string logicalCollectionName,
         JsonNode? node,
         JsonBsonConversionOptions? options = null,
@@ -44,7 +43,7 @@ public static class JsonDocumentStoreExtensions
     }
 
     public static async Task<Result<JsonDocument>> GetJsonDocumentByIdAsync(
-        this JsonDocumentStore store,
+        this IJsonDocumentStore store,
         string logicalCollectionName,
         BsonValue id,
         JsonBsonConversionOptions? options = null,
@@ -61,7 +60,7 @@ public static class JsonDocumentStoreExtensions
     }
 
     public static async Task<Result<JsonElement>> GetJsonElementByIdAsync(
-        this JsonDocumentStore store,
+        this IJsonDocumentStore store,
         string logicalCollectionName,
         BsonValue id,
         JsonBsonConversionOptions? options = null,
@@ -78,7 +77,7 @@ public static class JsonDocumentStoreExtensions
     }
 
     private static Task<Result<BsonDocument>> InsertConvertedAsync(
-        JsonDocumentStore store,
+        IJsonDocumentStore store,
         string logicalCollectionName,
         Result<BsonValue> converted,
         CancellationToken cancellationToken)

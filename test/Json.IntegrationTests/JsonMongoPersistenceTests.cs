@@ -1,7 +1,6 @@
 using Dilcore.MongoDB.Abstractions.Json;
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Extensions;
-using Dilcore.MongoDB.Json;
 using Dilcore.MongoDB.NewtonsoftJson;
 using Dilcore.MongoDB.SystemTextJson;
 using Dilcore.MongoDB.TestSupport;
@@ -36,11 +35,14 @@ public class JsonMongoPersistenceTests
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(_container.GetConnectionString()))
             .AddDatabase("JsonDB", db => db.OnCluster("primary")));
+        services.AddSystemTextJsonDocuments();
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
         var factory = scope.ServiceProvider.GetRequiredService<Dilcore.MongoDB.Abstractions.IMongoDbCollectionFactory>();
         var converter = scope.ServiceProvider.GetRequiredService<IBsonJsonConverter>();
-        var store = new JsonDocumentStore(factory, converter, new MongoDatabaseKey("JsonDB"));
+        var store = scope.ServiceProvider
+            .GetRequiredService<IJsonDocumentStoreFactory>()
+            .Create(new MongoDatabaseKey("JsonDB"));
 
         const string json = """
             {
@@ -75,11 +77,15 @@ public class JsonMongoPersistenceTests
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(_container.GetConnectionString()))
             .AddDatabase("JsonDomDB", db => db.OnCluster("primary")));
+        services.AddSystemTextJsonDocuments();
+        services.AddNewtonsoftJsonDocuments();
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
         var factory = scope.ServiceProvider.GetRequiredService<Dilcore.MongoDB.Abstractions.IMongoDbCollectionFactory>();
         var converter = scope.ServiceProvider.GetRequiredService<IBsonJsonConverter>();
-        var store = new JsonDocumentStore(factory, converter, new MongoDatabaseKey("JsonDomDB"));
+        var store = scope.ServiceProvider
+            .GetRequiredService<IJsonDocumentStoreFactory>()
+            .Create(new MongoDatabaseKey("JsonDomDB"));
 
         const string json = """
             {

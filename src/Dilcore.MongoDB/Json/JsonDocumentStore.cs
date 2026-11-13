@@ -12,7 +12,7 @@ public sealed class JsonDocumentStore(
     IMongoDbCollectionFactory collectionFactory,
     IBsonJsonConverter converter,
     MongoDatabaseKey databaseKey,
-    string? staticPrefix = null)
+    string? staticPrefix = null) : IJsonDocumentStore
 {
     public IBsonJsonConverter Converter { get; } = converter;
 

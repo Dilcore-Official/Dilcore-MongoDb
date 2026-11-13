@@ -25,4 +25,11 @@ public sealed class JsonBsonConversionOptions
     public int MaxUtf8Bytes { get; init; } = 16 * 1024 * 1024;
 
     public bool AllowDuplicateNames { get; init; }
+
+    /// <summary>
+    /// When true (default), single-purpose Extended JSON wrappers such as
+    /// <c>$oid</c>, <c>$date</c>, and <c>$numberLong</c> become the matching BSON types.
+    /// Ordinary JSON strings that look like ObjectIds stay strings.
+    /// </summary>
+    public bool InterpretExtendedJson { get; init; } = true;
 }

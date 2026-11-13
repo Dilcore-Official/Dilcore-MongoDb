@@ -8,8 +8,8 @@ Canonical companion: [package-descriptions.md](package-descriptions.md). Naming:
 |---------|----------|
 | `Dilcore.MongoDB.Abstractions` | You only need contracts / interfaces (e.g. libraries that define repositories without hosting DI). |
 | `Dilcore.MongoDB` | Application host: DI registration, namespace resolution, repositories, conventions, provisioning, transactions, driver integration. |
-| `Dilcore.MongoDB.SystemTextJson` | System.Text.Json DOM adapters through the shared BSON conversion engine. |
-| `Dilcore.MongoDB.NewtonsoftJson` | Newtonsoft.Json DOM adapters; do not reference this from STJ-only apps. |
+| `Dilcore.MongoDB.SystemTextJson` | System.Text.Json DOM adapters and `AddSystemTextJsonDocuments()` through the shared BSON conversion engine and store factory. |
+| `Dilcore.MongoDB.NewtonsoftJson` | Newtonsoft.Json DOM adapters and `AddNewtonsoftJsonDocuments()`; do not reference this from STJ-only apps. |
 
 Reference the primary package unless you are authoring a library that must stay DI-free.
 
