@@ -1,11 +1,12 @@
 # Dilcore MongoDB
 
 [![CI](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/ci.yml)
-[![MongoDB 7.0](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/mongo-7.0.yml/badge.svg?branch=main)](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/mongo-7.0.yml)
-[![MongoDB 8.0](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/mongo-8.0.yml/badge.svg?branch=main)](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/mongo-8.0.yml)
-[![MongoDB 9.0](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/mongo-9.0.yml/badge.svg?branch=main)](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/mongo-9.0.yml)
 [![codecov](https://codecov.io/gh/Dilcore-Official/Dilcore-MongoDb/graph/badge.svg?token=SZPZ8SWY8K)](https://codecov.io/gh/Dilcore-Official/Dilcore-MongoDb)
 [![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/Dilcore-Official/Dilcore-MongoDb?utm_source=oss&utm_medium=github&utm_campaign=Dilcore-Official%2FDilcore-MongoDb&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)](https://coderabbit.ai)
+
+[![MongoDB 7.0](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/mongo-7.0.yml/badge.svg)](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/mongo-7.0.yml)
+[![MongoDB 8.0](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/mongo-8.0.yml/badge.svg)](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/mongo-8.0.yml)
+[![MongoDB 9.0](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/mongo-9.0.yml/badge.svg)](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/mongo-9.0.yml)
 
 An opinionated .NET **MongoDB application toolkit**: validated multi-cluster / multi-database DI, scoped tenant-aware namespace resolution, composable document policies, repository helpers with FluentResults, JSON adapters, budgeted transactions, and **direct `MongoDB.Driver` escape hatches**.
 
