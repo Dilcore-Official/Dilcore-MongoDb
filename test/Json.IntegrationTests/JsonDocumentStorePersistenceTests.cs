@@ -140,10 +140,8 @@ public class JsonDocumentStorePersistenceTests
         var insert = await store.InsertAsync("payloads", json);
         insert.IsSuccess.ShouldBeTrue();
 
-        var loaded = await store.GetJsonDocumentByIdAsync(
-            "payloads",
-            insert.Value["_id"],
-            new JsonBsonConversionOptions { OutputMode = JsonBsonOutputMode.CanonicalExtendedJson });
+        var options = new JsonBsonConversionOptions { OutputMode = JsonBsonOutputMode.CanonicalExtendedJson };
+        var loaded = await store.GetJsonDocumentByIdAsync("payloads", insert.Value["_id"], options);
         loaded.IsSuccess.ShouldBeTrue();
         using (loaded.Value)
         {
@@ -152,6 +150,97 @@ public class JsonDocumentStorePersistenceTests
             loaded.Value.RootElement.GetProperty("items")[0]
                 .GetProperty("$numberLong").GetString().ShouldBe("2");
         }
+
+        var element = await store.GetJsonElementByIdAsync("payloads", insert.Value["_id"], options);
+        element.IsSuccess.ShouldBeTrue();
+        element.Value.GetProperty("items")[1].GetString().ShouldBe("x");
+    }
+
+    [Test]
+    public async Task InsertString_RootArrayOrScalar_Fails()
+    {
+        await using var host = CreateStjHost("RootStringDB");
+        var store = host.StoreFactory.Create(new MongoDatabaseKey("RootStringDB"));
+
+        var arrayRoot = await store.InsertAsync("payloads", "[1,2]");
+        arrayRoot.IsFailed.ShouldBeTrue();
+        arrayRoot.Errors[0].Message.ShouldContain("JSON root must be a document");
+
+        var scalarRoot = await store.InsertAsync("payloads", "42");
+        scalarRoot.IsFailed.ShouldBeTrue();
+        scalarRoot.Errors[0].Message.ShouldContain("JSON root must be a document");
+    }
+
+    [Test]
+    public async Task InsertOversizedBsonDocument_ReturnsDocumentTooLargeError()
+    {
+        await using var host = CreateStjHost("TooLargeDB");
+        var store = host.StoreFactory.Create(new MongoDatabaseKey("TooLargeDB"));
+        var document = new BsonDocument
+        {
+            ["_id"] = ObjectId.GenerateNewId(),
+            ["blob"] = new BsonBinaryData(new byte[16 * 1024 * 1024])
+        };
+
+        var result = await store.InsertAsync("payloads", document);
+        result.IsFailed.ShouldBeTrue();
+        result.HasError<DocumentTooLargeError>().ShouldBeTrue();
+    }
+
+    [Test]
+    public async Task Newtonsoft_GetJTokenByIdAsync_ReturnsNestedContent()
+    {
+        var services = new ServiceCollection();
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(_container.GetConnectionString()))
+            .AddDatabase("NsReadDB", db => db.OnCluster("primary")));
+        services.AddNewtonsoftJsonDocuments();
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var store = scope.ServiceProvider
+            .GetRequiredService<INewtonsoftJsonDocumentStoreFactory>()
+            .Create(new MongoDatabaseKey("NsReadDB"));
+
+        const string json = """
+            {
+              "_id": { "$oid": "573a1391f29313caabcd9705" },
+              "items": [ { "$numberInt": "4" }, "y" ]
+            }
+            """;
+        var insert = await store.InsertAsync("payloads", JObject.Parse(json));
+        insert.IsSuccess.ShouldBeTrue(string.Join(", ", insert.Errors));
+
+        var token = await store.GetJTokenByIdAsync(
+            "payloads",
+            insert.Value["_id"],
+            new JsonBsonConversionOptions { OutputMode = JsonBsonOutputMode.CanonicalExtendedJson });
+        token.IsSuccess.ShouldBeTrue();
+        token.Value["items"]![0]!["$numberInt"]!.Value<string>().ShouldBe("4");
+        token.Value["items"]![1]!.Value<string>().ShouldBe("y");
+    }
+
+    [Test]
+    public async Task Newtonsoft_InsertAsync_TypeNameHandling_FailsBeforeWrite()
+    {
+        var services = new ServiceCollection();
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(_container.GetConnectionString()))
+            .AddDatabase("NsTypeNameDB", db => db.OnCluster("primary")));
+        services.AddNewtonsoftJsonDocuments();
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var store = scope.ServiceProvider
+            .GetRequiredService<INewtonsoftJsonDocumentStoreFactory>()
+            .Create(new MongoDatabaseKey("NsTypeNameDB"));
+
+        var result = await store.InsertAsync(
+            "payloads",
+            JObject.Parse("""{"v":1}"""),
+            serializerSettings: new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
+        result.IsFailed.ShouldBeTrue();
+        result.Errors[0].Message.ShouldContain("TypeNameHandling");
     }
 
     [Test]

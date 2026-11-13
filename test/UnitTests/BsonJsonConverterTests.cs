@@ -50,6 +50,50 @@ public class BsonJsonConverterTests
         parsed["v"].BsonType.ShouldBe(BsonType.Decimal128);
     }
 
+    [TestCase("42", BsonType.Int32)]
+    [TestCase("2147483648", BsonType.Int64)]
+    [TestCase("1.5", BsonType.Decimal128)]
+    public void PreferDecimal128_MapsIntegersAndFractions(string number, BsonType expected)
+    {
+        var options = new JsonBsonConversionOptions
+        {
+            NumberMode = OrdinaryJsonNumberMode.PreferInt32ThenInt64ThenDecimal128
+        };
+
+        var parsed = Converter.Parse($$"""{"v":{{number}}}""", options).Value.AsBsonDocument;
+        parsed["v"].BsonType.ShouldBe(expected);
+    }
+
+    [Test]
+    public void MaxDepthNegative_Fails()
+    {
+        var result = Converter.Parse("""{"v":1}""", new JsonBsonConversionOptions { MaxDepth = -1 });
+        result.IsFailed.ShouldBeTrue();
+    }
+
+    [Test]
+    public void OrdinaryFalse_IsBsonBooleanFalse()
+    {
+        var parsed = Converter.Parse("""{"v":false}""").Value.AsBsonDocument;
+        parsed["v"].BsonType.ShouldBe(BsonType.Boolean);
+        parsed["v"].AsBoolean.ShouldBeFalse();
+    }
+
+    [Test]
+    public void RoundTrip_RelaxedExtendedJson_SucceedsForObjectIdAndDate()
+    {
+        var parsed = Converter.Parse(
+            """{"id":{"$oid":"573a1391f29313caabcd9637"},"when":{"$date":{"$numberLong":"0"}}}""").Value;
+        var json = Converter.ToJson(parsed, new JsonBsonConversionOptions
+        {
+            OutputMode = JsonBsonOutputMode.RelaxedExtendedJson
+        });
+        json.IsSuccess.ShouldBeTrue();
+        var again = Converter.Parse(json.Value).Value.AsBsonDocument;
+        again["id"].BsonType.ShouldBe(BsonType.ObjectId);
+        again["when"].BsonType.ShouldBe(BsonType.DateTime);
+    }
+
     [Test]
     public void NestedObjectInArray_PreservesTypes()
     {
