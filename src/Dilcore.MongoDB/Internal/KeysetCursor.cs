@@ -100,6 +100,17 @@ internal static class KeysetCursor
             return Result.Ok();
         }
 
+        foreach (var key in keys)
+        {
+            if (rendered.TryGetValue(key.Field, out var projected)
+                && !IsInclusionValue(projected)
+                && !IsExclusionValue(projected))
+            {
+                return Result.Fail(
+                    $"Keyset paging projection must not replace sort key '{key.Field}'.");
+            }
+        }
+
         var isInclusion = rendered.Any(element =>
             element.Name != DocumentElementNames.Id && IsInclusionValue(element.Value));
 
@@ -140,15 +151,22 @@ internal static class KeysetCursor
         return Result.Ok();
     }
 
-    public static string Encode<TDocument>(TDocument document, IReadOnlyList<SortKey> keys)
+    public static Result<string> TryEncode<TDocument>(TDocument document, IReadOnlyList<SortKey> keys)
     {
         var bson = document.ToBsonDocument();
         var sortArray = new BsonArray(keys.Count);
         var values = new BsonArray(keys.Count);
         foreach (var key in keys)
         {
+            var value = GetPathValue(bson, key.Field) ?? BsonNull.Value;
+            if (value.IsBsonArray)
+            {
+                return Result.Fail(
+                    $"Keyset paging does not support array-valued sort field '{key.Field}'.");
+            }
+
             sortArray.Add(new BsonArray { key.Field, key.Direction });
-            values.Add(GetPathValue(bson, key.Field) ?? BsonNull.Value);
+            values.Add(value);
         }
 
         var payload = new BsonDocument
@@ -159,7 +177,7 @@ internal static class KeysetCursor
         };
 
         var json = payload.ToJson(CanonicalJson);
-        return Base64Url.EncodeToString(Encoding.UTF8.GetBytes(json));
+        return Result.Ok(Base64Url.EncodeToString(Encoding.UTF8.GetBytes(json)));
     }
 
     public static Result<FilterDefinition<TDocument>> TryDecodeSeekFilter<TDocument>(
@@ -204,6 +222,11 @@ internal static class KeysetCursor
             {
                 return Result.Fail("Cursor sort does not match the request sort.");
             }
+
+            if (valuesArray[i].IsBsonArray)
+            {
+                return Result.Fail("Invalid cursor.");
+            }
         }
 
         return Result.Ok(BuildSeekFilter<TDocument>(expectedSort, valuesArray));
@@ -222,17 +245,15 @@ internal static class KeysetCursor
 
             if (keys[i].Direction > 0)
             {
-                // Null/missing sort lowest; $gt does not cross BSON types to reach them.
+                // Null/missing sort lowest; $gt stays in-type, so OR later BSON types.
                 comparison = isNull
                     ? Builders<TDocument>.Filter.Ne(keys[i].Field, BsonNull.Value)
-                    : Builders<TDocument>.Filter.Gt(keys[i].Field, value);
+                    : BuildTypeAwareComparison<TDocument>(keys[i].Field, value, ascending: true);
             }
             else if (!isNull)
             {
-                // Descending: values below the cursor in sort order are $lt OR null/missing.
-                comparison = Builders<TDocument>.Filter.Or(
-                    Builders<TDocument>.Filter.Lt(keys[i].Field, value),
-                    Builders<TDocument>.Filter.Eq(keys[i].Field, BsonNull.Value));
+                // Descending: earlier in-type values, earlier BSON types, or null/missing.
+                comparison = BuildTypeAwareComparison<TDocument>(keys[i].Field, value, ascending: false);
             }
 
             if (comparison is null)
@@ -260,6 +281,87 @@ internal static class KeysetCursor
             : branches.Count == 1
                 ? branches[0]
                 : Builders<TDocument>.Filter.Or(branches);
+    }
+
+    private static FilterDefinition<TDocument> BuildTypeAwareComparison<TDocument>(
+        string field,
+        BsonValue value,
+        bool ascending)
+    {
+        var inType = ascending
+            ? Builders<TDocument>.Filter.Gt(field, value)
+            : Builders<TDocument>.Filter.Lt(field, value);
+
+        var crossTypeAliases = ascending
+            ? TypeAliasesAfter(value.BsonType)
+            : TypeAliasesBefore(value.BsonType);
+
+        var parts = new List<FilterDefinition<TDocument>>(1 + crossTypeAliases.Count + (ascending ? 0 : 1))
+        {
+            inType
+        };
+
+        if (crossTypeAliases.Count > 0)
+        {
+            parts.Add(Builders<TDocument>.Filter.Or(
+                crossTypeAliases.Select(alias => Builders<TDocument>.Filter.Type(field, alias))));
+        }
+
+        if (!ascending)
+        {
+            parts.Add(Builders<TDocument>.Filter.Eq(field, BsonNull.Value));
+        }
+
+        return parts.Count == 1
+            ? parts[0]
+            : Builders<TDocument>.Filter.Or(parts);
+    }
+
+    // MongoDB comparison/sort type order (excluding null/missing, handled separately).
+    private static readonly string[] ComparableTypeAliases =
+    [
+        "number",
+        "string",
+        "object",
+        "array",
+        "binData",
+        "objectId",
+        "bool",
+        "date",
+        "timestamp",
+        "regex"
+    ];
+
+    private static int ComparableTypeRank(BsonType type)
+        => type switch
+        {
+            BsonType.Double or BsonType.Int32 or BsonType.Int64 or BsonType.Decimal128 => 0,
+            BsonType.String or BsonType.Symbol => 1,
+            BsonType.Document => 2,
+            BsonType.Array => 3,
+            BsonType.Binary => 4,
+            BsonType.ObjectId => 5,
+            BsonType.Boolean => 6,
+            BsonType.DateTime => 7,
+            BsonType.Timestamp => 8,
+            BsonType.RegularExpression => 9,
+            _ => -1
+        };
+
+    private static IReadOnlyList<string> TypeAliasesAfter(BsonType type)
+    {
+        var rank = ComparableTypeRank(type);
+        return rank < 0
+            ? Array.Empty<string>()
+            : ComparableTypeAliases.AsSpan(rank + 1).ToArray();
+    }
+
+    private static IReadOnlyList<string> TypeAliasesBefore(BsonType type)
+    {
+        var rank = ComparableTypeRank(type);
+        return rank <= 0
+            ? Array.Empty<string>()
+            : ComparableTypeAliases.AsSpan(0, rank).ToArray();
     }
 
     private static bool TryDecodePayload(string cursor, out BsonDocument payload, out string error)

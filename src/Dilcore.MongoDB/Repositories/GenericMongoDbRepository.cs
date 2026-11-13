@@ -181,6 +181,12 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                 return Result.Fail<KeysetPage<TDocument>>("PageSize must be greater than zero.");
             }
 
+            if (request.PageSize == int.MaxValue)
+            {
+                return Result.Fail<KeysetPage<TDocument>>(
+                    "PageSize is too large to reserve an extra document for HasMore.");
+            }
+
             var sortResult = KeysetCursor.NormalizeSort(request.Sort);
             if (sortResult.IsFailed)
             {
@@ -224,9 +230,17 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                 documents.RemoveAt(documents.Count - 1);
             }
 
-            var nextCursor = hasMore && documents.Count > 0
-                ? KeysetCursor.Encode(documents[^1], sortKeys)
-                : null;
+            string? nextCursor = null;
+            if (hasMore && documents.Count > 0)
+            {
+                var encodeResult = KeysetCursor.TryEncode(documents[^1], sortKeys);
+                if (encodeResult.IsFailed)
+                {
+                    return Result.Fail<KeysetPage<TDocument>>(encodeResult.Errors);
+                }
+
+                nextCursor = encodeResult.Value;
+            }
 
             return Result.Ok(new KeysetPage<TDocument>
             {

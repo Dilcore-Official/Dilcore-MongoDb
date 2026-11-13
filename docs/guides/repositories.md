@@ -30,7 +30,7 @@ Unkeyed `IGenericRepository<T>` is registered only when a type has a single bind
 | `GetPageAsync` | Keyset page (`KeysetPageRequest<T>` / `KeysetPage<T>`) |
 | `GetAsyncEnumerable` | Streaming read (see caveat below) |
 | `DeleteAsync` | Soft-delete when `WithSoftDelete()` is on the binding. No match → `DocumentNotFoundError`; `DeleteAsync(id, eTag)` with a stale token → `ConcurrencyConflictError`. |
-| `RestoreAsync` / `PurgeAsync` | Restore a soft-deleted document; hard-delete (including deleted) |
+| `RestoreAsync` / `PurgeAsync` | Restore a soft-deleted document; `PurgeAsync` permanently deletes every filter match (including documents that are not soft-deleted) |
 | `HasAnyAsync` / `CountAsync` | Same not-deleted filter as reads when soft delete is enabled |
 
 `Dilcore.MongoDB.Repositories.GenericRepositoryExtensions` adds `GetAsync(id)`, `GetListAsync(expression)`, and `DeleteAsync(id, eTag)` for `IDocumentEntity<TId>` / `IHasConcurrencyToken`.
@@ -59,7 +59,9 @@ var page = await repository.GetPageAsync(new KeysetPageRequest<Order>
 cursor with a different sort fails. The repository appends `_id` ascending as a
 tie-breaker when the requested sort does not already include `_id`, so pages stay
 stable when sort values collide. Sort directions must be `1` or `-1` (no `$meta`
-sorts). Optional `Projection` must keep every sort key (including `_id`).
+sorts). Optional `Projection` must keep every sort key (including `_id`) and must
+not replace a sort key with a computed expression. Array-valued sort fields are
+rejected. Continuation seeks follow MongoDB BSON type order for scalar values.
 Malformed cursors return a failed `Result` instead of throwing.
 
 ### Streaming caveat

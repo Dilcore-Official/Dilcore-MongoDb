@@ -99,8 +99,9 @@ public class KeysetCursorTests
             Name = "alpha"
         };
 
-        var cursor = KeysetCursor.Encode(document, keys);
-        var seek = KeysetCursor.TryDecodeSeekFilter<CursorEntity>(cursor, keys);
+        var encoded = KeysetCursor.TryEncode(document, keys);
+        encoded.IsSuccess.ShouldBeTrue();
+        var seek = KeysetCursor.TryDecodeSeekFilter<CursorEntity>(encoded.Value, keys);
 
         seek.IsSuccess.ShouldBeTrue();
         var rendered = seek.Value.Render(CreateRenderArgs());
@@ -115,11 +116,12 @@ public class KeysetCursorTests
             Builders<CursorEntity>.Sort.Ascending(x => x.Name)).Value;
         var otherKeys = KeysetCursor.NormalizeSort(
             Builders<CursorEntity>.Sort.Descending(x => x.Name)).Value;
-        var cursor = KeysetCursor.Encode(
+        var encoded = KeysetCursor.TryEncode(
             new CursorEntity { Id = Guid.NewGuid(), Name = "x" },
             encodeKeys);
+        encoded.IsSuccess.ShouldBeTrue();
 
-        var seek = KeysetCursor.TryDecodeSeekFilter<CursorEntity>(cursor, otherKeys);
+        var seek = KeysetCursor.TryDecodeSeekFilter<CursorEntity>(encoded.Value, otherKeys);
 
         seek.IsFailed.ShouldBeTrue();
         seek.Errors[0].Message.ShouldContain("sort");
@@ -226,8 +228,9 @@ public class KeysetCursorTests
             Profile = new NestedProfile { City = "Oslo" }
         };
 
-        var cursor = KeysetCursor.Encode(document, keys);
-        var seek = KeysetCursor.TryDecodeSeekFilter<NestedCursorEntity>(cursor, keys);
+        var encoded = KeysetCursor.TryEncode(document, keys);
+        encoded.IsSuccess.ShouldBeTrue();
+        var seek = KeysetCursor.TryDecodeSeekFilter<NestedCursorEntity>(encoded.Value, keys);
 
         seek.IsSuccess.ShouldBeTrue();
         var rendered = seek.Value.Render(
@@ -364,6 +367,90 @@ public class KeysetCursorTests
         result.Errors[0].Message.ShouldContain("Invalid projection");
     }
 
+    [Test]
+    public void ValidateProjection_ComputedSortKey_Fails()
+    {
+        var keys = KeysetCursor.NormalizeSort(
+            Builders<CursorEntity>.Sort.Ascending(x => x.Name)).Value;
+        var projection = new ComputedSortKeyProjectionDefinition(keys[0].Field);
+
+        var result = KeysetCursor.ValidateProjection(projection, keys);
+
+        result.IsFailed.ShouldBeTrue();
+        result.Errors[0].Message.ShouldContain("replace");
+    }
+
+    [Test]
+    public void TryEncode_ArraySortValue_Fails()
+    {
+        var keys = new KeysetCursor.SortKey[]
+        {
+            new("Tags", 1),
+            new(DocumentElementNames.Id, 1)
+        };
+        var document = new ArrayCursorEntity
+        {
+            Id = Guid.NewGuid(),
+            Tags = ["a", "b"]
+        };
+
+        var encoded = KeysetCursor.TryEncode(document, keys);
+
+        encoded.IsFailed.ShouldBeTrue();
+        encoded.Errors[0].Message.ShouldContain("array-valued");
+    }
+
+    [Test]
+    public void TryDecodeSeekFilter_ArrayCursorValue_Fails()
+    {
+        var keys = KeysetCursor.NormalizeSort(Builders<CursorEntity>.Sort.Ascending(x => x.Id)).Value;
+        var cursor = EncodePayload(new BsonDocument
+        {
+            { "v", 1 },
+            { "sort", new BsonArray { new BsonArray { DocumentElementNames.Id, 1 } } },
+            { "values", new BsonArray { new BsonArray { 1, 2 } } }
+        });
+
+        var seek = KeysetCursor.TryDecodeSeekFilter<CursorEntity>(cursor, keys);
+
+        seek.IsFailed.ShouldBeTrue();
+        seek.Errors[0].Message.ShouldBe("Invalid cursor.");
+    }
+
+    [Test]
+    public void BuildSeekFilter_AscendingNumber_IncludesLaterBsonTypes()
+    {
+        var keys = new KeysetCursor.SortKey[] { new("Score", 1) };
+        var values = new BsonArray { new BsonInt32(5) };
+
+        var filter = KeysetCursor.BuildSeekFilter<ScoreEntity>(keys, values);
+        var rendered = filter.Render(
+            new RenderArgs<ScoreEntity>(
+                BsonSerializer.LookupSerializer<ScoreEntity>(),
+                BsonSerializer.SerializerRegistry));
+
+        var json = rendered.ToJson();
+        json.ShouldContain("$gt");
+        json.ShouldContain("$type");
+        json.ShouldContain("string");
+    }
+
+    [Test]
+    public void BuildSeekFilter_DescendingString_IncludesEarlierBsonTypesAndNull()
+    {
+        var keys = new KeysetCursor.SortKey[] { new("Name", -1) };
+        var values = new BsonArray { "m" };
+
+        var filter = KeysetCursor.BuildSeekFilter<CursorEntity>(keys, values);
+        var rendered = filter.Render(CreateRenderArgs());
+        var json = rendered.ToJson();
+
+        json.ShouldContain("$lt");
+        json.ShouldContain("$type");
+        json.ShouldContain("number");
+        json.ShouldContain("null");
+    }
+
     private static string EncodePayload(BsonDocument payload)
     {
         var json = payload.ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.CanonicalExtendedJson });
@@ -395,6 +482,13 @@ public class KeysetCursorTests
             => throw new InvalidOperationException("render failed");
     }
 
+    private sealed class ComputedSortKeyProjectionDefinition(string sortKeyField)
+        : ProjectionDefinition<CursorEntity>
+    {
+        public override BsonDocument Render(RenderArgs<CursorEntity> args)
+            => new(sortKeyField, new BsonDocument("$literal", "x"));
+    }
+
     private sealed class CursorEntity : IDocumentEntity<Guid>, IHasConcurrencyToken
     {
         public Guid Id { get; set; }
@@ -414,5 +508,19 @@ public class KeysetCursorTests
     private sealed class NestedProfile
     {
         public string? City { get; set; }
+    }
+
+    private sealed class ArrayCursorEntity : IDocumentEntity<Guid>
+    {
+        public Guid Id { get; set; }
+
+        public string[] Tags { get; set; } = [];
+    }
+
+    private sealed class ScoreEntity : IDocumentEntity<Guid>
+    {
+        public Guid Id { get; set; }
+
+        public int Score { get; set; }
     }
 }

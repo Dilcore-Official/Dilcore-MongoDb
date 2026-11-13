@@ -227,6 +227,22 @@ public class ProductionPolicyTests : BaseIntegrationTests
     }
 
     [Test]
+    public async Task GetPageAsync_PageSizeMaxValue_ReturnsFailedResult()
+    {
+        var repository = CreateRepository("pages-max-size", enableSoftDelete: false);
+
+        var result = await repository.GetPageAsync(new KeysetPageRequest<GenericRepositoryTests.TestEntity1>
+        {
+            Filter = Builders<GenericRepositoryTests.TestEntity1>.Filter.Empty,
+            Sort = Builders<GenericRepositoryTests.TestEntity1>.Sort.Ascending(x => x.Id),
+            PageSize = int.MaxValue
+        });
+
+        result.ShouldBeFailure();
+        result.Errors[0].Message.ShouldContain("PageSize");
+    }
+
+    [Test]
     public async Task GetPageAsync_SoftDeletedDocuments_AreExcluded()
     {
         var repository = CreateRepository("pages-soft", enableSoftDelete: true);
