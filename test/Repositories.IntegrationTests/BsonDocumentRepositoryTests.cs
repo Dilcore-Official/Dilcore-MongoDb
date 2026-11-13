@@ -1,4 +1,5 @@
 ﻿using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Internal;
 using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Abstractions.Repositories;
@@ -39,7 +40,7 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
         var repository = scope.ServiceProvider.GetRequiredService<IBsonDocRepository>();
 
         var id = Guid.NewGuid().ToString();
-        var document = new BsonDocument { ["_id"] = id, ["name"] = "test" };
+        var document = new BsonDocument { [DocumentElementNames.Id] = id, ["name"] = "test" };
 
         await repository.CreateAsync(document);
         var result = await repository.GetAsync(id);
@@ -74,11 +75,11 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
         var repository = scope.ServiceProvider.GetRequiredService<IBsonDocRepository>();
 
         var id = Guid.NewGuid().ToString();
-        await repository.CreateAsync(new BsonDocument { ["_id"] = id, ["name"] = "test" });
+        await repository.CreateAsync(new BsonDocument { [DocumentElementNames.Id] = id, ["name"] = "test" });
 
         var client = scope.ServiceProvider.GetRequiredKeyedService<IMongoClient>("primary");
         var collection = client.GetDatabase(DatabaseName).GetCollection<BsonDocument>($"{prefix}_{CollectionName}");
-        var fromDb = await collection.Find(Builders<BsonDocument>.Filter.Eq("_id", id)).FirstOrDefaultAsync();
+        var fromDb = await collection.Find(Builders<BsonDocument>.Filter.Eq(DocumentElementNames.Id, id)).FirstOrDefaultAsync();
         fromDb.ShouldNotBeNull();
     }
 
@@ -97,7 +98,7 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
         public Task<Result<BsonDocument?>> GetAsync(string id) =>
             ExecuteAsync(CollectionName, async collection =>
             {
-                var filter = Builders<BsonDocument>.Filter.Eq("_id", id);
+                var filter = Builders<BsonDocument>.Filter.Eq(DocumentElementNames.Id, id);
                 var result = await collection.Find(filter).FirstOrDefaultAsync();
                 return Result.Ok<BsonDocument?>(result);
             });

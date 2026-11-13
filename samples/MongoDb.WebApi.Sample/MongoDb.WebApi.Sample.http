@@ -1,6 +1,91 @@
 @MongoDb.WebApi.Sample_HostAddress = http://localhost:5248
 
-GET {{MongoDb.WebApi.Sample_HostAddress}}/weatherforecast/
+### List all forecasts
+GET {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts
+Accept: application/json
+
+### First page (default size 5)
+GET {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts/page?size=5
+Accept: application/json
+
+### Next page — paste NextCursor from the previous response
+GET {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts/page?size=5&cursor={{nextCursor}}
+Accept: application/json
+
+### Create a forecast
+POST {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts
+Content-Type: application/json
+
+{
+  "date": "2026-11-20",
+  "temperatureC": 18,
+  "summary": "Mild"
+}
+
+### Replace — use Id/ETag from a GET; a stale ETag returns 409
+PUT {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts/{{forecastId}}
+Content-Type: application/json
+
+{
+  "date": "2026-11-20",
+  "temperatureC": 22,
+  "summary": "Warm",
+  "eTag": 0
+}
+
+### Soft-delete without ETag
+DELETE {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts/{{forecastId}}
+
+### Soft-delete with ETag guard
+DELETE {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts/{{forecastId}}?eTag={{eTag}}
+
+### Second delete of the same id returns 404
+DELETE {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts/{{forecastId}}
+
+###
+GET {{MongoDb.WebApi.Sample_HostAddress}}/notes
 Accept: application/json
 
 ###
+POST {{MongoDb.WebApi.Sample_HostAddress}}/notes
+Content-Type: application/json
+
+{
+  "text": "hello",
+  "priority": "High"
+}
+
+### Insert JSON document (System.Text.Json) with Extended JSON type fidelity
+POST {{MongoDb.WebApi.Sample_HostAddress}}/json/payloads
+Content-Type: application/json
+
+{
+  "_id": { "$oid": "573a1391f29313caabcd9801" },
+  "count": { "$numberInt": "7" },
+  "when": { "$date": { "$numberLong": "0" } },
+  "items": [ { "$numberLong": "2" }, { "nested": true } ]
+}
+
+### Get JSON document by ObjectId
+GET {{MongoDb.WebApi.Sample_HostAddress}}/json/payloads/573a1391f29313caabcd9801
+Accept: application/json
+
+### Failure: JSON root must be a document (array root)
+POST {{MongoDb.WebApi.Sample_HostAddress}}/json/payloads
+Content-Type: application/json
+
+[1, 2, 3]
+
+### Failure: missing document id
+GET {{MongoDb.WebApi.Sample_HostAddress}}/json/payloads/573a1391f29313caabcd9999
+Accept: application/json
+
+### Insert via Newtonsoft.Json facade
+POST {{MongoDb.WebApi.Sample_HostAddress}}/ns-json/payloads
+Content-Type: application/json
+
+{
+  "_id": { "$oid": "573a1391f29313caabcd9802" },
+  "label": "from-newtonsoft",
+  "money": { "$numberDecimal": "10.50" }
+}

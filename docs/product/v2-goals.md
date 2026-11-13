@@ -14,7 +14,7 @@ Validated later by M5 packaging/benchmarks ([#28](https://github.com/Dilcore-Off
 | Direct runtime deps in primary package | FluentValidation + DI + MongoDB.Driver | DI + MongoDB.Driver | **≤ 3** direct runtime `PackageReference` items | [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12), [#13](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/13) |
 | Consumer single-binding setup | Multi-builder sample | Sample is within budget | **≤ 15** meaningful C# statements for one cluster + one document binding | [#17](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/17), [#39](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/39) |
 
-Optional JSON / OpenTelemetry / VectorData packages are extra, **not shipped**, and do not count against the two-core-package goal.
+Optional JSON packages (`Dilcore.MongoDB.SystemTextJson`, `Dilcore.MongoDB.NewtonsoftJson`) are **shipped (M3)** and do not count against the two-core-package goal. OpenTelemetry and VectorData IDs remain extra and **not shipped**.
 
 ### Counting rules
 
