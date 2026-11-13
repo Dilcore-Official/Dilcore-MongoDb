@@ -135,16 +135,25 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         }, cancellationToken);
 
     public Task<Result<IReadOnlyList<TDocument>>> GetListAsync(CancellationToken cancellationToken = default) =>
-        GetListAsync(ApplyNotDeleteFilter(), cancellationToken);
+        GetListAsync(ApplyNotDeleteFilter(), options: null, cancellationToken);
 
     public Task<Result<IReadOnlyList<TDocument>>> GetListAsync(
         FilterDefinition<TDocument> filter,
         CancellationToken cancellationToken = default)
+        => GetListAsync(filter, options: null, cancellationToken);
+
+    public Task<Result<IReadOnlyList<TDocument>>> GetListAsync(
+        FilterDefinition<TDocument> filter,
+        FindOptions<TDocument, TDocument>? options,
+        CancellationToken cancellationToken = default)
         => ExecuteAsync(async (collection, token) =>
         {
             filter = ApplyNotDeleteFilter(filter);
-            var entities = await MongoCollectionCalls.Find(collection, _callContext.Session, filter)
-                .ToListAsync(token);
+            using var cursor = _callContext.Session is null
+                ? await MongoCollectionCalls.FindAsync(collection, filter, options, token)
+                : await MongoCollectionCalls.FindAsync(
+                    collection, _callContext.Session, filter, options, token);
+            var entities = await cursor.ToListAsync(token);
             return Result.Ok<IReadOnlyList<TDocument>>(entities);
         }, cancellationToken);
 
@@ -160,6 +169,85 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                 : collection.OfType<TDerived>().Find(_callContext.Session, filter);
             var entities = await query.ToListAsync(token);
             return Result.Ok<IReadOnlyList<TDerived>>(entities);
+        }, cancellationToken);
+
+    public Task<Result<KeysetPage<TDocument>>> GetPageAsync(
+        KeysetPageRequest<TDocument> request,
+        CancellationToken cancellationToken = default)
+        => ExecuteAsync(async (collection, token) =>
+        {
+            if (request.PageSize <= 0)
+            {
+                return Result.Fail<KeysetPage<TDocument>>("PageSize must be greater than zero.");
+            }
+
+            if (request.PageSize == int.MaxValue)
+            {
+                return Result.Fail<KeysetPage<TDocument>>(
+                    "PageSize is too large to reserve an extra document for HasMore.");
+            }
+
+            var sortResult = KeysetCursor.NormalizeSort(request.Sort);
+            if (sortResult.IsFailed)
+            {
+                return Result.Fail<KeysetPage<TDocument>>(sortResult.Errors);
+            }
+
+            var sortKeys = sortResult.Value;
+            var projectionResult = KeysetCursor.ValidateProjection(request.Projection, sortKeys);
+            if (projectionResult.IsFailed)
+            {
+                return Result.Fail<KeysetPage<TDocument>>(projectionResult.Errors);
+            }
+
+            var filter = ApplyNotDeleteFilter(request.Filter);
+            if (!string.IsNullOrWhiteSpace(request.Cursor))
+            {
+                var seekResult = KeysetCursor.TryDecodeSeekFilter<TDocument>(request.Cursor, sortKeys);
+                if (seekResult.IsFailed)
+                {
+                    return Result.Fail<KeysetPage<TDocument>>(seekResult.Errors);
+                }
+
+                filter &= seekResult.Value;
+            }
+
+            var take = request.PageSize + 1;
+            var fluent = MongoCollectionCalls.Find(collection, _callContext.Session, filter)
+                .Sort(KeysetCursor.ToSortDefinition<TDocument>(sortKeys))
+                .Limit(take);
+
+            if (request.Projection is not null)
+            {
+                ProjectionDefinition<TDocument, TDocument> projection = request.Projection;
+                fluent = fluent.Project(projection);
+            }
+
+            var documents = await fluent.ToListAsync(token);
+            var hasMore = documents.Count > request.PageSize;
+            if (hasMore)
+            {
+                documents.RemoveAt(documents.Count - 1);
+            }
+
+            string? nextCursor = null;
+            if (hasMore && documents.Count > 0)
+            {
+                var encodeResult = KeysetCursor.TryEncode(documents[^1], sortKeys);
+                if (encodeResult.IsFailed)
+                {
+                    return Result.Fail<KeysetPage<TDocument>>(encodeResult.Errors);
+                }
+
+                nextCursor = encodeResult.Value;
+            }
+
+            return Result.Ok(new KeysetPage<TDocument>
+            {
+                Items = documents,
+                NextCursor = nextCursor,
+                HasMore = hasMore
+            });
         }, cancellationToken);
 
     public async IAsyncEnumerable<TDocument> GetAsyncEnumerable(
@@ -228,6 +316,43 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
 
             filter = ApplyNotDeleteFilter(filter);
             return SoftDeleteOneAsync(collection, filter, token);
+        }, cancellationToken);
+
+    public Task<Result<bool>> RestoreAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
+        => ExecuteAsync(async (collection, token) =>
+        {
+            if (!IsSoftDeletable)
+            {
+                return Result.Fail<bool>("Restore requires ISoftDeletable.");
+            }
+
+            filter &= Builders<TDocument>.Filter.Eq(PolicyElementNames.IsDeleted<TDocument>(), true);
+
+            UpdateDefinition<TDocument> update = Builders<TDocument>.Update.Set(
+                PolicyElementNames.IsDeleted<TDocument>(), false);
+            if (HasConcurrencyToken)
+            {
+                update = update.Set(PolicyElementNames.ETag<TDocument>(), MongoDbHelper.GenerateEtag());
+            }
+
+            if (IsAuditable)
+            {
+                update = update.Set(PolicyElementNames.UpdatedAt<TDocument>(), DateTime.UtcNow);
+            }
+
+            var result = await MongoCollectionCalls.UpdateOneAsync(
+                collection, _callContext.Session, filter, update, options: null, token);
+            return result.MatchedCount == 1
+                ? Result.Ok(true)
+                : Result.Fail<bool>(new DocumentNotFoundError());
+        }, cancellationToken);
+
+    public Task<Result<long>> PurgeAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
+        => ExecuteAsync(async (collection, token) =>
+        {
+            var result = await MongoCollectionCalls.DeleteManyAsync(
+                collection, _callContext.Session, filter, token);
+            return Result.Ok(result.DeletedCount);
         }, cancellationToken);
 
     public Task<Result<bool>> HasAnyAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
@@ -536,4 +661,5 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             ((IAuditableDocument)entity).UpdatedAt = previousUpdated;
         }
     }
+
 }
