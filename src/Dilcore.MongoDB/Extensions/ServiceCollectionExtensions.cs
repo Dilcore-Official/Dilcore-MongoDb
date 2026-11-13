@@ -47,9 +47,10 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<MongoRegistrationGraph>()));
         services.AddScoped<IMongoDatabaseResolver, MongoDatabaseResolver>();
         services.AddScoped<IMongoDbCollectionFactory, MongoDbCollectionFactory>();
+        services.AddScoped<IMongoDbTransactionRunner, MongoDbTransactionRunner>();
         services.AddScoped<IMongoDbProvisioner, MongoDbProvisioner>();
         services.AddSingleton<IBsonJsonConverter, BsonJsonConverter>();
-        services.AddScoped<IMongoDbTransactionRunner, MongoDbTransactionRunner>();
+        services.AddScoped<IJsonDocumentStoreFactory, JsonDocumentStoreFactory>();
         services.AddScoped<IRepositoryResolver, RepositoryResolver>();
 
         foreach (var resolverType in graph.Databases

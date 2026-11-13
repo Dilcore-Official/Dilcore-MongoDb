@@ -1,0 +1,42 @@
+---
+description: Test coverage analysis (.NET): what to cover and what to exclude with justification
+globs:
+alwaysApply: false
+---
+
+# Test coverage analysis (.NET)
+
+Apply when asked to run or analyze coverage.
+
+## 1. Run
+```bash
+dotnet test --settings coverage.runsettings --collect:"XPlat Code Coverage" --results-directory ./TestResults
+reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:TestResults/report -reporttypes:"JsonSummary;TextSummary;Html"
+```
+If MCP (dotnet-coverage-mcp) is connected, use its tools instead of the commands above.
+
+## 2. Analysis (read-only; do not change code at this step)
+Read `Summary.json` and Cobertura XML. For each class/method with uncovered lines or branches, collect:
+- line% and branch%, number of uncovered branches;
+- cyclomatic complexity (when present in the report);
+- category (see below).
+
+Sort by (uncovered branches × complexity), NOT by file percentage.
+High line% with low branch% means the logic was only exercised along the happy path. Call those out separately.
+
+## 3. Categories
+**A. Cover with tests (priority)**: business logic, calculations, validations, conditional mapping, error handling and retries, parsing; for Dynamics plugins, the logic itself (not the IServiceProvider/context wiring).
+
+**B. Candidates for `[ExcludeFromCodeCoverage]`**: generated code, DTOs/POCOs/records with no logic, `Program.cs`, DI registration and configuration, thin wrappers over external SDKs/HTTP with no branching, migrations, code that can only be verified via integration tests (with an explanation).
+
+**C. Debatable**: briefly describe pros and cons; leave the decision to a human.
+
+## 4. Output
+Table: `File/Class.Method | line% | branch% | complexity | category | recommendation`.
+For category B, propose a ready `Justification` (a concrete reason, not "not needed").
+
+## 5. Constraints
+- Do NOT apply `[ExcludeFromCodeCoverage]` yourself. First show the candidate list and wait for confirmation.
+- Do not exclude code only because it is hard to test: first propose a refactor for testability.
+- Do not write tests "for the percentage": each test must assert behavior, not merely invoke code.
+- After the confirmed list, apply the attribute with `Justification = "..."` or add an exclusion in `coverage.runsettings` (`ExcludeByFile` / `Exclude`), then re-run for comparison.

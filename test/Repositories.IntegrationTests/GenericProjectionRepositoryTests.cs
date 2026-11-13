@@ -1,7 +1,9 @@
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Policies;
+using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Extensions;
+using Dilcore.MongoDB.Repositories;
 using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.Repositories.IntegrationTests;
@@ -66,6 +68,58 @@ public class GenericProjectionRepositoryTests : BaseIntegrationTests
         projectionResult.ShouldBeSuccess();
         projectionResult.ValueOrDefault!.Id.ShouldBe(entity.Id);
         projectionResult.ValueOrDefault.Name.ShouldBe(entity.Name);
+    }
+
+    [Test]
+    public async Task GenericProjectionRepository_MissingDocument_ReturnsNotFound()
+    {
+        var filter = Builders<TestEntity1>.Filter.Eq(x => x.Id, Guid.NewGuid());
+        var result = await _projectionRepository.GetAsync(filter, x => new TestEntityProjection
+        {
+            Id = x.Id,
+            Name = x.Name
+        });
+        result.ShouldBeFailure();
+        result.ShouldHaveError<DocumentNotFoundError>();
+    }
+
+    [Test]
+    public async Task GenericProjectionRepository_SoftDeleted_IsExcluded()
+    {
+        var services = new ServiceCollection();
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(MongoDbContainer.GetConnectionString()))
+            .AddDatabase("ProjectionSoftDB", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<TestEntity1>("e1", d => d
+                    .WithCollectionName("projectionSoft")
+                    .WithSoftDelete()
+                    .WithBulkRepository()
+                    .WithProjectionRepository());
+            }));
+
+        using var provider = AcceptanceServiceProviderFactory.Create(services);
+        using var scope = provider.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IGenericRepository<TestEntity1>>();
+        var projection = scope.ServiceProvider.GetRequiredService<IGenericProjectionRepository<TestEntity1>>();
+
+        var entity = Fixture.Build<TestEntity1>()
+            .With(x => x.IsDeleted, false)
+            .Without(x => x.ETag)
+            .Without(x => x.Id)
+            .Create();
+        (await repository.StoreAsync(entity)).ShouldBeSuccess();
+        (await repository.DeleteAsync(entity.Id, entity.ETag)).ShouldBeSuccess();
+
+        var missing = await projection.GetAsync(
+            Builders<TestEntity1>.Filter.Eq(x => x.Id, entity.Id),
+            x => new TestEntityProjection { Id = x.Id, Name = x.Name });
+        missing.ShouldHaveError<DocumentNotFoundError>();
+
+        var list = await projection.GetListAsync(x => new TestEntityProjection { Id = x.Id, Name = x.Name });
+        list.ShouldBeSuccess();
+        list.Value.ShouldNotContain(x => x.Id == entity.Id);
     }
 
     public class TestEntity1 : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument

@@ -2,7 +2,7 @@
 
 Dilcore MongoDB keeps `MongoDB.Driver` types visible. Use these recipes when repository helpers are not enough. This is **current** M3 guidance.
 
-Runnable catalog: [samples/MongoDb.Capabilities.Sample](../../samples/MongoDb.Capabilities.Sample) (`/escape/client`, `/escape/collection`). Transactions how-to: [transactions.md](../guides/transactions.md).
+Runnable catalog: [samples/MongoDb.Capabilities.Sample](../../samples/MongoDb.Capabilities.Sample) (`/escape/client`, `/escape/collection`). Getting-started sample: [MongoDb.WebApi.Sample](../../samples/MongoDb.WebApi.Sample). Transactions how-to: [transactions.md](../guides/transactions.md).
 
 ## Clients, databases, collections
 
@@ -15,7 +15,7 @@ var collection = (await factory.GetCollectionAsync<Order>(new MongoDocumentBindi
 
 ## Concerns, preference, retries
 
-Set `WriteConcern`, `ReadConcern`, `ReadPreference`, retry, timeout, compression, and `applicationName` on `MongoClientSettings` when registering the cluster. Collection-level overrides use driver `CollectionNamespace` / `MongoCollectionSettings` on `GetCollection` after you resolve the database.
+Set `WriteConcern`, `ReadConcern`, `ReadPreference`, retry, timeout, compression, and `applicationName` on `MongoClientSettings` when registering the cluster. Collection-level overrides use driver `MongoCollectionSettings` on `GetCollection` after you resolve the database.
 
 ## Sessions and transactions
 

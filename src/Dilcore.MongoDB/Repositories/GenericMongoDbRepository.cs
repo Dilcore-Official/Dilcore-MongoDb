@@ -10,7 +10,6 @@ using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Internal;
 using FluentResults;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.Repositories;
@@ -44,10 +43,23 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
     }
 
     public Task<Result<TDocument>> StoreAsync(TDocument entity, CancellationToken cancellationToken = default)
-        => ExecuteAsync((collection, ct) => StoreEntityAsync(entity, collection, ct), cancellationToken);
+        => ExecuteAsync(
+            (collection, ct) => StoreEntityAsync(entity, collection, ct),
+            cancellationToken,
+            Estimate(entity));
 
     public Task<Result<TDocument>> ReplaceAsync(TDocument entity, CancellationToken cancellationToken = default)
-        => ExecuteAsync((collection, ct) => ReplaceWithoutConcurrencyAsync(entity, collection, replaceEntireDocument: true, ct), cancellationToken);
+        => ExecuteAsync((collection, ct) =>
+        {
+            if (HasConcurrencyToken)
+            {
+                return entity.IsNew()
+                    ? Task.FromResult(Result.Fail<TDocument>(new DocumentNotFoundError()))
+                    : WriteWithConcurrencyAsync(entity, ((IHasConcurrencyToken)entity).ETag, collection, replaceEntireDocument: true, ct);
+            }
+
+            return ReplaceWithoutConcurrencyAsync(entity, collection, replaceEntireDocument: true, ct);
+        }, cancellationToken, Estimate(entity));
 
     public Task<Result<TDocument>> UpdateSnapshotAsync(TDocument entity, CancellationToken cancellationToken = default)
         => ExecuteAsync((collection, ct) =>
@@ -57,13 +69,13 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                 var currentEtag = ((IHasConcurrencyToken)entity).ETag;
                 return entity.IsNew()
                     ? CreateAsync(entity, collection, ct)
-                    : UpdateWithConcurrencyAsync(entity, currentEtag, collection, ct);
+                    : WriteWithConcurrencyAsync(entity, currentEtag, collection, replaceEntireDocument: false, ct);
             }
 
             return IdAccessor.IsEmpty(entity)
                 ? CreateAsync(entity, collection, ct)
                 : ReplaceWithoutConcurrencyAsync(entity, collection, replaceEntireDocument: false, ct);
-        }, cancellationToken);
+        }, cancellationToken, Estimate(entity));
 
     public Task<Result<TDocument>> PatchAsync(
         FilterDefinition<TDocument> filter,
@@ -74,12 +86,12 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             filter = ApplyNotDeleteFilter(filter);
             if (HasConcurrencyToken)
             {
-                update = update.Set("eTag", MongoDbHelper.GenerateEtag());
+                update = update.Set(PolicyElementNames.ETag<TDocument>(), MongoDbHelper.GenerateEtag());
             }
 
             if (IsAuditable)
             {
-                update = update.Set("updatedAt", DateTime.UtcNow);
+                update = update.Set(PolicyElementNames.UpdatedAt<TDocument>(), DateTime.UtcNow);
             }
 
             var updated = await MongoCollectionCalls.FindOneAndUpdateAsync(
@@ -141,23 +153,11 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         => ExecuteAsync(async (collection, token) =>
         {
             filter = ApplyNotDeleteFilter(filter);
-            var fluent = MongoCollectionCalls.Find(collection, _callContext.Session, filter);
-            if (options?.Sort is not null)
-            {
-                fluent = fluent.Sort(options.Sort);
-            }
-
-            if (options?.Limit is not null)
-            {
-                fluent = fluent.Limit(options.Limit);
-            }
-
-            if (options?.Skip is not null)
-            {
-                fluent = fluent.Skip(options.Skip);
-            }
-
-            var entities = await fluent.ToListAsync(token);
+            using var cursor = _callContext.Session is null
+                ? await MongoCollectionCalls.FindAsync(collection, filter, options, token)
+                : await MongoCollectionCalls.FindAsync(
+                    collection, _callContext.Session, filter, options, token);
+            var entities = await cursor.ToListAsync(token);
             return Result.Ok<IReadOnlyList<TDocument>>(entities);
         }, cancellationToken);
 
@@ -185,16 +185,47 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                 return Result.Fail<KeysetPage<TDocument>>("PageSize must be greater than zero.");
             }
 
+            if (request.PageSize == int.MaxValue)
+            {
+                return Result.Fail<KeysetPage<TDocument>>(
+                    "PageSize is too large to reserve an extra document for HasMore.");
+            }
+
+            var sortResult = KeysetCursor.NormalizeSort(request.Sort);
+            if (sortResult.IsFailed)
+            {
+                return Result.Fail<KeysetPage<TDocument>>(sortResult.Errors);
+            }
+
+            var sortKeys = sortResult.Value;
+            var projectionResult = KeysetCursor.ValidateProjection(request.Projection, sortKeys);
+            if (projectionResult.IsFailed)
+            {
+                return Result.Fail<KeysetPage<TDocument>>(projectionResult.Errors);
+            }
+
             var filter = ApplyNotDeleteFilter(request.Filter);
             if (!string.IsNullOrWhiteSpace(request.Cursor))
             {
-                filter &= DecodeCursor(request.Cursor);
+                var seekResult = KeysetCursor.TryDecodeSeekFilter<TDocument>(request.Cursor, sortKeys);
+                if (seekResult.IsFailed)
+                {
+                    return Result.Fail<KeysetPage<TDocument>>(seekResult.Errors);
+                }
+
+                filter &= seekResult.Value;
             }
 
             var take = request.PageSize + 1;
             var fluent = MongoCollectionCalls.Find(collection, _callContext.Session, filter)
-                .Sort(request.Sort)
+                .Sort(KeysetCursor.ToSortDefinition<TDocument>(sortKeys))
                 .Limit(take);
+
+            if (request.Projection is not null)
+            {
+                ProjectionDefinition<TDocument, TDocument> projection = request.Projection;
+                fluent = fluent.Project(projection);
+            }
 
             var documents = await fluent.ToListAsync(token);
             var hasMore = documents.Count > request.PageSize;
@@ -203,9 +234,17 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                 documents.RemoveAt(documents.Count - 1);
             }
 
-            var nextCursor = hasMore && documents.Count > 0
-                ? EncodeCursor(documents[^1])
-                : null;
+            string? nextCursor = null;
+            if (hasMore && documents.Count > 0)
+            {
+                var encodeResult = KeysetCursor.TryEncode(documents[^1], sortKeys);
+                if (encodeResult.IsFailed)
+                {
+                    return Result.Fail<KeysetPage<TDocument>>(encodeResult.Errors);
+                }
+
+                nextCursor = encodeResult.Value;
+            }
 
             return Result.Ok(new KeysetPage<TDocument>
             {
@@ -291,15 +330,18 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                 return Result.Fail<bool>("Restore requires ISoftDeletable.");
             }
 
-            UpdateDefinition<TDocument> update = Builders<TDocument>.Update.Set("isDeleted", false);
+            filter &= Builders<TDocument>.Filter.Eq(PolicyElementNames.IsDeleted<TDocument>(), true);
+
+            UpdateDefinition<TDocument> update = Builders<TDocument>.Update.Set(
+                PolicyElementNames.IsDeleted<TDocument>(), false);
             if (HasConcurrencyToken)
             {
-                update = update.Set("eTag", MongoDbHelper.GenerateEtag());
+                update = update.Set(PolicyElementNames.ETag<TDocument>(), MongoDbHelper.GenerateEtag());
             }
 
             if (IsAuditable)
             {
-                update = update.Set("updatedAt", DateTime.UtcNow);
+                update = update.Set(PolicyElementNames.UpdatedAt<TDocument>(), DateTime.UtcNow);
             }
 
             var result = await MongoCollectionCalls.UpdateOneAsync(
@@ -345,12 +387,20 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         {
             return entity.IsNew()
                 ? CreateAsync(entity, collection, cancellationToken)
-                : UpdateWithConcurrencyAsync(entity, ((IHasConcurrencyToken)entity).ETag, collection, cancellationToken);
+                : WriteWithConcurrencyAsync(
+                    entity,
+                    ((IHasConcurrencyToken)entity).ETag,
+                    collection,
+                    replaceEntireDocument: false,
+                    cancellationToken);
         }
 
-        return IdAccessor.IsEmpty(entity)
-            ? CreateAsync(entity, collection, cancellationToken)
-            : ReplaceWithoutConcurrencyAsync(entity, collection, replaceEntireDocument: false, cancellationToken);
+        if (IdAccessor.IsEmpty(entity))
+        {
+            return CreateAsync(entity, collection, cancellationToken);
+        }
+
+        return StoreAssignedIdWithoutConcurrencyAsync(entity, collection, cancellationToken);
     }
 
     private async Task<Result<TDocument>> CreateAsync(
@@ -386,12 +436,14 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                 collection, _callContext.Session, entity, new InsertOneOptions(), cancellationToken);
             return Result.Ok(entity);
         }
-        catch (MongoException)
+        catch (Exception exception) when (exception is MongoException or FormatException or OperationCanceledException)
         {
-            if (stagedId)
+            if (stagedId && exception is OperationCanceledException)
             {
-                // Best-effort: leave generated id; insert retry with same id is safer than clearing.
+                IdAccessor.ClearId(entity);
             }
+
+            // Best-effort: leave generated id after Mongo/format failure; insert retry with same id is safer than clearing.
 
             if (IsAuditable)
             {
@@ -408,10 +460,11 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         }
     }
 
-    private async Task<Result<TDocument>> UpdateWithConcurrencyAsync(
+    private async Task<Result<TDocument>> WriteWithConcurrencyAsync(
         TDocument entity,
         long currentEtag,
         IMongoCollection<TDocument> collection,
+        bool replaceEntireDocument,
         CancellationToken cancellationToken)
     {
         var previousUpdated = IsAuditable ? ((IAuditableDocument)entity).UpdatedAt : default;
@@ -427,33 +480,74 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         ((IHasConcurrencyToken)entity).ETag = nextEtag;
 
         var filter = IdAccessor.BuildIdFilter(entity);
-        filter &= Builders<TDocument>.Filter.Eq("eTag", currentEtag);
+        filter &= Builders<TDocument>.Filter.Eq(PolicyElementNames.ETag<TDocument>(), currentEtag);
         filter = ApplyNotDeleteFilter(filter);
-        var updateDocument = entity.ToBsonSnapshotUpdateDocument();
 
         try
         {
-            var updateResult = await MongoCollectionCalls.UpdateOneAsync(
-                collection,
-                _callContext.Session,
-                filter,
-                updateDocument,
-                options: null,
-                cancellationToken);
+            long matched;
+            if (replaceEntireDocument)
+            {
+                var replaceResult = await MongoCollectionCalls.ReplaceOneAsync(
+                    collection, _callContext.Session, filter, entity, options: null, cancellationToken);
+                matched = replaceResult.MatchedCount;
+            }
+            else
+            {
+                var updateResult = await MongoCollectionCalls.UpdateOneAsync(
+                    collection,
+                    _callContext.Session,
+                    filter,
+                    entity.ToBsonSnapshotUpdateDocument(),
+                    options: null,
+                    cancellationToken);
+                matched = updateResult.MatchedCount;
+            }
 
-            if (updateResult.MatchedCount == 1)
+            if (matched == 1)
             {
                 return Result.Ok(entity);
             }
 
             RestoreStaged(entity, previousEtag, previousUpdated);
-            return Result.Fail<TDocument>(new ConcurrencyConflictError());
+            return await UnmatchedWriteErrorAsync(entity, collection, cancellationToken);
         }
-        catch (MongoException)
+        catch (Exception exception) when (exception is MongoException or FormatException or OperationCanceledException)
         {
             RestoreStaged(entity, previousEtag, previousUpdated);
             throw;
         }
+    }
+
+    private async Task<Result<TDocument>> StoreAssignedIdWithoutConcurrencyAsync(
+        TDocument entity,
+        IMongoCollection<TDocument> collection,
+        CancellationToken cancellationToken)
+    {
+        var update = await ReplaceWithoutConcurrencyAsync(
+            entity, collection, replaceEntireDocument: false, cancellationToken);
+        if (update.IsSuccess || !update.HasError<DocumentNotFoundError>())
+        {
+            return update;
+        }
+
+        return await CreateAsync(entity, collection, cancellationToken);
+    }
+
+    private async Task<Result<TDocument>> UnmatchedWriteErrorAsync(
+        TDocument entity,
+        IMongoCollection<TDocument> collection,
+        CancellationToken cancellationToken)
+    {
+        var exists = await MongoCollectionCalls.Find(
+                collection,
+                _callContext.Session,
+                ApplyNotDeleteFilter(IdAccessor.BuildIdFilter(entity)))
+            .Limit(1)
+            .AnyAsync(cancellationToken);
+        return exists
+            ? Result.Fail<TDocument>(new ConcurrencyConflictError())
+            : Result.Fail<TDocument>(new DocumentNotFoundError());
     }
 
     private async Task<Result<TDocument>> ReplaceWithoutConcurrencyAsync(
@@ -501,7 +595,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             RestoreAudit(entity, previousUpdated);
             return Result.Fail<TDocument>(new DocumentNotFoundError());
         }
-        catch (MongoException)
+        catch (Exception exception) when (exception is MongoException or FormatException or OperationCanceledException)
         {
             RestoreAudit(entity, previousUpdated);
             throw;
@@ -513,20 +607,28 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         FilterDefinition<TDocument> filter,
         CancellationToken cancellationToken = default)
     {
-        UpdateDefinition<TDocument> update = Builders<TDocument>.Update.Set("isDeleted", true);
+        UpdateDefinition<TDocument> update = Builders<TDocument>.Update.Set(
+            PolicyElementNames.IsDeleted<TDocument>(), true);
         if (HasConcurrencyToken)
         {
-            update = update.Set("eTag", MongoDbHelper.GenerateEtag());
+            update = update.Set(PolicyElementNames.ETag<TDocument>(), MongoDbHelper.GenerateEtag());
         }
 
         if (IsAuditable)
         {
-            update = update.Set("updatedAt", DateTime.UtcNow);
+            update = update.Set(PolicyElementNames.UpdatedAt<TDocument>(), DateTime.UtcNow);
         }
 
         var result = await MongoCollectionCalls.UpdateOneAsync(
             collection, _callContext.Session, filter, update, options: null, cancellationToken);
-        return Result.Ok(result.ModifiedCount == 1 || result.MatchedCount == 1);
+        if (result.ModifiedCount == 1 || result.MatchedCount == 1)
+        {
+            return Result.Ok(true);
+        }
+
+        return HasConcurrencyToken
+            ? Result.Fail<bool>(new ConcurrencyConflictError())
+            : Result.Fail<bool>(new DocumentNotFoundError());
     }
 
     private async Task<Result<bool>> PermanentDeleteOneAsync(
@@ -536,7 +638,14 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
     {
         var result = await MongoCollectionCalls.DeleteOneAsync(
             collection, _callContext.Session, filter, cancellationToken);
-        return Result.Ok(result.DeletedCount == 1);
+        if (result.DeletedCount == 1)
+        {
+            return Result.Ok(true);
+        }
+
+        return HasConcurrencyToken
+            ? Result.Fail<bool>(new ConcurrencyConflictError())
+            : Result.Fail<bool>(new DocumentNotFoundError());
     }
 
     private static void RestoreStaged(TDocument entity, long previousEtag, DateTime previousUpdated)
@@ -549,6 +658,23 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         RestoreAudit(entity, previousUpdated);
     }
 
+    private static int? Estimate(TDocument entity)
+    {
+        try
+        {
+            // Snapshot serialization registers the Guid serializer. Doing that before ToBson
+            // avoids locking the process-wide Guid serializer to Unspecified.
+            _ = entity.ToBsonSnapshotUpdateDocument();
+            return entity.ToBson().Length;
+        }
+        catch (Exception exception) when (exception is FormatException or BsonSerializationException)
+        {
+            // Unserializable payloads (for example above the BSON document cap) are left
+            // for the write path, which maps them to DocumentTooLargeError.
+            return null;
+        }
+    }
+
     private static void RestoreAudit(TDocument entity, DateTime previousUpdated)
     {
         if (IsAuditable)
@@ -557,17 +683,4 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         }
     }
 
-    private static string EncodeCursor(TDocument document)
-    {
-        var bson = document.ToBsonDocument();
-        var id = bson["_id"];
-        return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(id.ToJson()));
-    }
-
-    private static FilterDefinition<TDocument> DecodeCursor(string cursor)
-    {
-        var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(cursor));
-        var id = BsonSerializer.Deserialize<BsonValue>(json);
-        return Builders<TDocument>.Filter.Gt("_id", id);
-    }
 }

@@ -94,6 +94,42 @@ public class NamespacePipelineTests
         result.ShouldBeFailure();
     }
 
+    [Test]
+    public async Task Resolve_InvalidCollectionName_Fails()
+    {
+        var resolver = new DefaultNamespaceResolver(
+        [
+            new PrefixNamespaceSegmentContributor()
+        ], EmptyGraph);
+
+        var result = await resolver.ResolveAsync(new NamespaceResolutionRequest
+        {
+            LogicalName = "system.indexes",
+            Target = NamespaceTarget.Collection
+        });
+
+        result.ShouldBeFailure();
+        result.Errors[0].Message.ShouldContain("Invalid MongoDB collection name");
+    }
+
+    [Test]
+    public async Task Resolve_UnknownNamespaceTarget_Fails()
+    {
+        var resolver = new DefaultNamespaceResolver(
+        [
+            new PrefixNamespaceSegmentContributor()
+        ], EmptyGraph);
+
+        var result = await resolver.ResolveAsync(new NamespaceResolutionRequest
+        {
+            LogicalName = "orders",
+            Target = (NamespaceTarget)999
+        });
+
+        result.ShouldBeFailure();
+        result.Errors[0].Message.ShouldContain("Unknown namespace target");
+    }
+
     private sealed class FailClosedContributor : INamespaceSegmentContributor
     {
         public int Order => 50;

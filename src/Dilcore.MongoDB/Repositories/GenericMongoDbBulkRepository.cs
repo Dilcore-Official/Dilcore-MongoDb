@@ -10,6 +10,7 @@ using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Internal;
 using FluentResults;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.Repositories;
@@ -77,37 +78,84 @@ internal class GenericMongoDbBulkRepository<TDocument> : BaseMongoDbRepository<T
             var writeModels = CreateWriteModels(entityList).ToList();
             var batches = Chunk(writeModels, options);
             var bulkOptions = new BulkWriteOptions { IsOrdered = options.IsOrdered };
+            var processed = 0;
 
             try
             {
                 foreach (var batch in batches)
                 {
-                    var result = await MongoCollectionCalls.BulkWriteAsync(
-                        collection, _callContext.Session, batch, bulkOptions, token);
-
-                    if (result.RequestCount != batch.Count)
+                    if (Budget is not null)
                     {
-                        RestoreAll(snapshots);
-                        return Result.Fail<IReadOnlyList<TDocument>>("Not all entities were processed");
+                        var failedReservation = batch
+                            .Select(model => Budget.Reserve(EstimateBytes(model)))
+                            .FirstOrDefault(reservation => reservation.IsFailed);
+                        if (failedReservation is not null)
+                        {
+                            RestoreUncommitted(snapshots, processed, entityList.Count);
+                            return Result.Fail<IReadOnlyList<TDocument>>(failedReservation.Errors);
+                        }
+                    }
+
+                    try
+                    {
+                        var result = await MongoCollectionCalls.BulkWriteAsync(
+                            collection, _callContext.Session, batch, bulkOptions, token);
+
+                        if (result.RequestCount != batch.Count)
+                        {
+                            RestoreUncommitted(snapshots, processed, entityList.Count);
+                            return Result.Fail<IReadOnlyList<TDocument>>("Not all entities were processed");
+                        }
+
+                        var unmatched = await CollectUnmatchedUpdatesAsync(
+                            collection, entityList, writeModels, processed, batch.Count, token);
+                        if (unmatched.Count > 0)
+                        {
+                            return CompletePartialFailure(
+                                snapshots,
+                                entityList.Count,
+                                processed,
+                                batch.Count,
+                                failed: unmatched,
+                                unprocessed: new HashSet<int>(),
+                                includeSuccessesInBatch: true);
+                        }
+
+                        processed += batch.Count;
+                    }
+                    catch (MongoBulkWriteException<TDocument> exception)
+                    {
+                        var failed = exception.WriteErrors
+                            .ToDictionary(error => error.Index + processed, error => error.Message);
+                        var unprocessed = new HashSet<int>();
+                        if (options.IsOrdered && failed.Count > 0)
+                        {
+                            var firstFailed = failed.Keys.Min();
+                            for (var index = firstFailed + 1; index < processed + batch.Count; index++)
+                            {
+                                unprocessed.Add(index);
+                            }
+                        }
+
+                        return CompletePartialFailure(
+                            snapshots,
+                            entityList.Count,
+                            processed,
+                            batch.Count,
+                            failed,
+                            unprocessed,
+                            includeSuccessesInBatch: !options.IsOrdered);
                     }
                 }
 
                 return Result.Ok<IReadOnlyList<TDocument>>(entityList);
             }
-            catch (MongoBulkWriteException<TDocument> exception)
+            catch (Exception exception) when (exception is MongoException or FormatException)
             {
-                RestoreAll(snapshots);
-                var items = exception.WriteErrors
-                    .Select(error => new BulkWriteItemResult(error.Index, succeeded: false, error.Message))
-                    .ToList();
-                return Result.Fail<IReadOnlyList<TDocument>>(new BulkWritePartialFailureError(items, exception.Message));
-            }
-            catch (MongoException)
-            {
-                RestoreAll(snapshots);
+                RestoreUncommitted(snapshots, processed, entityList.Count);
                 throw;
             }
-        }, cancellationToken);
+        }, cancellationToken, estimatedBytes: null);
 
     public Task<Result> BulkDeleteAsync(
         Expression<Func<TDocument, bool>> expression,
@@ -131,15 +179,16 @@ internal class GenericMongoDbBulkRepository<TDocument> : BaseMongoDbRepository<T
         FilterDefinition<TDocument> filter,
         CancellationToken token)
     {
-        UpdateDefinition<TDocument> update = Builders<TDocument>.Update.Set("isDeleted", true);
+        UpdateDefinition<TDocument> update = Builders<TDocument>.Update.Set(
+            PolicyElementNames.IsDeleted<TDocument>(), true);
         if (HasConcurrencyToken)
         {
-            update = update.Set("eTag", MongoDbHelper.GenerateEtag());
+            update = update.Set(PolicyElementNames.ETag<TDocument>(), MongoDbHelper.GenerateEtag());
         }
 
         if (IsAuditable)
         {
-            update = update.Set("updatedAt", DateTime.UtcNow);
+            update = update.Set(PolicyElementNames.UpdatedAt<TDocument>(), DateTime.UtcNow);
         }
 
         var result = await MongoCollectionCalls.UpdateManyAsync(
@@ -204,7 +253,7 @@ internal class GenericMongoDbBulkRepository<TDocument> : BaseMongoDbRepository<T
                 entity.GenerateETag();
 
                 var filter = IdAccessor.BuildIdFilter(entity);
-                filter &= Builders<TDocument>.Filter.Eq("eTag", currentETag);
+                filter &= Builders<TDocument>.Filter.Eq(PolicyElementNames.ETag<TDocument>(), currentETag);
                 filter = ApplyNotDeleteFilter(filter);
 
                 var updateDocument = entity.ToBsonSnapshotUpdateDocument();
@@ -259,9 +308,18 @@ internal class GenericMongoDbBulkRepository<TDocument> : BaseMongoDbRepository<T
         {
             InsertOneModel<TDocument> insert => insert.Document.ToBsonDocument().ToBson().Length,
             ReplaceOneModel<TDocument> replace => replace.Replacement.ToBsonDocument().ToBson().Length,
-            UpdateOneModel<TDocument> update => 1024,
+            UpdateOneModel<TDocument> update => EstimateUpdateBytes(update),
             _ => 512
         };
+
+    private static int EstimateUpdateBytes(UpdateOneModel<TDocument> update)
+    {
+        var rendered = update.Update.Render(
+            new RenderArgs<TDocument>(
+                BsonSerializer.LookupSerializer<TDocument>(),
+                BsonSerializer.SerializerRegistry));
+        return rendered.ToBson().Length;
+    }
 
     private static EntitySnapshot Capture(TDocument entity) => new()
     {
@@ -273,10 +331,98 @@ internal class GenericMongoDbBulkRepository<TDocument> : BaseMongoDbRepository<T
 
     private static void RestoreAll(IReadOnlyList<EntitySnapshot> snapshots)
     {
-        foreach (var snapshot in snapshots)
+        RestoreUncommitted(snapshots, committedCount: 0, snapshots.Count);
+    }
+
+    private static void RestoreUncommitted(
+        IReadOnlyList<EntitySnapshot> snapshots,
+        int committedCount,
+        int totalCount)
+    {
+        for (var index = committedCount; index < totalCount; index++)
         {
-            snapshot.Restore();
+            snapshots[index].Restore();
         }
+    }
+
+    private async Task<Dictionary<int, string>> CollectUnmatchedUpdatesAsync(
+        IMongoCollection<TDocument> collection,
+        IReadOnlyList<TDocument> entities,
+        IReadOnlyList<WriteModel<TDocument>> writeModels,
+        int processed,
+        int batchCount,
+        CancellationToken cancellationToken)
+    {
+        var unmatched = new Dictionary<int, string>();
+        for (var offset = 0; offset < batchCount; offset++)
+        {
+            var index = processed + offset;
+            if (writeModels[index] is InsertOneModel<TDocument>)
+            {
+                continue;
+            }
+
+            var entity = entities[index];
+            var persisted = await MongoCollectionCalls.Find(
+                    collection,
+                    _callContext.Session,
+                    ApplyNotDeleteFilter(IdAccessor.BuildIdFilter(entity)))
+                .FirstOrDefaultAsync(cancellationToken);
+            if (persisted is null)
+            {
+                unmatched[index] = "The document was not found.";
+                continue;
+            }
+
+            if (HasConcurrencyToken &&
+                ((IHasConcurrencyToken)persisted).ETag != ((IHasConcurrencyToken)entity).ETag)
+            {
+                unmatched[index] = "The document was modified concurrently.";
+            }
+        }
+
+        return unmatched;
+    }
+
+    private Result<IReadOnlyList<TDocument>> CompletePartialFailure(
+        IReadOnlyList<EntitySnapshot> snapshots,
+        int totalCount,
+        int processed,
+        int batchCount,
+        IReadOnlyDictionary<int, string> failed,
+        ISet<int> unprocessed,
+        bool includeSuccessesInBatch)
+    {
+        var items = new List<BulkWriteItemResult>(totalCount);
+        var batchEnd = processed + batchCount;
+        for (var index = 0; index < totalCount; index++)
+        {
+            if (failed.TryGetValue(index, out var message))
+            {
+                snapshots[index].Restore();
+                items.Add(new BulkWriteItemResult(index, succeeded: false, message));
+                continue;
+            }
+
+            if (unprocessed.Contains(index) || index >= batchEnd)
+            {
+                snapshots[index].Restore();
+                items.Add(new BulkWriteItemResult(index, succeeded: false, "The write was not processed."));
+                continue;
+            }
+
+            if (index < processed || includeSuccessesInBatch)
+            {
+                items.Add(new BulkWriteItemResult(index, succeeded: true));
+                continue;
+            }
+
+            snapshots[index].Restore();
+            items.Add(new BulkWriteItemResult(index, succeeded: false, "The write was not processed."));
+        }
+
+        return Result.Fail<IReadOnlyList<TDocument>>(
+            new BulkWritePartialFailureError(items, "One or more bulk write items failed."));
     }
 
     private sealed class EntitySnapshot

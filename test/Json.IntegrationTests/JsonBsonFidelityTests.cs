@@ -96,4 +96,63 @@ public class JsonBsonFidelityTests
         });
         json.Value.ShouldContain("$oid");
     }
+
+    [TestCase("""{"v":1}""", BsonType.Int32)]
+    [TestCase("""{"v":2147483648}""", BsonType.Int64)]
+    [TestCase("""{"v":1.5}""", BsonType.Double)]
+    [TestCase("""{"v":true}""", BsonType.Boolean)]
+    [TestCase("""{"v":null}""", BsonType.Null)]
+    [TestCase("""{"v":"2020-01-01T00:00:00Z"}""", BsonType.String)]
+    public void OrdinaryJson_PreservesExactBsonType_OnBothAdapters(string json, BsonType expected)
+    {
+        Converter.Parse(json).Value.AsBsonDocument["v"].BsonType.ShouldBe(expected);
+
+        using var stj = JsonDocument.Parse(json);
+        stj.ToBson(Converter).Value.AsBsonDocument["v"].BsonType.ShouldBe(expected);
+
+        using var reader = new JsonTextReader(new StringReader(json))
+        {
+            DateParseHandling = DateParseHandling.None,
+            FloatParseHandling = FloatParseHandling.Decimal
+        };
+        JToken.Load(reader).ToBson(Converter).Value.AsBsonDocument["v"].BsonType.ShouldBe(expected);
+    }
+
+    [Test]
+    public void EmptyObjectAndArray_RoundTrip()
+    {
+        var parsed = Converter.Parse("""{"obj":{},"arr":[]}""").Value.AsBsonDocument;
+        parsed["obj"].AsBsonDocument.ElementCount.ShouldBe(0);
+        parsed["arr"].AsBsonArray.Count.ShouldBe(0);
+
+        var json = Converter.ToJson(parsed).Value;
+        using var stj = JsonDocument.Parse(json);
+        stj.RootElement.GetProperty("obj").EnumerateObject().Any().ShouldBeFalse();
+        stj.RootElement.GetProperty("arr").GetArrayLength().ShouldBe(0);
+    }
+
+    [Test]
+    public void ArrayOfMixedTypes_PreservesEachElement()
+    {
+        const string json = """{"v":[1,{"$numberLong":"2"},"x",true,null,{"nested":[]}]}""";
+        var array = Converter.Parse(json).Value.AsBsonDocument["v"].AsBsonArray;
+        array[0].BsonType.ShouldBe(BsonType.Int32);
+        array[1].BsonType.ShouldBe(BsonType.Int64);
+        array[2].BsonType.ShouldBe(BsonType.String);
+        array[3].BsonType.ShouldBe(BsonType.Boolean);
+        array[4].BsonType.ShouldBe(BsonType.Null);
+        array[5].BsonType.ShouldBe(BsonType.Document);
+    }
+
+    [Test]
+    public void Newtonsoft_ToJToken_DoesNotCoerceExtendedDateStrings()
+    {
+        var bson = Converter.Parse("""{"when":{"$date":{"$numberLong":"0"}}}""").Value;
+        var token = bson.ToJToken(Converter, new JsonBsonConversionOptions
+        {
+            OutputMode = JsonBsonOutputMode.CanonicalExtendedJson
+        });
+        token.IsSuccess.ShouldBeTrue();
+        token.Value["when"]!["$date"]!["$numberLong"]!.Type.ShouldBe(JTokenType.String);
+    }
 }

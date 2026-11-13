@@ -15,9 +15,25 @@ db.AddDocumentBinding<Order>("orders", d => d
     .WithCollectionItemsTimeToLive(TimeSpan.FromDays(1), x => x.ExpiresAt));
 ```
 
-`WithIndexes` takes `params CreateIndexModel<TDocument>[]`, not raw `IndexKeys` definitions.
+`WithIndexes` takes `params CreateIndexModel<TDocument>[]`, not raw `IndexKeys` definitions. **Always set `CreateIndexOptions.Name`** so Apply can detect drift and removals by name.
 
-`WithCollectionItemsTimeToLive` adds an expire-after index on the selected property when you call `ApplyAsync`.
+`WithCollectionItemsTimeToLive` adds a named expire-after index (`{collection}_ttl`) on the selected property when you call `ApplyAsync`.
+
+## Desired-state indexes
+
+For each binding collection, the declared indexes (+ optional TTL) are the **exclusive** desired set besides MongoDB’s `_id_` index. `ApplyAsync` / `DryRunAsync` reconcile:
+
+| Situation | Apply action | DryRun action |
+|-----------|--------------|---------------|
+| Index missing on server | `create` | `would-create` |
+| Same name, same definition | `skip` | `skip` |
+| Same name, different keys/options | `recreate` (drop + create) | `would-recreate` |
+| On server, not in binding | `remove` | `would-remove` |
+
+- Documents are never deleted; only index metadata changes.
+- `_id_` is never dropped.
+- Indexes created outside the binding on that collection are removed on Apply — declare every index you want kept.
+- Comparison covers index `key`, `unique`, `sparse`, and TTL `expireAfterSeconds`.
 
 ## Runner
 
@@ -25,8 +41,8 @@ db.AddDocumentBinding<Order>("orders", d => d
 
 ```csharp
 var provisioner = scope.ServiceProvider.GetRequiredService<IMongoDbProvisioner>();
-var preview = await provisioner.DryRunAsync();   // Applied == false; Action is would-create or skip
-var applied = await provisioner.ApplyAsync();    // mutates the server; idempotent
+var preview = await provisioner.DryRunAsync();   // Applied == false; Action is would-* or skip
+var applied = await provisioner.ApplyAsync();    // mutates the server; idempotent when already aligned
 ```
 
 `ProvisioningReport` lists `ProvisioningStepResult` (`Name`, `Action`, optional `Details`). Fail closed if `IsFailed`.

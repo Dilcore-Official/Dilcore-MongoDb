@@ -183,7 +183,7 @@ Milestone: [M3 MongoDB Production, JSON & Transactions](https://github.com/Dilco
 |-------|------|----------|
 | [#18](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/18) | Fix latent correctness bugs (soft-delete, ETag, mutation, replace/patch, bulk) | P0 |
 | [#19](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/19) | Production query/policy capabilities (keyset pagination, restore/purge, typed failures) | P1 |
-| [#20](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/20) | JSON interoperability: STJ + Newtonsoft, Extended JSON fidelity, conversion profiles | P0 |
+| [#20](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/20) | JSON interoperability: STJ + Newtonsoft, Extended JSON fidelity, conversion profiles, per-library store registration | P0 |
 | [#21](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/21) | Multi-document transactions via `WithTransactionAsync` + client budget guardrails | P0 |
 | [#22](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/22) | Idempotent provisioning / migration runner (indexes, TTL, vector, schema validation) | P0 |
 | [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) | Replica-set integration matrix + production security guidance | P0 |

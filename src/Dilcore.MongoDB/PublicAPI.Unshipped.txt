@@ -8,5 +8,6 @@ Dilcore.MongoDB.DependencyInjection.IConventionsBuilder.UseElementNameConvention
 Dilcore.MongoDB.DependencyInjection.IConventionsBuilder.UseEnumRepresentation(MongoDB.Bson.BsonType) -> Dilcore.MongoDB.DependencyInjection.IConventionsBuilder
 Dilcore.MongoDB.DependencyInjection.IMongoDbBuilder.ConfigureConventions(System.Action<Dilcore.MongoDB.DependencyInjection.IConventionsBuilder>) -> Dilcore.MongoDB.DependencyInjection.IMongoDbBuilder
 class Dilcore.MongoDB.Json.BsonJsonConverter
+static Dilcore.MongoDB.Json.BsonJsonConverter.ConvertOrdinaryNumber(string, Dilcore.MongoDB.Abstractions.Json.OrdinaryJsonNumberMode) -> MongoDB.Bson.BsonValue
 class Dilcore.MongoDB.Json.JsonDocumentStore
 

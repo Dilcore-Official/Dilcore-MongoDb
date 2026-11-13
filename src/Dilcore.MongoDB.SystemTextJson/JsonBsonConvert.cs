@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Dilcore.MongoDB.Abstractions.Json;
+using Dilcore.MongoDB.Json;
 using FluentResults;
 using MongoDB.Bson;
 
@@ -14,6 +15,8 @@ public static class JsonBsonConvert
         JsonBsonConversionOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(converter);
+        // Structural path: reuse converter.Parse on the exact raw text so number tokens and
+        // Extended JSON wrappers keep the same fidelity as string Parse.
         return converter.Parse(element.GetRawText(), options);
     }
 
@@ -37,6 +40,7 @@ public static class JsonBsonConvert
             return Result.Ok<BsonValue>(BsonNull.Value);
         }
 
+        // JsonNode.ToJsonString preserves number literal text for JsonValue numbers.
         return converter.Parse(node.ToJsonString(), options);
     }
 
@@ -73,4 +77,10 @@ public static class JsonBsonConvert
 
         return Result.Ok(JsonDocument.Parse(json.Value));
     }
+
+    /// <summary>
+    /// Maps an ordinary JSON number token using the shared core number-mode rules.
+    /// </summary>
+    public static BsonValue ConvertOrdinaryNumber(string rawToken, OrdinaryJsonNumberMode mode) =>
+        BsonJsonConverter.ConvertOrdinaryNumber(rawToken, mode);
 }
