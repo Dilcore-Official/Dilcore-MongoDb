@@ -5,13 +5,18 @@ namespace Dilcore.MongoDB.ArchitectureTests;
 public class PackageTopologyTests
 {
     [Test]
-    public void Src_HasExactlyTwoPackableProjects()
+    public void Src_HasFourPackableProjects()
     {
         var projects = RepoLocator.GetSrcProjectFiles();
-        projects.Count.ShouldBe(2);
+        projects.Count.ShouldBe(4);
 
         var names = projects.Select(Path.GetFileNameWithoutExtension).OrderBy(x => x).ToArray();
-        names.ShouldBe(["Dilcore.MongoDB", "Dilcore.MongoDB.Abstractions"]);
+        names.ShouldBe([
+            "Dilcore.MongoDB",
+            "Dilcore.MongoDB.Abstractions",
+            "Dilcore.MongoDB.NewtonsoftJson",
+            "Dilcore.MongoDB.SystemTextJson"
+        ]);
     }
 
     [Test]

@@ -69,7 +69,7 @@ reviews:
         cookbook. CONTRIBUTING.md owns How. Do not invent provider-neutral DocumentDB claims.
     - path: ".serena/**"
       instructions: |
-        Memories must match the two-package Dilcore.MongoDB state and point to ADRs/CONTRIBUTING
+        Memories must match the two-core-package plus optional JSON Dilcore.MongoDB state and point to ADRs/CONTRIBUTING
         instead of duplicating pins or command lists.
     - path: ".github/**"
       instructions: |

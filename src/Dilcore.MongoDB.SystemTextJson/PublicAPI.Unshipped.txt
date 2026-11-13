@@ -1,0 +1,6 @@
+#nullable enable
+static class Dilcore.MongoDB.SystemTextJson.JsonBsonConvert
+static class Dilcore.MongoDB.SystemTextJson.JsonDocumentStoreExtensions
+static class Dilcore.MongoDB.SystemTextJson.ServiceCollectionExtensions
+interface Dilcore.MongoDB.SystemTextJson.ISystemTextJsonDocumentStore
+interface Dilcore.MongoDB.SystemTextJson.ISystemTextJsonDocumentStoreFactory

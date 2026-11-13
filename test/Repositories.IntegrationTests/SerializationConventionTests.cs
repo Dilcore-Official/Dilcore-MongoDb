@@ -1,4 +1,5 @@
 using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Internal;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.Internal;
@@ -47,7 +48,7 @@ public class SerializationConventionTests : BaseIntegrationTests
         var raw = await client
             .GetDatabase("EnumConvDB")
             .GetCollection<BsonDocument>("enumDocs")
-            .Find(Builders<BsonDocument>.Filter.Eq("_id", store.Value.Id))
+            .Find(Builders<BsonDocument>.Filter.Eq(DocumentElementNames.Id, store.Value.Id))
             .FirstAsync();
 
         raw["status"].BsonType.ShouldBe(BsonType.Int32);

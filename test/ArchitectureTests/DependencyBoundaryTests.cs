@@ -44,4 +44,26 @@ public class DependencyBoundaryTests
         projectRefs.Count.ShouldBe(1);
         projectRefs[0].ShouldContain("Dilcore.MongoDB.Abstractions");
     }
+
+    [Test]
+    public void SystemTextJson_DoesNotReferenceNewtonsoft()
+    {
+        var project = RepoLocator.GetSrcProjectFiles()
+            .Single(p => Path.GetFileName(p) == "Dilcore.MongoDB.SystemTextJson.csproj");
+        var doc = RepoLocator.LoadCsproj(project);
+        var packages = RepoLocator.GetPackageReferences(doc).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        packages.ShouldNotContain("Newtonsoft.Json");
+        RepoLocator.GetProjectReferences(doc).ShouldContain(path => path.Contains("Dilcore.MongoDB.csproj"));
+    }
+
+    [Test]
+    public void NewtonsoftJson_ReferencesNewtonsoftAndNotTheStjPackage()
+    {
+        var project = RepoLocator.GetSrcProjectFiles()
+            .Single(p => Path.GetFileName(p) == "Dilcore.MongoDB.NewtonsoftJson.csproj");
+        var doc = RepoLocator.LoadCsproj(project);
+        var packages = RepoLocator.GetPackageReferences(doc).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        packages.ShouldContain("Newtonsoft.Json");
+        RepoLocator.GetProjectReferences(doc).ShouldNotContain(path => path.Contains("SystemTextJson"));
+    }
 }
