@@ -3,26 +3,18 @@ using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.NewtonsoftJson;
 using Dilcore.MongoDB.SystemTextJson;
-using Dilcore.MongoDB.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
-using Testcontainers.MongoDb;
 
 namespace Dilcore.MongoDB.Json.IntegrationTests;
 
+/// <summary>
+/// DI registration tests only — no live MongoDB. Uses a placeholder connection string
+/// so parallel Testcontainers startups in this assembly cannot fail OneTimeSetUp.
+/// </summary>
 [Category("M3Matrix")]
 public class JsonDocumentStoreRegistrationTests
 {
-    private MongoDbContainer _container = null!;
-
-    [OneTimeSetUp]
-    public async Task Start()
-    {
-        _container = MongoTestImages.CreateStandalone();
-        await _container.StartAsync();
-    }
-
-    [OneTimeTearDown]
-    public async Task Stop() => await _container.DisposeAsync();
+    private const string PlaceholderConnectionString = "mongodb://localhost";
 
     [Test]
     public void AddSystemTextJsonDocuments_WithoutAddMongoDb_FailsClosed()
@@ -45,7 +37,7 @@ public class JsonDocumentStoreRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddMongoDb(mongo => mongo
-            .AddCluster("primary", c => c.UseConnectionString(_container.GetConnectionString()))
+            .AddCluster("primary", c => c.UseConnectionString(PlaceholderConnectionString))
             .AddDatabase("JsonRegDB", db => db.OnCluster("primary")));
         services.AddSystemTextJsonDocuments();
         services.AddSystemTextJsonDocuments();
@@ -67,7 +59,7 @@ public class JsonDocumentStoreRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddMongoDb(mongo => mongo
-            .AddCluster("primary", c => c.UseConnectionString(_container.GetConnectionString()))
+            .AddCluster("primary", c => c.UseConnectionString(PlaceholderConnectionString))
             .AddDatabase("JsonNsRegDB", db => db.OnCluster("primary")));
         services.AddNewtonsoftJsonDocuments();
         services.AddNewtonsoftJsonDocuments();
@@ -87,7 +79,7 @@ public class JsonDocumentStoreRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddMongoDb(mongo => mongo
-            .AddCluster("primary", c => c.UseConnectionString(_container.GetConnectionString()))
+            .AddCluster("primary", c => c.UseConnectionString(PlaceholderConnectionString))
             .AddDatabase("KnownDB", db => db.OnCluster("primary")));
         services.AddSystemTextJsonDocuments();
 
@@ -99,5 +91,6 @@ public class JsonDocumentStoreRegistrationTests
 
         var result = await store.InsertAsync("payloads", """{"v":1}""");
         result.IsFailed.ShouldBeTrue();
+        result.Errors[0].Message.ShouldContain("Unknown database key");
     }
 }
