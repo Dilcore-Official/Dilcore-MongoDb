@@ -14,16 +14,9 @@ namespace Dilcore.MongoDB.UnitTests;
 
 public class KeysetCursorTests
 {
-    private static int _guidSerializerRegistered;
-
     [OneTimeSetUp]
-    public void RegisterGuidSerializer()
+    public static void RegisterGuidSerializer()
     {
-        if (Interlocked.Exchange(ref _guidSerializerRegistered, 1) == 1)
-        {
-            return;
-        }
-
         try
         {
             BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));

@@ -27,7 +27,11 @@ internal static class KeysetCursor
         {
             rendered = sort.Render(CreateRenderArgs<TDocument>());
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is BsonSerializationException
+            or InvalidOperationException
+            or ArgumentException
+            or NotSupportedException
+            or FormatException)
         {
             return Result.Fail($"Invalid sort for keyset paging: {exception.Message}");
         }
@@ -82,7 +86,11 @@ internal static class KeysetCursor
         {
             rendered = projection.Render(CreateRenderArgs<TDocument>());
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is BsonSerializationException
+            or InvalidOperationException
+            or ArgumentException
+            or NotSupportedException
+            or FormatException)
         {
             return Result.Fail($"Invalid projection for keyset paging: {exception.Message}");
         }
