@@ -1,6 +1,56 @@
 @MongoDb.WebApi.Sample_HostAddress = http://localhost:5248
 
-GET {{MongoDb.WebApi.Sample_HostAddress}}/weatherforecast/
+### List all forecasts
+GET {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts
+Accept: application/json
+
+### First page (default size 5)
+GET {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts/page?size=5
+Accept: application/json
+
+### Next page — paste NextCursor from the previous response
+GET {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts/page?size=5&cursor={{nextCursor}}
+Accept: application/json
+
+### Create a forecast
+POST {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts
+Content-Type: application/json
+
+{
+  "date": "2026-11-20",
+  "temperatureC": 18,
+  "summary": "Mild"
+}
+
+### Replace — use Id/ETag from a GET; a stale ETag returns 409
+PUT {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts/{{forecastId}}
+Content-Type: application/json
+
+{
+  "date": "2026-11-20",
+  "temperatureC": 22,
+  "summary": "Warm",
+  "eTag": 0
+}
+
+### Soft-delete without ETag
+DELETE {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts/{{forecastId}}
+
+### Soft-delete with ETag guard
+DELETE {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts/{{forecastId}}?eTag={{eTag}}
+
+### Second delete of the same id returns 404
+DELETE {{MongoDb.WebApi.Sample_HostAddress}}/weather-forecasts/{{forecastId}}
+
+###
+GET {{MongoDb.WebApi.Sample_HostAddress}}/notes
 Accept: application/json
 
 ###
+POST {{MongoDb.WebApi.Sample_HostAddress}}/notes
+Content-Type: application/json
+
+{
+  "text": "hello",
+  "priority": "High"
+}

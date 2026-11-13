@@ -1,9 +1,13 @@
 using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Options;
 using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Repositories;
+using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.Repositories;
+using FluentResults;
 using MongoDB.Bson;
+using MongoDB.Driver;
 using Testcontainers.MongoDb;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -61,7 +65,7 @@ var summaries = new[]
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
 };
 
-var forecast = Enumerable.Range(1, 5).Select(index =>
+var forecast = Enumerable.Range(1, 12).Select(index =>
         new WeatherForecast
         (
             DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
@@ -77,43 +81,107 @@ await repository.BulkStoreAsync(forecast);
 app.MapGet("/weather-forecasts", async (IGenericRepository<WeatherForecast> genericRepository) =>
     {
         var result = await genericRepository.GetListAsync();
-
-        if (result.IsSuccess)
-        {
-            return Results.Ok(result.ValueOrDefault);
-        }
-
-        return Results.BadRequest(result.Errors);
+        return result.IsSuccess
+            ? Results.Ok(result.Value)
+            : ToHttpResult(result);
     })
     .WithName("GetWeatherForecast");
+
+app.MapGet("/weather-forecasts/page", async (
+        IGenericRepository<WeatherForecast> genericRepository,
+        string? cursor,
+        int? size) =>
+    {
+        var result = await genericRepository.GetPageAsync(new KeysetPageRequest<WeatherForecast>
+        {
+            Filter = Builders<WeatherForecast>.Filter.Empty,
+            Sort = Builders<WeatherForecast>.Sort.Ascending(x => x.Date),
+            PageSize = size is > 0 and <= 100 ? size.Value : 5,
+            Cursor = cursor
+        });
+
+        return result.IsSuccess
+            ? Results.Ok(result.Value)
+            : ToHttpResult(result);
+    })
+    .WithName("GetWeatherForecastPage");
+
 app.MapPost("/weather-forecasts", async (IGenericRepository<WeatherForecast> genericRepository, WeatherForecast weatherForecast) =>
     {
         var result = await genericRepository.StoreAsync(weatherForecast);
-
-        if (result.IsSuccess)
-        {
-            return Results.Ok(result.ValueOrDefault);
-        }
-
-        return Results.BadRequest(result.Errors);
+        return result.IsSuccess
+            ? Results.Ok(result.Value)
+            : ToHttpResult(result);
     })
     .WithName("CreateWeatherForecast");
+
+app.MapPut("/weather-forecasts/{id:guid}", async (
+        Guid id,
+        IGenericRepository<WeatherForecast> genericRepository,
+        WeatherForecast weatherForecast) =>
+    {
+        weatherForecast.Id = id;
+        var result = await genericRepository.ReplaceAsync(weatherForecast);
+        return result.IsSuccess
+            ? Results.Ok(result.Value)
+            : ToHttpResult(result);
+    })
+    .WithName("ReplaceWeatherForecast");
+
+app.MapDelete("/weather-forecasts/{id:guid}", async (
+        Guid id,
+        long? eTag,
+        IGenericRepository<WeatherForecast> genericRepository) =>
+    {
+        var result = eTag is { } token
+            ? await genericRepository.DeleteAsync(id, token)
+            : await genericRepository.DeleteAsync(x => x.Id == id);
+
+        return result.IsSuccess
+            ? Results.NoContent()
+            : ToHttpResult(result);
+    })
+    .WithName("DeleteWeatherForecast");
 
 app.MapGet("/notes", async (IGenericRepository<Note> notes) =>
     {
         var result = await notes.GetListAsync();
-        return result.IsSuccess ? Results.Ok(result.ValueOrDefault) : Results.BadRequest(result.Errors);
+        return result.IsSuccess
+            ? Results.Ok(result.Value)
+            : ToHttpResult(result);
     })
     .WithName("GetNotes");
 
 app.MapPost("/notes", async (IGenericRepository<Note> notes, Note note) =>
     {
         var result = await notes.StoreAsync(note);
-        return result.IsSuccess ? Results.Ok(result.ValueOrDefault) : Results.BadRequest(result.Errors);
+        return result.IsSuccess
+            ? Results.Ok(result.Value)
+            : ToHttpResult(result);
     })
     .WithName("CreateNote");
 
 app.Run();
+
+static IResult ToHttpResult(ResultBase result)
+{
+    if (result.HasError<DocumentNotFoundError>())
+    {
+        return Results.NotFound(result.Errors);
+    }
+
+    if (result.HasError<ConcurrencyConflictError>() || result.HasError<DuplicateKeyError>())
+    {
+        return Results.Conflict(result.Errors);
+    }
+
+    if (result.HasError<TransientWriteError>())
+    {
+        return Results.Json(result.Errors, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+
+    return Results.BadRequest(result.Errors);
+}
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
     : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument

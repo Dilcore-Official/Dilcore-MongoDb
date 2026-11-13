@@ -53,6 +53,23 @@ Unkeyed `IGenericRepository<T>` is registered only when a type has a single bind
 
 Unordered writes that partially fail return `BulkWritePartialFailureError` with `Items` (`BulkWriteItemResult`: index, succeeded, errorMessage).
 
+```csharp
+var result = await bulk.BulkStoreAsync(orders, new MongoBulkWriteOptions
+{
+    IsOrdered = false,
+    MaxOperationsPerBatch = 500
+});
+
+if (result.HasError<BulkWritePartialFailureError>(out var partials))
+{
+    var failed = partials
+        .SelectMany(error => error.Items)
+        .Where(item => !item.Succeeded)
+        .Select(item => (item.Index, item.ErrorMessage));
+    // report failed input indices; committed items keep staged policy values
+}
+```
+
 ## Projection repository
 
 `IGenericProjectionRepository<TDocument>`: `GetAsync<TProjection>` and `GetListAsync<TProjection>` with a `FilterDefinition` plus `Expression<Func<TDocument, TProjection>>`, or list with projection only.
