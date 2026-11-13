@@ -86,14 +86,13 @@ internal class GenericMongoDbBulkRepository<TDocument> : BaseMongoDbRepository<T
                 {
                     if (Budget is not null)
                     {
-                        foreach (var model in batch)
+                        var failedReservation = batch
+                            .Select(model => Budget.Reserve(EstimateBytes(model)))
+                            .FirstOrDefault(reservation => reservation.IsFailed);
+                        if (failedReservation is not null)
                         {
-                            var reservation = Budget.Reserve(EstimateBytes(model));
-                            if (reservation.IsFailed)
-                            {
-                                RestoreUncommitted(snapshots, processed, entityList.Count);
-                                return Result.Fail<IReadOnlyList<TDocument>>(reservation.Errors);
-                            }
+                            RestoreUncommitted(snapshots, processed, entityList.Count);
+                            return Result.Fail<IReadOnlyList<TDocument>>(failedReservation.Errors);
                         }
                     }
 
