@@ -61,7 +61,8 @@ public sealed class BsonJsonConverter : IBsonJsonConverter
         {
             return Result.Ok(value.ToJson(new JsonWriterSettings { OutputMode = mode }));
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is FormatException or BsonSerializationException or BsonException
+                                              or InvalidOperationException or ArgumentException)
         {
             return Result.Fail(new Error(exception.Message));
         }

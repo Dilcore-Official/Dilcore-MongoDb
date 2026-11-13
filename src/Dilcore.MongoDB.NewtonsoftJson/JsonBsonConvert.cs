@@ -66,7 +66,8 @@ public static class JsonBsonConvert
             };
             return Result.Ok(JToken.Load(reader));
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is JsonException or FormatException or BsonException
+                                              or InvalidOperationException or ArgumentException)
         {
             return Result.Fail(new Error(exception.Message));
         }
