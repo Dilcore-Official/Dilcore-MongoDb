@@ -45,8 +45,8 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
     public Task<Result<TDocument>> StoreAsync(TDocument entity, CancellationToken cancellationToken = default)
         => ExecuteAsync(
             (collection, ct) => StoreEntityAsync(entity, collection, ct),
-            cancellationToken,
-            Estimate(entity));
+            Estimate(entity),
+            cancellationToken);
 
     public Task<Result<TDocument>> ReplaceAsync(TDocument entity, CancellationToken cancellationToken = default)
         => ExecuteAsync((collection, ct) =>
@@ -59,7 +59,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             }
 
             return ReplaceWithoutConcurrencyAsync(entity, collection, replaceEntireDocument: true, ct);
-        }, cancellationToken, Estimate(entity));
+        }, Estimate(entity), cancellationToken);
 
     public Task<Result<TDocument>> UpdateSnapshotAsync(TDocument entity, CancellationToken cancellationToken = default)
         => ExecuteAsync((collection, ct) =>
@@ -75,7 +75,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             return IdAccessor.IsEmpty(entity)
                 ? CreateAsync(entity, collection, ct)
                 : ReplaceWithoutConcurrencyAsync(entity, collection, replaceEntireDocument: false, ct);
-        }, cancellationToken, Estimate(entity));
+        }, Estimate(entity), cancellationToken);
 
     public Task<Result<TDocument>> PatchAsync(
         FilterDefinition<TDocument> filter,
@@ -110,7 +110,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             }
 
             return Result.Ok(updated);
-        }, cancellationToken);
+        }, cancellationToken: cancellationToken);
 
     public Task<Result<TDocument>> GetAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
         => ExecuteAsync(async (collection, token) =>
@@ -121,7 +121,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             return entity is null
                 ? Result.Fail<TDocument>(new DocumentNotFoundError())
                 : Result.Ok(entity);
-        }, cancellationToken);
+        }, cancellationToken: cancellationToken);
 
     public Task<Result<TDerived>> GetAsync<TDerived>(FilterDefinition<TDerived> filter, CancellationToken cancellationToken = default)
         where TDerived : class, TDocument
@@ -136,7 +136,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             return entity is null
                 ? Result.Fail<TDerived>(new DocumentNotFoundError())
                 : Result.Ok(entity);
-        }, cancellationToken);
+        }, cancellationToken: cancellationToken);
 
     public Task<Result<IReadOnlyList<TDocument>>> GetListAsync(CancellationToken cancellationToken = default) =>
         GetListAsync(ApplyNotDeleteFilter(), options: null, cancellationToken);
@@ -159,7 +159,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                     collection, _callContext.Session, filter, options, token);
             var entities = await cursor.ToListAsync(token);
             return Result.Ok<IReadOnlyList<TDocument>>(entities);
-        }, cancellationToken);
+        }, cancellationToken: cancellationToken);
 
     public Task<Result<IReadOnlyList<TDerived>>> GetListAsync<TDerived>(
         FilterDefinition<TDerived> filter,
@@ -173,7 +173,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                 : collection.OfType<TDerived>().Find(_callContext.Session, filter);
             var entities = await query.ToListAsync(token);
             return Result.Ok<IReadOnlyList<TDerived>>(entities);
-        }, cancellationToken);
+        }, cancellationToken: cancellationToken);
 
     public Task<Result<KeysetPage<TDocument>>> GetPageAsync(
         KeysetPageRequest<TDocument> request,
@@ -252,7 +252,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                 NextCursor = nextCursor,
                 HasMore = hasMore
             });
-        }, cancellationToken);
+        }, cancellationToken: cancellationToken);
 
     public async IAsyncEnumerable<TDocument> GetAsyncEnumerable(
         FilterDefinition<TDocument> filter,
@@ -262,7 +262,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         if (collectionResult.IsFailed)
         {
             throw new CollectionResolutionException(
-                $"Failed to get collection: {collectionResult.Errors.FirstOrDefault()?.Message}");
+                $"Failed to get collection: {(collectionResult.Errors.Count > 0 ? collectionResult.Errors[0].Message : null)}");
         }
 
         var collection = collectionResult.Value;
@@ -288,7 +288,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         if (collectionResult.IsFailed)
         {
             throw new CollectionResolutionException(
-                $"Failed to get collection: {collectionResult.Errors.FirstOrDefault()?.Message}");
+                $"Failed to get collection: {(collectionResult.Errors.Count > 0 ? collectionResult.Errors[0].Message : null)}");
         }
 
         var collection = collectionResult.Value;
@@ -320,7 +320,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
 
             filter = ApplyNotDeleteFilter(filter);
             return SoftDeleteOneAsync(collection, filter, token);
-        }, cancellationToken);
+        }, cancellationToken: cancellationToken);
 
     public Task<Result<bool>> RestoreAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
         => ExecuteAsync(async (collection, token) =>
@@ -349,7 +349,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             return result.MatchedCount == 1
                 ? Result.Ok(true)
                 : Result.Fail<bool>(new DocumentNotFoundError());
-        }, cancellationToken);
+        }, cancellationToken: cancellationToken);
 
     public Task<Result<long>> PurgeAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
         => ExecuteAsync(async (collection, token) =>
@@ -357,7 +357,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             var result = await MongoCollectionCalls.DeleteManyAsync(
                 collection, _callContext.Session, filter, token);
             return Result.Ok(result.DeletedCount);
-        }, cancellationToken);
+        }, cancellationToken: cancellationToken);
 
     public Task<Result<bool>> HasAnyAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
         => ExecuteAsync(async (collection, token) =>
@@ -367,7 +367,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
                 .Limit(1)
                 .AnyAsync(cancellationToken: token);
             return Result.Ok(any);
-        }, cancellationToken);
+        }, cancellationToken: cancellationToken);
 
     public Task<Result<long>> CountAsync(FilterDefinition<TDocument> filter, CancellationToken cancellationToken = default)
         => ExecuteAsync(async (collection, token) =>
@@ -376,7 +376,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             var count = await MongoCollectionCalls.CountDocumentsAsync(
                 collection, _callContext.Session, filter, options: null, token);
             return Result.Ok(count);
-        }, cancellationToken);
+        }, cancellationToken: cancellationToken);
 
     private Task<Result<TDocument>> StoreEntityAsync(
         TDocument entity,
@@ -406,7 +406,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
     private async Task<Result<TDocument>> CreateAsync(
         TDocument entity,
         IMongoCollection<TDocument> collection,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         var stagedId = false;
         if (IdAccessor.IsEmpty(entity))
@@ -465,7 +465,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         long currentEtag,
         IMongoCollection<TDocument> collection,
         bool replaceEntireDocument,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         var previousUpdated = IsAuditable ? ((IAuditableDocument)entity).UpdatedAt : default;
         var previousEtag = currentEtag;
@@ -522,7 +522,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
     private async Task<Result<TDocument>> StoreAssignedIdWithoutConcurrencyAsync(
         TDocument entity,
         IMongoCollection<TDocument> collection,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         var update = await ReplaceWithoutConcurrencyAsync(
             entity, collection, replaceEntireDocument: false, cancellationToken);
@@ -537,7 +537,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
     private async Task<Result<TDocument>> UnmatchedWriteErrorAsync(
         TDocument entity,
         IMongoCollection<TDocument> collection,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         var exists = await MongoCollectionCalls.Find(
                 collection,
@@ -554,7 +554,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         TDocument entity,
         IMongoCollection<TDocument> collection,
         bool replaceEntireDocument,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         var previousUpdated = IsAuditable ? ((IAuditableDocument)entity).UpdatedAt : default;
         if (IsAuditable)

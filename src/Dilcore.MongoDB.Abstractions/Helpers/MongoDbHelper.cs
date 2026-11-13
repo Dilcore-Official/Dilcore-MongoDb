@@ -2,6 +2,9 @@ using System.Security.Cryptography;
 
 namespace Dilcore.MongoDB.Abstractions.Helpers;
 
+/// <summary>
+/// Small helpers shared by repositories and document extension methods.
+/// </summary>
 public static class MongoDbHelper
 {
     /// <summary>

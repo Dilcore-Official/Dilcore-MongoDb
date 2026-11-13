@@ -1,6 +1,5 @@
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Keys;
-using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Provisioning;
 using Dilcore.MongoDB.Extensions;
 using FluentResults;
@@ -527,7 +526,7 @@ public class ProvisioningRunnerTests : BaseIntegrationTests
         public Task<Result<ProvisioningStepResult>> ExecuteAsync(
             IMongoDatabaseResolver databaseResolver,
             bool apply,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Result.Ok(new ProvisioningStepResult
             {
@@ -544,7 +543,7 @@ public class ProvisioningRunnerTests : BaseIntegrationTests
         public Task<Result<ProvisioningStepResult>> ExecuteAsync(
             IMongoDatabaseResolver databaseResolver,
             bool apply,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Result.Fail<ProvisioningStepResult>("boom"));
         }

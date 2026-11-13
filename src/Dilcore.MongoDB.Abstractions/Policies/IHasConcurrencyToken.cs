@@ -5,5 +5,8 @@ namespace Dilcore.MongoDB.Abstractions.Policies;
 /// </summary>
 public interface IHasConcurrencyToken
 {
+    /// <summary>
+    /// Monotonic concurrency token; <see cref="Constants.EmptyETag"/> means not yet persisted.
+    /// </summary>
     long ETag { get; set; }
 }

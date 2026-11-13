@@ -4,6 +4,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Dilcore.MongoDB.SystemTextJson;
 
+/// <summary>
+/// Optional DI registration for System.Text.Json document store facades.
+/// </summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>

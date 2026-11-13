@@ -9,8 +9,20 @@ using Newtonsoft.Json.Linq;
 
 namespace Dilcore.MongoDB.NewtonsoftJson;
 
+/// <summary>
+/// Converts between Newtonsoft.Json tokens and BSON values.
+/// </summary>
 public static class JsonBsonConvert
 {
+    /// <summary>
+    /// Maps a <see cref="JToken"/> tree to BSON using structural rules and optional Extended JSON handling.
+    /// </summary>
+    /// <param name="token">The token to convert.</param>
+    /// <param name="converter">Shared converter for Extended JSON fragments and number policy.</param>
+    /// <param name="options">Optional conversion rules; when null, defaults apply.</param>
+    /// <param name="serializerSettings">When set, non-<see cref="TypeNameHandling.None"/> <see cref="JsonSerializerSettings.TypeNameHandling"/> fails the result.</param>
+    /// <returns>A converted <see cref="BsonValue"/>, or a conversion error.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="token"/> or <paramref name="converter"/> is null.</exception>
     public static Result<BsonValue> ToBson(
         this JToken token,
         IBsonJsonConverter converter,
@@ -55,6 +67,15 @@ public static class JsonBsonConvert
         }
     }
 
+    /// <summary>
+    /// Maps a <see cref="JObject"/> to BSON via <see cref="ToBson(JToken, IBsonJsonConverter, JsonBsonConversionOptions?, JsonSerializerSettings?)"/>.
+    /// </summary>
+    /// <param name="document">The object to convert.</param>
+    /// <param name="converter">Shared converter for Extended JSON fragments and number policy.</param>
+    /// <param name="options">Optional conversion rules.</param>
+    /// <param name="serializerSettings">When set, non-<see cref="TypeNameHandling.None"/> <see cref="JsonSerializerSettings.TypeNameHandling"/> fails the result.</param>
+    /// <returns>A converted <see cref="BsonValue"/>, or a conversion error.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="document"/> or <paramref name="converter"/> is null.</exception>
     public static Result<BsonValue> ToBson(
         this JObject document,
         IBsonJsonConverter converter,
@@ -62,6 +83,14 @@ public static class JsonBsonConvert
         JsonSerializerSettings? serializerSettings = null)
         => ((JToken)document).ToBson(converter, options, serializerSettings);
 
+    /// <summary>
+    /// Serializes a <see cref="BsonValue"/> through <see cref="IBsonJsonConverter"/> and parses the JSON as a <see cref="JToken"/>.
+    /// </summary>
+    /// <param name="value">The BSON value to convert.</param>
+    /// <param name="converter">Converter used to produce JSON text.</param>
+    /// <param name="options">Optional conversion rules.</param>
+    /// <returns>A <see cref="JToken"/> representation, or a conversion error.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> or <paramref name="converter"/> is null.</exception>
     public static Result<JToken> ToJToken(
         this BsonValue value,
         IBsonJsonConverter converter,
@@ -110,6 +139,14 @@ public static class JsonBsonConvert
     private static Result ConversionFailed(Exception exception)
         => Result.Fail(new JsonConversionError(exception.Message));
 
+    /// <summary>
+    /// Converts a <see cref="BsonValue"/> to a <see cref="JObject"/>; fails when the BSON root is not a document.
+    /// </summary>
+    /// <param name="value">The BSON value to convert.</param>
+    /// <param name="converter">Converter used for BSON-to-JSON serialization.</param>
+    /// <param name="options">Optional conversion rules.</param>
+    /// <returns>A <see cref="JObject"/> when the root is a document, or a conversion error.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> or <paramref name="converter"/> is null.</exception>
     public static Result<JObject> ToJObject(
         this BsonValue value,
         IBsonJsonConverter converter,

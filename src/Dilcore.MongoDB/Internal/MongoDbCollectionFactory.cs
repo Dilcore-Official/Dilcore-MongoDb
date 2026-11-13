@@ -128,7 +128,7 @@ internal sealed class MongoDbCollectionFactory(
         string? staticPrefix,
         MongoDocumentBindingKey? bindingKey,
         MongoDatabaseKey? databaseKey,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         return namespaceResolver.ResolveAsync(new NamespaceResolutionRequest
         {
@@ -143,7 +143,7 @@ internal sealed class MongoDbCollectionFactory(
     private static Task<Result<IMongoCollection<TDocument>>> GetTypedCollectionAsync<TDocument>(
         IMongoDatabase database,
         GetCollectionOptions<TDocument> options,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
         where TDocument : IDocumentEntity
     {
         _ = cancellationToken;

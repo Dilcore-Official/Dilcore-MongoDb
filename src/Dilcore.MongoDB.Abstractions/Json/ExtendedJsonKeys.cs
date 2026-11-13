@@ -28,6 +28,12 @@ public static class ExtendedJsonKeys
         "$uuid"
     };
 
+    /// <summary>
+    /// Returns whether <paramref name="propertyName"/> is a recognized Extended JSON type-marker key (for example <c>$oid</c> or <c>$date</c>).
+    /// </summary>
+    /// <param name="propertyName">JSON object property name to test.</param>
+    /// <returns><see langword="true"/> when the name is a known type marker; otherwise <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="propertyName"/> is <see langword="null"/>.</exception>
     public static bool IsTypeMarker(string propertyName)
     {
         ArgumentNullException.ThrowIfNull(propertyName);

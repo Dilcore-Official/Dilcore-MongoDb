@@ -10,8 +10,18 @@ using MongoDB.Bson.Serialization;
 
 namespace Dilcore.MongoDB.Json;
 
+/// <summary>
+/// Default <see cref="IBsonJsonConverter"/> that parses UTF-8 JSON into <see cref="BsonValue"/> and serializes BSON to Extended JSON.
+/// </summary>
 public sealed class BsonJsonConverter : IBsonJsonConverter
 {
+    /// <summary>
+    /// Parses a JSON string into BSON, honoring depth, size, number, and Extended JSON options.
+    /// </summary>
+    /// <param name="json">The JSON text to parse.</param>
+    /// <param name="options">Optional conversion limits and behavior; defaults apply when <see langword="null"/>.</param>
+    /// <returns>A successful <see cref="BsonValue"/> or a failure with conversion or size errors.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is <see langword="null"/>.</exception>
     public Result<BsonValue> Parse(string json, JsonBsonConversionOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(json);
@@ -64,6 +74,13 @@ public sealed class BsonJsonConverter : IBsonJsonConverter
         }
     }
 
+    /// <summary>
+    /// Serializes a <see cref="BsonValue"/> to Extended JSON using canonical or relaxed output mode.
+    /// </summary>
+    /// <param name="value">The BSON value to serialize.</param>
+    /// <param name="options">Optional output mode; defaults apply when <see langword="null"/>.</param>
+    /// <returns>A JSON string on success, or a failure with conversion errors.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <see langword="null"/>.</exception>
     public Result<string> ToJson(BsonValue value, JsonBsonConversionOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(value);

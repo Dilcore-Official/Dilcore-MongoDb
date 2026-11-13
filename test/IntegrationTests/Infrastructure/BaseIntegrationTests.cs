@@ -1,5 +1,4 @@
-﻿using Dilcore.MongoDB.TestSupport;
-using Testcontainers.MongoDb;
+﻿using Testcontainers.MongoDb;
 
 namespace Dilcore.MongoDB.IntegrationTests.Infrastructure;
 

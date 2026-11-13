@@ -4,7 +4,6 @@ using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Json;
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Abstractions.Options;
-using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Provisioning;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Abstractions.Results;
@@ -271,28 +270,4 @@ static IResult ToHttpResult(ResultBase result)
     }
 
     return Results.BadRequest(result.Errors);
-}
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-    : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
-{
-    public Guid Id { get; set; }
-    public long ETag { get; set; }
-    public bool IsDeleted { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
-
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
-
-/// <summary>Minimal document with text and priority. Priority is stored as BSON Int32 via ConfigureConventions.</summary>
-record Note(string Text, NotePriority Priority) : IDocumentEntity<Guid>
-{
-    public Guid Id { get; set; }
-}
-
-enum NotePriority
-{
-    Low = 0,
-    High = 1
 }

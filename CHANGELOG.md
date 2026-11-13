@@ -8,6 +8,23 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
 
 ## [Unreleased]
 
+### Added
+
+- Build quality gates: `global.json` (SDK 10.0 feature band), package lock files,
+  public API analyzer baselines, XML documentation on the public surface, and
+  Release warnings-as-errors. CI restores with `--locked-mode`, verifies
+  `dotnet format`, and builds with `-warnaserror`.
+- Strict DI lifetime tests for `AddMongoDb` registrations and the optional JSON store factories.
+
+### Changed
+
+- `IProvisioningStep.ExecuteAsync` takes `CancellationToken cancellationToken = default`.
+- Protected `BaseMongoDbRepository.ExecuteAsync` overloads take `estimatedBytes` before
+  `CancellationToken`, so the token is the last parameter. Positional callers must swap those arguments.
+  C# sources do not end with a trailing newline.
+- Unused `using` directives fail the build (`IDE0005`). Samples no longer reference
+  `Microsoft.AspNetCore.OpenApi`; Swashbuckle is the sample OpenAPI host.
+
 ### Fixed
 
 - Transaction budgets reserve rendered BSON size for document and bulk writes, reject negative

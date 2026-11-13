@@ -1,4 +1,3 @@
-using Dilcore.MongoDB.Abstractions.Internal;
 using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Abstractions.Transactions;
 using FluentResults;

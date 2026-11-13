@@ -1,31 +1,239 @@
 #nullable enable
-class Dilcore.MongoDB.Abstractions.Exceptions.CollectionResolutionException
-static class Dilcore.MongoDB.Abstractions.Json.ExtendedJsonKeys
-interface Dilcore.MongoDB.Abstractions.Json.IBsonJsonConverter
-interface Dilcore.MongoDB.Abstractions.Json.IJsonDocumentStore
-interface Dilcore.MongoDB.Abstractions.Json.IJsonDocumentStoreFactory
-class Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions
-enum Dilcore.MongoDB.Abstractions.Json.JsonBsonOutputMode
-enum Dilcore.MongoDB.Abstractions.Json.OrdinaryJsonNumberMode
-class Dilcore.MongoDB.Abstractions.Options.KeysetPageRequest`1
-class Dilcore.MongoDB.Abstractions.Options.KeysetPage`1
-class Dilcore.MongoDB.Abstractions.Options.MongoBulkWriteOptions
-interface Dilcore.MongoDB.Abstractions.Provisioning.IMongoDbProvisioner
-interface Dilcore.MongoDB.Abstractions.Provisioning.IProvisioningStep
-class Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningReport
-class Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningStepResult
-class Dilcore.MongoDB.Abstractions.Results.BulkWriteItemResult
-class Dilcore.MongoDB.Abstractions.Results.BulkWritePartialFailureError
-class Dilcore.MongoDB.Abstractions.Results.ConcurrencyConflictError
-class Dilcore.MongoDB.Abstractions.Results.CrossClusterOperationError
-class Dilcore.MongoDB.Abstractions.Results.DocumentNotFoundError
-class Dilcore.MongoDB.Abstractions.Results.DocumentTooLargeError
-class Dilcore.MongoDB.Abstractions.Results.DuplicateKeyError
-class Dilcore.MongoDB.Abstractions.Results.JsonConversionError
-class Dilcore.MongoDB.Abstractions.Results.MongoOperationError
-class Dilcore.MongoDB.Abstractions.Results.TransientWriteError
-class Dilcore.MongoDB.Abstractions.Results.TransactionBudgetExceededError
-class Dilcore.MongoDB.Abstractions.Results.WriteConcernFailureError
-interface Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionContext
-interface Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionRunner
-class Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions
+Dilcore.MongoDB.Abstractions.Exceptions.CollectionResolutionException
+Dilcore.MongoDB.Abstractions.Exceptions.CollectionResolutionException.CollectionResolutionException(string! message) -> void
+Dilcore.MongoDB.Abstractions.IDocumentEntity<TId>
+Dilcore.MongoDB.Abstractions.IDocumentEntity<TId>.Id.get -> TId
+Dilcore.MongoDB.Abstractions.IDocumentEntity<TId>.Id.set -> void
+Dilcore.MongoDB.Abstractions.Json.ExtendedJsonKeys
+Dilcore.MongoDB.Abstractions.Json.IBsonJsonConverter
+Dilcore.MongoDB.Abstractions.Json.IBsonJsonConverter.Parse(string! json, Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions? options = null) -> FluentResults.Result<MongoDB.Bson.BsonValue!>!
+Dilcore.MongoDB.Abstractions.Json.IBsonJsonConverter.ToJson(MongoDB.Bson.BsonValue! value, Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions? options = null) -> FluentResults.Result<string!>!
+Dilcore.MongoDB.Abstractions.Json.IJsonDocumentStore
+Dilcore.MongoDB.Abstractions.Json.IJsonDocumentStore.Converter.get -> Dilcore.MongoDB.Abstractions.Json.IBsonJsonConverter!
+Dilcore.MongoDB.Abstractions.Json.IJsonDocumentStore.GetByIdAsync(string! logicalCollectionName, MongoDB.Bson.BsonValue! id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<MongoDB.Bson.BsonDocument!>!>!
+Dilcore.MongoDB.Abstractions.Json.IJsonDocumentStore.InsertAsync(string! logicalCollectionName, MongoDB.Bson.BsonDocument! document, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<MongoDB.Bson.BsonDocument!>!>!
+Dilcore.MongoDB.Abstractions.Json.IJsonDocumentStore.InsertAsync(string! logicalCollectionName, string! json, Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<MongoDB.Bson.BsonDocument!>!>!
+Dilcore.MongoDB.Abstractions.Json.IJsonDocumentStoreFactory
+Dilcore.MongoDB.Abstractions.Json.IJsonDocumentStoreFactory.Create(Dilcore.MongoDB.Abstractions.Keys.MongoDatabaseKey databaseKey, string? staticPrefix = null) -> Dilcore.MongoDB.Abstractions.Json.IJsonDocumentStore!
+Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions
+Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions.AllowDuplicateNames.get -> bool
+Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions.AllowDuplicateNames.init -> void
+Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions.InterpretExtendedJson.get -> bool
+Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions.InterpretExtendedJson.init -> void
+Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions.JsonBsonConversionOptions() -> void
+Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions.MaxDepth.get -> int
+Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions.MaxDepth.init -> void
+Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions.MaxUtf8Bytes.get -> int
+Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions.MaxUtf8Bytes.init -> void
+Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions.NumberMode.get -> Dilcore.MongoDB.Abstractions.Json.OrdinaryJsonNumberMode
+Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions.NumberMode.init -> void
+Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions.OutputMode.get -> Dilcore.MongoDB.Abstractions.Json.JsonBsonOutputMode
+Dilcore.MongoDB.Abstractions.Json.JsonBsonConversionOptions.OutputMode.init -> void
+Dilcore.MongoDB.Abstractions.Json.JsonBsonOutputMode
+Dilcore.MongoDB.Abstractions.Json.JsonBsonOutputMode.CanonicalExtendedJson = 0 -> Dilcore.MongoDB.Abstractions.Json.JsonBsonOutputMode
+Dilcore.MongoDB.Abstractions.Json.JsonBsonOutputMode.RelaxedExtendedJson = 1 -> Dilcore.MongoDB.Abstractions.Json.JsonBsonOutputMode
+Dilcore.MongoDB.Abstractions.Json.OrdinaryJsonNumberMode
+Dilcore.MongoDB.Abstractions.Json.OrdinaryJsonNumberMode.AlwaysDouble = 2 -> Dilcore.MongoDB.Abstractions.Json.OrdinaryJsonNumberMode
+Dilcore.MongoDB.Abstractions.Json.OrdinaryJsonNumberMode.PreferInt32ThenInt64ThenDecimal128 = 1 -> Dilcore.MongoDB.Abstractions.Json.OrdinaryJsonNumberMode
+Dilcore.MongoDB.Abstractions.Json.OrdinaryJsonNumberMode.PreferInt32ThenInt64ThenDouble = 0 -> Dilcore.MongoDB.Abstractions.Json.OrdinaryJsonNumberMode
+Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>
+Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>.CollectionItemsTimeToLive.get -> System.TimeSpan?
+Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>.CollectionName.get -> string?
+Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>.GetCollectionOptions() -> void
+Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>.GuidIdGenerationStrategy.get -> Dilcore.MongoDB.Abstractions.GuidIdGenerationStrategy
+Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>.Indices.get -> System.Collections.Generic.IReadOnlyList<MongoDB.Driver.CreateIndexModel<TDocument>!>?
+Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>.SoftDeleteDisabled.get -> bool
+Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>.SoftDeleteEnabled.get -> bool
+Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>.TimeToLeavePropertySelector.get -> System.Linq.Expressions.Expression<System.Func<TDocument, object!>!>?
+Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>.WithCollectionItemsTimeToLive(System.TimeSpan timeToLive, System.Linq.Expressions.Expression<System.Func<TDocument, object!>!>! propertySelector) -> Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>!
+Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>.WithCollectionName(string! collectionName) -> Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>!
+Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>.WithGuidIdGeneration(Dilcore.MongoDB.Abstractions.GuidIdGenerationStrategy strategy) -> Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>!
+Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>.WithIndexes(System.Collections.Generic.IReadOnlyList<MongoDB.Driver.CreateIndexModel<TDocument>!>! indexes) -> Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>!
+Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>.WithIndexes(params MongoDB.Driver.CreateIndexModel<TDocument>![]! indexes) -> Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>!
+Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>.WithSoftDelete() -> Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument>!
+Dilcore.MongoDB.Abstractions.Options.KeysetPage<TDocument>
+Dilcore.MongoDB.Abstractions.Options.KeysetPage<TDocument>.HasMore.get -> bool
+Dilcore.MongoDB.Abstractions.Options.KeysetPage<TDocument>.HasMore.init -> void
+Dilcore.MongoDB.Abstractions.Options.KeysetPage<TDocument>.Items.get -> System.Collections.Generic.IReadOnlyList<TDocument>!
+Dilcore.MongoDB.Abstractions.Options.KeysetPage<TDocument>.Items.init -> void
+Dilcore.MongoDB.Abstractions.Options.KeysetPage<TDocument>.KeysetPage() -> void
+Dilcore.MongoDB.Abstractions.Options.KeysetPage<TDocument>.NextCursor.get -> string?
+Dilcore.MongoDB.Abstractions.Options.KeysetPage<TDocument>.NextCursor.init -> void
+Dilcore.MongoDB.Abstractions.Options.KeysetPageRequest<TDocument>
+Dilcore.MongoDB.Abstractions.Options.KeysetPageRequest<TDocument>.Cursor.get -> string?
+Dilcore.MongoDB.Abstractions.Options.KeysetPageRequest<TDocument>.Cursor.init -> void
+Dilcore.MongoDB.Abstractions.Options.KeysetPageRequest<TDocument>.Filter.get -> MongoDB.Driver.FilterDefinition<TDocument>!
+Dilcore.MongoDB.Abstractions.Options.KeysetPageRequest<TDocument>.Filter.init -> void
+Dilcore.MongoDB.Abstractions.Options.KeysetPageRequest<TDocument>.KeysetPageRequest() -> void
+Dilcore.MongoDB.Abstractions.Options.KeysetPageRequest<TDocument>.PageSize.get -> int
+Dilcore.MongoDB.Abstractions.Options.KeysetPageRequest<TDocument>.PageSize.init -> void
+Dilcore.MongoDB.Abstractions.Options.KeysetPageRequest<TDocument>.Projection.get -> MongoDB.Driver.ProjectionDefinition<TDocument>?
+Dilcore.MongoDB.Abstractions.Options.KeysetPageRequest<TDocument>.Projection.init -> void
+Dilcore.MongoDB.Abstractions.Options.KeysetPageRequest<TDocument>.Sort.get -> MongoDB.Driver.SortDefinition<TDocument>!
+Dilcore.MongoDB.Abstractions.Options.KeysetPageRequest<TDocument>.Sort.init -> void
+Dilcore.MongoDB.Abstractions.Options.MongoBulkWriteOptions
+Dilcore.MongoDB.Abstractions.Options.MongoBulkWriteOptions.IsOrdered.get -> bool
+Dilcore.MongoDB.Abstractions.Options.MongoBulkWriteOptions.IsOrdered.init -> void
+Dilcore.MongoDB.Abstractions.Options.MongoBulkWriteOptions.MaxOperationsPerBatch.get -> int?
+Dilcore.MongoDB.Abstractions.Options.MongoBulkWriteOptions.MaxOperationsPerBatch.init -> void
+Dilcore.MongoDB.Abstractions.Options.MongoBulkWriteOptions.MongoBulkWriteOptions() -> void
+Dilcore.MongoDB.Abstractions.Provisioning.IMongoDbProvisioner
+Dilcore.MongoDB.Abstractions.Provisioning.IMongoDbProvisioner.ApplyAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningReport!>!>!
+Dilcore.MongoDB.Abstractions.Provisioning.IMongoDbProvisioner.DryRunAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningReport!>!>!
+Dilcore.MongoDB.Abstractions.Provisioning.IProvisioningStep
+Dilcore.MongoDB.Abstractions.Provisioning.IProvisioningStep.ExecuteAsync(Dilcore.MongoDB.Abstractions.IMongoDatabaseResolver! databaseResolver, bool apply, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningStepResult!>!>!
+Dilcore.MongoDB.Abstractions.Provisioning.IProvisioningStep.Name.get -> string!
+Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningReport
+Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningReport.Applied.get -> bool
+Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningReport.Applied.init -> void
+Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningReport.ProvisioningReport() -> void
+Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningReport.Steps.get -> System.Collections.Generic.IReadOnlyList<Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningStepResult!>!
+Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningReport.Steps.init -> void
+Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningStepResult
+Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningStepResult.Action.get -> string!
+Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningStepResult.Action.init -> void
+Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningStepResult.Details.get -> string?
+Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningStepResult.Details.init -> void
+Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningStepResult.Name.get -> string!
+Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningStepResult.Name.init -> void
+Dilcore.MongoDB.Abstractions.Provisioning.ProvisioningStepResult.ProvisioningStepResult() -> void
+Dilcore.MongoDB.Abstractions.Repositories.BaseMongoDbRepository<TDocument>
+Dilcore.MongoDB.Abstractions.Repositories.BaseMongoDbRepository<TDocument>.ApplyNotDeleteFilter() -> MongoDB.Driver.FilterDefinition<TDocument!>!
+Dilcore.MongoDB.Abstractions.Repositories.BaseMongoDbRepository<TDocument>.ApplyNotDeleteFilter(MongoDB.Driver.FilterDefinition<TDocument!>! filter) -> MongoDB.Driver.FilterDefinition<TDocument!>!
+Dilcore.MongoDB.Abstractions.Repositories.BaseMongoDbRepository<TDocument>.ApplyNotDeleteFilter<TDerived>(MongoDB.Driver.FilterDefinition<TDerived!>! filter) -> MongoDB.Driver.FilterDefinition<TDerived!>!
+Dilcore.MongoDB.Abstractions.Repositories.BaseMongoDbRepository<TDocument>.BaseMongoDbRepository(System.Action<Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument!>!>! optionsAction, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<FluentResults.Result<MongoDB.Driver.IMongoCollection<TDocument!>!>!>!>! collectionProvider) -> void
+Dilcore.MongoDB.Abstractions.Repositories.BaseMongoDbRepository<TDocument>.ExecuteAsync(System.Func<MongoDB.Driver.IMongoCollection<TDocument!>!, System.Threading.CancellationToken, System.Threading.Tasks.Task<FluentResults.Result!>!>! func, int? estimatedBytes = 256, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result!>!
+Dilcore.MongoDB.Abstractions.Repositories.BaseMongoDbRepository<TDocument>.ExecuteAsync(System.Func<MongoDB.Driver.IMongoCollection<TDocument!>!, System.Threading.CancellationToken, System.Threading.Tasks.Task<FluentResults.Result<System.Collections.Generic.IReadOnlyList<TDocument!>!>!>!>! func, int? estimatedBytes = 256, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<System.Collections.Generic.IReadOnlyList<TDocument!>!>!>!
+Dilcore.MongoDB.Abstractions.Repositories.BaseMongoDbRepository<TDocument>.ExecuteAsync(System.Func<MongoDB.Driver.IMongoCollection<TDocument!>!, System.Threading.CancellationToken, System.Threading.Tasks.Task<FluentResults.Result<TDocument!>!>!>! func, int? estimatedBytes = 256, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<TDocument!>!>!
+Dilcore.MongoDB.Abstractions.Repositories.BaseMongoDbRepository<TDocument>.ExecuteAsync<TResult>(System.Func<MongoDB.Driver.IMongoCollection<TDocument!>!, System.Threading.CancellationToken, System.Threading.Tasks.Task<FluentResults.Result<TResult>!>!>! func, int? estimatedBytes = 256, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<TResult>!>!
+Dilcore.MongoDB.Abstractions.Repositories.BaseMongoDbRepository<TDocument>.GetCollectionAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<MongoDB.Driver.IMongoCollection<TDocument!>!>!>!
+Dilcore.MongoDB.Abstractions.Repositories.BaseMongoDbRepository<TDocument>.GetOptions() -> Dilcore.MongoDB.Abstractions.Options.GetCollectionOptions<TDocument!>!
+Dilcore.MongoDB.Abstractions.Repositories.BaseMongoDbRepository<TDocument>.Session.get -> MongoDB.Driver.IClientSessionHandle?
+Dilcore.MongoDB.Abstractions.Repositories.BaseMongoDbRepository<TDocument>.Session.init -> void
+Dilcore.MongoDB.Abstractions.Repositories.IGenericBulkRepository<TDocument>
+Dilcore.MongoDB.Abstractions.Repositories.IGenericBulkRepository<TDocument>.BulkDeleteAsync(System.Linq.Expressions.Expression<System.Func<TDocument, bool>!>! expression, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericBulkRepository<TDocument>.BulkStoreAsync(TDocument[]! entities, Dilcore.MongoDB.Abstractions.Options.MongoBulkWriteOptions! options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<System.Collections.Generic.IReadOnlyList<TDocument>!>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericBulkRepository<TDocument>.BulkStoreAsync(TDocument[]! entities, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<System.Collections.Generic.IReadOnlyList<TDocument>!>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericBulkRepository<TDocument>.BulkStoreRangeAsync(System.Collections.Generic.IEnumerable<TDocument>! entities, Dilcore.MongoDB.Abstractions.Options.MongoBulkWriteOptions! options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<System.Collections.Generic.IReadOnlyList<TDocument>!>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericBulkRepository<TDocument>.BulkStoreRangeAsync(System.Collections.Generic.IEnumerable<TDocument>! entities, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<System.Collections.Generic.IReadOnlyList<TDocument>!>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericProjectionRepository<TDocument>
+Dilcore.MongoDB.Abstractions.Repositories.IGenericProjectionRepository<TDocument>.GetAsync<TProjection>(MongoDB.Driver.FilterDefinition<TDocument>! filter, System.Linq.Expressions.Expression<System.Func<TDocument, TProjection!>!>! projection, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<TProjection!>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericProjectionRepository<TDocument>.GetListAsync<TProjection>(MongoDB.Driver.FilterDefinition<TDocument>! filter, System.Linq.Expressions.Expression<System.Func<TDocument, TProjection!>!>! projection, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<System.Collections.Generic.IReadOnlyList<TProjection!>!>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericProjectionRepository<TDocument>.GetListAsync<TProjection>(System.Linq.Expressions.Expression<System.Func<TDocument, TProjection!>!>! projection, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<System.Collections.Generic.IReadOnlyList<TProjection!>!>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.CountAsync(MongoDB.Driver.FilterDefinition<TDocument>! filter, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<long>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.DeleteAsync(MongoDB.Driver.FilterDefinition<TDocument>! filter, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<bool>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.GetAsync(MongoDB.Driver.FilterDefinition<TDocument>! filter, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<TDocument>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.GetAsync<TDerived>(MongoDB.Driver.FilterDefinition<TDerived!>! filter, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<TDerived!>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.GetAsyncEnumerable(MongoDB.Driver.FilterDefinition<TDocument>! filter, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<TDocument>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.GetAsyncEnumerable<TDerived>(MongoDB.Driver.FilterDefinition<TDerived!>! filter, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<TDerived!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.GetListAsync(MongoDB.Driver.FilterDefinition<TDocument>! filter, MongoDB.Driver.FindOptions<TDocument, TDocument>? options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<System.Collections.Generic.IReadOnlyList<TDocument>!>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.GetListAsync(MongoDB.Driver.FilterDefinition<TDocument>! filter, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<System.Collections.Generic.IReadOnlyList<TDocument>!>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.GetListAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<System.Collections.Generic.IReadOnlyList<TDocument>!>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.GetListAsync<TDerived>(MongoDB.Driver.FilterDefinition<TDerived!>! filter, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<System.Collections.Generic.IReadOnlyList<TDerived!>!>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.GetPageAsync(Dilcore.MongoDB.Abstractions.Options.KeysetPageRequest<TDocument>! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<Dilcore.MongoDB.Abstractions.Options.KeysetPage<TDocument>!>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.HasAnyAsync(MongoDB.Driver.FilterDefinition<TDocument>! filter, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<bool>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.PatchAsync(MongoDB.Driver.FilterDefinition<TDocument>! filter, MongoDB.Driver.UpdateDefinition<TDocument>! update, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<TDocument>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.PurgeAsync(MongoDB.Driver.FilterDefinition<TDocument>! filter, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<long>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.ReplaceAsync(TDocument entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<TDocument>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.RestoreAsync(MongoDB.Driver.FilterDefinition<TDocument>! filter, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<bool>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.StoreAsync(TDocument entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<TDocument>!>!
+Dilcore.MongoDB.Abstractions.Repositories.IGenericRepository<TDocument>.UpdateSnapshotAsync(TDocument entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<TDocument>!>!
+Dilcore.MongoDB.Abstractions.Results.BulkWriteItemResult
+Dilcore.MongoDB.Abstractions.Results.BulkWriteItemResult.BulkWriteItemResult(int index, bool succeeded, string? errorMessage = null) -> void
+Dilcore.MongoDB.Abstractions.Results.BulkWriteItemResult.ErrorMessage.get -> string?
+Dilcore.MongoDB.Abstractions.Results.BulkWriteItemResult.Index.get -> int
+Dilcore.MongoDB.Abstractions.Results.BulkWriteItemResult.Succeeded.get -> bool
+Dilcore.MongoDB.Abstractions.Results.BulkWritePartialFailureError
+Dilcore.MongoDB.Abstractions.Results.BulkWritePartialFailureError.BulkWritePartialFailureError(System.Collections.Generic.IReadOnlyList<Dilcore.MongoDB.Abstractions.Results.BulkWriteItemResult!>! items, string? message = null) -> void
+Dilcore.MongoDB.Abstractions.Results.BulkWritePartialFailureError.Items.get -> System.Collections.Generic.IReadOnlyList<Dilcore.MongoDB.Abstractions.Results.BulkWriteItemResult!>!
+Dilcore.MongoDB.Abstractions.Results.ConcurrencyConflictError
+Dilcore.MongoDB.Abstractions.Results.ConcurrencyConflictError.ConcurrencyConflictError(string? message = null) -> void
+Dilcore.MongoDB.Abstractions.Results.CrossClusterOperationError
+Dilcore.MongoDB.Abstractions.Results.CrossClusterOperationError.CrossClusterOperationError(string? message = null) -> void
+Dilcore.MongoDB.Abstractions.Results.DocumentNotFoundError
+Dilcore.MongoDB.Abstractions.Results.DocumentNotFoundError.DocumentNotFoundError(string? message = null) -> void
+Dilcore.MongoDB.Abstractions.Results.DocumentTooLargeError
+Dilcore.MongoDB.Abstractions.Results.DocumentTooLargeError.DocumentTooLargeError(string? message = null) -> void
+Dilcore.MongoDB.Abstractions.Results.DuplicateKeyError
+Dilcore.MongoDB.Abstractions.Results.DuplicateKeyError.DuplicateKeyError(string? message = null) -> void
+Dilcore.MongoDB.Abstractions.Results.JsonConversionError
+Dilcore.MongoDB.Abstractions.Results.JsonConversionError.JsonConversionError(string? message = null) -> void
+Dilcore.MongoDB.Abstractions.Results.MongoOperationError
+Dilcore.MongoDB.Abstractions.Results.MongoOperationError.MongoOperationError(string! message) -> void
+Dilcore.MongoDB.Abstractions.Results.TransactionBudgetExceededError
+Dilcore.MongoDB.Abstractions.Results.TransactionBudgetExceededError.TransactionBudgetExceededError(string? message = null) -> void
+Dilcore.MongoDB.Abstractions.Results.TransientWriteError
+Dilcore.MongoDB.Abstractions.Results.TransientWriteError.TransientWriteError(string? message = null) -> void
+Dilcore.MongoDB.Abstractions.Results.WriteConcernFailureError
+Dilcore.MongoDB.Abstractions.Results.WriteConcernFailureError.WriteConcernFailureError(string? message = null) -> void
+Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionContext
+Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionContext.ClusterKey.get -> Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey
+Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionContext.Repositories.get -> Dilcore.MongoDB.Abstractions.Repositories.IRepositoryResolver!
+Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionContext.Session.get -> MongoDB.Driver.IClientSessionHandle!
+Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionRunner
+Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionRunner.ExecuteAsync(Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey clusterKey, System.Func<Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionContext!, System.Threading.CancellationToken, System.Threading.Tasks.Task<FluentResults.Result!>!>! callback, Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result!>!
+Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionRunner.ExecuteAsync<TResult>(Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey clusterKey, System.Func<Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionContext!, System.Threading.CancellationToken, System.Threading.Tasks.Task<FluentResults.Result<TResult>!>!>! callback, Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<TResult>!>!
+Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionRunner.WithTransactionAsync(Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey clusterKey, System.Func<Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionContext!, System.Threading.CancellationToken, System.Threading.Tasks.Task<FluentResults.Result!>!>! callback, Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result!>!
+Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionRunner.WithTransactionAsync<TResult>(Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey clusterKey, System.Func<Dilcore.MongoDB.Abstractions.Transactions.IMongoDbTransactionContext!, System.Threading.CancellationToken, System.Threading.Tasks.Task<FluentResults.Result<TResult>!>!>! callback, Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<FluentResults.Result<TResult>!>!
+Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions
+Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions.DriverOptions.get -> MongoDB.Driver.TransactionOptions?
+Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions.DriverOptions.init -> void
+Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions.MaxEstimatedBytes.get -> int
+Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions.MaxEstimatedBytes.init -> void
+Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions.MaxOperations.get -> int
+Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions.MaxOperations.init -> void
+Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions.MongoTransactionOptions() -> void
+Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions.TimeLimit.get -> System.TimeSpan
+Dilcore.MongoDB.Abstractions.Transactions.MongoTransactionOptions.TimeLimit.init -> void
+abstract Dilcore.MongoDB.Abstractions.Results.MongoOperationError.Code.get -> string!
+const Dilcore.MongoDB.Abstractions.Constants.EmptyETag = 0 -> long
+const Dilcore.MongoDB.Abstractions.Results.BulkWritePartialFailureError.ErrorCode = "bulk_write_partial_failure" -> string!
+const Dilcore.MongoDB.Abstractions.Results.ConcurrencyConflictError.ErrorCode = "concurrency_conflict" -> string!
+const Dilcore.MongoDB.Abstractions.Results.CrossClusterOperationError.ErrorCode = "cross_cluster_operation" -> string!
+const Dilcore.MongoDB.Abstractions.Results.DocumentNotFoundError.ErrorCode = "document_not_found" -> string!
+const Dilcore.MongoDB.Abstractions.Results.DocumentTooLargeError.ErrorCode = "document_too_large" -> string!
+const Dilcore.MongoDB.Abstractions.Results.DuplicateKeyError.ErrorCode = "duplicate_key" -> string!
+const Dilcore.MongoDB.Abstractions.Results.JsonConversionError.ErrorCode = "json_conversion" -> string!
+const Dilcore.MongoDB.Abstractions.Results.TransactionBudgetExceededError.ErrorCode = "transaction_budget_exceeded" -> string!
+const Dilcore.MongoDB.Abstractions.Results.TransientWriteError.ErrorCode = "transient_write" -> string!
+const Dilcore.MongoDB.Abstractions.Results.WriteConcernFailureError.ErrorCode = "write_concern_failure" -> string!
+override Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey.GetHashCode() -> int
+override Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey.ToString() -> string!
+override Dilcore.MongoDB.Abstractions.Keys.MongoDatabaseKey.GetHashCode() -> int
+override Dilcore.MongoDB.Abstractions.Keys.MongoDatabaseKey.ToString() -> string!
+override Dilcore.MongoDB.Abstractions.Keys.MongoDocumentBindingKey.GetHashCode() -> int
+override Dilcore.MongoDB.Abstractions.Keys.MongoDocumentBindingKey.ToString() -> string!
+override Dilcore.MongoDB.Abstractions.Results.BulkWritePartialFailureError.Code.get -> string!
+override Dilcore.MongoDB.Abstractions.Results.ConcurrencyConflictError.Code.get -> string!
+override Dilcore.MongoDB.Abstractions.Results.CrossClusterOperationError.Code.get -> string!
+override Dilcore.MongoDB.Abstractions.Results.DocumentNotFoundError.Code.get -> string!
+override Dilcore.MongoDB.Abstractions.Results.DocumentTooLargeError.Code.get -> string!
+override Dilcore.MongoDB.Abstractions.Results.DuplicateKeyError.Code.get -> string!
+override Dilcore.MongoDB.Abstractions.Results.JsonConversionError.Code.get -> string!
+override Dilcore.MongoDB.Abstractions.Results.TransactionBudgetExceededError.Code.get -> string!
+override Dilcore.MongoDB.Abstractions.Results.TransientWriteError.Code.get -> string!
+override Dilcore.MongoDB.Abstractions.Results.WriteConcernFailureError.Code.get -> string!
+static Dilcore.MongoDB.Abstractions.Extensions.DocumentEntityExtensions.CheckId<TDocument>(this TDocument! document) -> void
+static Dilcore.MongoDB.Abstractions.Extensions.DocumentEntityExtensions.CreatedNow(this Dilcore.MongoDB.Abstractions.IDocumentEntity! document) -> void
+static Dilcore.MongoDB.Abstractions.Extensions.DocumentEntityExtensions.GenerateETag(this Dilcore.MongoDB.Abstractions.IDocumentEntity! document) -> void
+static Dilcore.MongoDB.Abstractions.Extensions.DocumentEntityExtensions.IsIdEmpty<TDocument>(this TDocument! document) -> bool
+static Dilcore.MongoDB.Abstractions.Extensions.DocumentEntityExtensions.IsNew(this Dilcore.MongoDB.Abstractions.IDocumentEntity! document) -> bool
+static Dilcore.MongoDB.Abstractions.Extensions.DocumentEntityExtensions.NewId<TDocument>(this TDocument! document, Dilcore.MongoDB.Abstractions.GuidIdGenerationStrategy guidStrategy = Dilcore.MongoDB.Abstractions.GuidIdGenerationStrategy.Random) -> void
+static Dilcore.MongoDB.Abstractions.Extensions.DocumentEntityExtensions.ToBsonSnapshotUpdateDocument<T>(this T document) -> MongoDB.Bson.BsonDocument!
+static Dilcore.MongoDB.Abstractions.Extensions.DocumentEntityExtensions.ToBsonUpdateDocument<T>(this T document) -> MongoDB.Bson.BsonDocument!
+static Dilcore.MongoDB.Abstractions.Extensions.DocumentEntityExtensions.UpdatedNow(this Dilcore.MongoDB.Abstractions.IDocumentEntity! document) -> void
+static Dilcore.MongoDB.Abstractions.Helpers.MongoDbHelper.GenerateEtag() -> long
+static Dilcore.MongoDB.Abstractions.Json.ExtendedJsonKeys.IsTypeMarker(string! propertyName) -> bool
+static Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey.implicit operator string!(Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey key) -> string!
+static Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey.operator !=(Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey left, Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey right) -> bool
+static Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey.operator ==(Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey left, Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey right) -> bool
+static Dilcore.MongoDB.Abstractions.Keys.MongoDatabaseKey.implicit operator string!(Dilcore.MongoDB.Abstractions.Keys.MongoDatabaseKey key) -> string!
+static Dilcore.MongoDB.Abstractions.Keys.MongoDatabaseKey.operator !=(Dilcore.MongoDB.Abstractions.Keys.MongoDatabaseKey left, Dilcore.MongoDB.Abstractions.Keys.MongoDatabaseKey right) -> bool
+static Dilcore.MongoDB.Abstractions.Keys.MongoDatabaseKey.operator ==(Dilcore.MongoDB.Abstractions.Keys.MongoDatabaseKey left, Dilcore.MongoDB.Abstractions.Keys.MongoDatabaseKey right) -> bool
+static Dilcore.MongoDB.Abstractions.Keys.MongoDocumentBindingKey.implicit operator string!(Dilcore.MongoDB.Abstractions.Keys.MongoDocumentBindingKey key) -> string!
+static Dilcore.MongoDB.Abstractions.Keys.MongoDocumentBindingKey.operator !=(Dilcore.MongoDB.Abstractions.Keys.MongoDocumentBindingKey left, Dilcore.MongoDB.Abstractions.Keys.MongoDocumentBindingKey right) -> bool
+static Dilcore.MongoDB.Abstractions.Keys.MongoDocumentBindingKey.operator ==(Dilcore.MongoDB.Abstractions.Keys.MongoDocumentBindingKey left, Dilcore.MongoDB.Abstractions.Keys.MongoDocumentBindingKey right) -> bool
+~override Dilcore.MongoDB.Abstractions.Keys.MongoClusterKey.Equals(object obj) -> bool
+~override Dilcore.MongoDB.Abstractions.Keys.MongoDatabaseKey.Equals(object obj) -> bool
+~override Dilcore.MongoDB.Abstractions.Keys.MongoDocumentBindingKey.Equals(object obj) -> bool

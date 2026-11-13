@@ -22,13 +22,16 @@ jobs:
       - name: 🛠️ Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          global-json-file: global.json
 
       - name: 📦 Restore dependencies
-        run: dotnet restore Dilcore.MongoDB.sln
+        run: dotnet restore Dilcore.MongoDB.sln --locked-mode
+
+      - name: 🎨 Verify formatting
+        run: dotnet format Dilcore.MongoDB.sln --verify-no-changes --no-restore
 
       - name: 🔨 Build
-        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release
+        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release -warnaserror -p:ContinuousIntegrationBuild=true
 
       - name: 🧪 Architecture + unit tests
         run: >
@@ -58,7 +61,7 @@ jobs:
       - name: 🛠️ Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          global-json-file: global.json
 
       - name: 🐳 Docker preflight
         run: |
@@ -66,10 +69,10 @@ jobs:
           docker info
 
       - name: 📦 Restore dependencies
-        run: dotnet restore Dilcore.MongoDB.sln
+        run: dotnet restore Dilcore.MongoDB.sln --locked-mode
 
       - name: 🔨 Build
-        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release
+        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release -warnaserror -p:ContinuousIntegrationBuild=true
 
       - name: 🧪 DI acceptance + integration tests
         run: >
@@ -99,7 +102,7 @@ jobs:
       - name: 🛠️ Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          global-json-file: global.json
 
       - name: 🐳 Docker preflight
         run: |
@@ -107,10 +110,10 @@ jobs:
           docker info
 
       - name: 📦 Restore dependencies
-        run: dotnet restore Dilcore.MongoDB.sln
+        run: dotnet restore Dilcore.MongoDB.sln --locked-mode
 
       - name: 🔨 Build
-        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release
+        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release -warnaserror -p:ContinuousIntegrationBuild=true
 
       - name: 🧪 Replica-set / production matrix
         run: >
@@ -145,7 +148,7 @@ jobs:
       - name: 🛠️ Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          global-json-file: global.json
 
       - name: 🐳 Docker preflight
         run: |
@@ -153,10 +156,10 @@ jobs:
           docker info
 
       - name: 📦 Restore dependencies
-        run: dotnet restore Dilcore.MongoDB.sln
+        run: dotnet restore Dilcore.MongoDB.sln --locked-mode
 
       - name: 🔨 Build
-        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release
+        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release -warnaserror -p:ContinuousIntegrationBuild=true
 
       - name: 🧪 Test
         run: >

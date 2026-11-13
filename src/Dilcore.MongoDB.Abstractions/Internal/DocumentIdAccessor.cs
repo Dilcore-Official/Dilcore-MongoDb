@@ -1,74 +1,9 @@
-using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using Dilcore.MongoDB.Abstractions.Exceptions;
-using Dilcore.MongoDB.Abstractions.Policies;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.Abstractions.Internal;
-
-internal interface IDocumentIdAccessor<TDocument>
-    where TDocument : class, IDocumentEntity
-{
-    Type IdentifierType { get; }
-
-    bool IsGuidIdentifier { get; }
-
-    bool IsEmpty(TDocument document);
-
-    void EnsureNewId(TDocument document, GuidIdGenerationStrategy guidStrategy = GuidIdGenerationStrategy.Random);
-
-    void ClearId(TDocument document);
-
-    FilterDefinition<TDocument> BuildIdFilter(TDocument document);
-}
-
-internal static class DocumentIdAccessorCache
-{
-    private static readonly MethodInfo CreateCoreMethod =
-        typeof(DocumentIdAccessorCache).GetMethod(
-            nameof(CreateCore),
-            BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    public static IDocumentIdAccessor<TDocument> Get<TDocument>()
-        where TDocument : class, IDocumentEntity
-        => Holder<TDocument>.Instance;
-
-    public static Type ResolveIdentifierType(Type documentType)
-    {
-        ArgumentNullException.ThrowIfNull(documentType);
-
-        var idInterface = documentType.GetInterfaces()
-            .FirstOrDefault(iface => iface.IsGenericType && iface.GetGenericTypeDefinition() == typeof(IDocumentEntity<>));
-
-        if (idInterface is null)
-        {
-            throw new InvalidOperationException(
-                $"Type '{documentType.FullName}' must implement IDocumentEntity<TId>.");
-        }
-
-        return idInterface.GetGenericArguments()[0];
-    }
-
-    private static class Holder<TDocument>
-        where TDocument : class, IDocumentEntity
-    {
-        public static readonly IDocumentIdAccessor<TDocument> Instance = Create<TDocument>();
-    }
-
-    private static IDocumentIdAccessor<TDocument> Create<TDocument>()
-        where TDocument : class, IDocumentEntity
-    {
-        var idType = ResolveIdentifierType(typeof(TDocument));
-        var factory = CreateCoreMethod.MakeGenericMethod(typeof(TDocument), idType);
-        return (IDocumentIdAccessor<TDocument>)factory.Invoke(null, null)!;
-    }
-
-    private static IDocumentIdAccessor<TDocument> CreateCore<TDocument, TId>()
-        where TDocument : class, IDocumentEntity
-        => new DocumentIdAccessor<TDocument, TId>();
-}
 
 internal sealed class DocumentIdAccessor<TDocument, TId> : IDocumentIdAccessor<TDocument>
     where TDocument : class, IDocumentEntity
@@ -182,28 +117,5 @@ internal sealed class DocumentIdAccessor<TDocument, TId> : IDocumentIdAccessor<T
         }
 
         return null;
-    }
-}
-
-internal static class SoftDeleteFilterCache
-{
-    public static FilterDefinition<TDocument> GetNotDeletedFilter<TDocument>()
-        where TDocument : class, IDocumentEntity
-        => SoftDeleteHolder<TDocument>.Filter;
-
-    private static class SoftDeleteHolder<TDocument>
-        where TDocument : class, IDocumentEntity
-    {
-        public static readonly FilterDefinition<TDocument> Filter = Create();
-
-        private static FilterDefinition<TDocument> Create()
-        {
-            if (!typeof(ISoftDeletable).IsAssignableFrom(typeof(TDocument)))
-            {
-                return Builders<TDocument>.Filter.Empty;
-            }
-
-            return Builders<TDocument>.Filter.Eq(PolicyElementNames.IsDeleted<TDocument>(), false);
-        }
     }
 }

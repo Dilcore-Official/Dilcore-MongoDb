@@ -18,7 +18,7 @@ public sealed class SampleProvisioningStep : IProvisioningStep
     public async Task<Result<ProvisioningStepResult>> ExecuteAsync(
         IMongoDatabaseResolver databaseResolver,
         bool apply,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         var database = await databaseResolver.GetDatabaseAsync(
             new MongoDatabaseKey(DatabaseName),

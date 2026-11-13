@@ -5,7 +5,6 @@ using Dilcore.MongoDB.Abstractions.Helpers;
 using Dilcore.MongoDB.Abstractions.Internal;
 using Dilcore.MongoDB.Abstractions.Policies;
 using AutoFixture.NUnit4;
-using MongoDB.Bson;
 using AbstractionsConstants = Dilcore.MongoDB.Abstractions.Constants;
 
 namespace Dilcore.MongoDB.UnitTests;

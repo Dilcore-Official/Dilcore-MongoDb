@@ -17,6 +17,7 @@ trim_trailing_whitespace = false
 
 [*.cs]
 indent_size = 4
+insert_final_newline = false
 
 # New lines and wrapping
 csharp_new_line_before_open_brace = all
@@ -112,6 +113,60 @@ dotnet_naming_rule.non_private_members_are_pascal_case.style = pascal_case_style
 dotnet_naming_symbols.non_private_members.applicable_kinds = method,property,event
 dotnet_naming_symbols.non_private_members.applicable_accessibilities = public,internal,protected,protected_internal,private_protected
 
-# Formatting diagnostics stay suggestion so editors and `dotnet format` can apply
-# them without turning this change into a warnings-as-errors build gate.
+# StyleCop is referenced only for SA1402 (one top-level type per file).
+# Every other StyleCop category stays off. Tests may keep fixtures beside the test class.
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.DocumentationRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.LayoutRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.MaintainabilityRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.NamingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.OrderingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.ReadabilityRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.SpacingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.SpecialRules.severity = none
+dotnet_diagnostic.SA1402.severity = error
+dotnet_diagnostic.SA0001.severity = none
+
+# Formatting stays suggestion so `dotnet format` applies it. Build gates use
+# the diagnostics below. CS1591 is suggestion until public XML docs are complete,
+# then src raises it to error.
 dotnet_diagnostic.IDE0055.severity = suggestion
+dotnet_diagnostic.IDE0005.severity = error
+dotnet_diagnostic.NU1510.severity = error
+dotnet_diagnostic.IDE0036.severity = warning
+dotnet_diagnostic.CA1068.severity = error
+dotnet_diagnostic.CA2016.severity = error
+dotnet_diagnostic.CS1591.severity = none
+
+# Public API docs are required only in shipped libraries.
+[src/**.cs]
+dotnet_diagnostic.CS1591.severity = error
+
+# Overloads that take an optional CancellationToken are the repository and transaction shape.
+# RS0026 forbids that combination; the token rule wins.
+dotnet_diagnostic.RS0026.severity = none
+
+# CA1859 wants private helpers to return List/concrete types. Interface returns stay.
+dotnet_diagnostic.CA1859.severity = none
+
+# "Namespace" is the product name for database and collection naming.
+# CA1716 flags the reserved keyword; renaming the namespace is a breaking change.
+[src/**/Namespace/**.cs]
+dotnet_diagnostic.CA1716.severity = none
+
+[test/**.cs]
+dotnet_diagnostic.CS1591.severity = none
+dotnet_diagnostic.CA1068.severity = none
+dotnet_diagnostic.CA2016.severity = none
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.SA1402.severity = none
+
+[samples/**.cs]
+dotnet_diagnostic.CS1591.severity = none
+dotnet_diagnostic.CA1068.severity = none
+dotnet_diagnostic.CA2016.severity = none
+dotnet_diagnostic.CA1707.severity = none
+
+# BenchmarkDotNet names are Category_Scenario, and [Benchmark] methods must be instance methods.
+[test/Benchmarks/**.cs]
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA1822.severity = none

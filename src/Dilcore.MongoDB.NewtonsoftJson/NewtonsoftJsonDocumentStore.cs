@@ -1,5 +1,4 @@
 using Dilcore.MongoDB.Abstractions.Json;
-using Dilcore.MongoDB.Abstractions.Keys;
 using FluentResults;
 using MongoDB.Bson;
 using Newtonsoft.Json;
@@ -59,11 +58,4 @@ internal sealed class NewtonsoftJsonDocumentStore(IJsonDocumentStore store) : IN
         JsonBsonConversionOptions? options = null,
         CancellationToken cancellationToken = default) =>
         store.GetJTokenByIdAsync(logicalCollectionName, id, options, cancellationToken);
-}
-
-internal sealed class NewtonsoftJsonDocumentStoreFactory(IJsonDocumentStoreFactory storeFactory)
-    : INewtonsoftJsonDocumentStoreFactory
-{
-    public INewtonsoftJsonDocumentStore Create(MongoDatabaseKey databaseKey, string? staticPrefix = null) =>
-        new NewtonsoftJsonDocumentStore(storeFactory.Create(databaseKey, staticPrefix));
 }

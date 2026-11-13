@@ -62,7 +62,3 @@ internal static class TransactionEndpoints
             .WithTags("Transactions");
     }
 }
-
-public sealed record PlaceOrderRequest(string Sku, int Quantity, decimal Amount);
-
-public sealed record PlaceOrderResponse(Guid OrderId, Guid PaymentId);

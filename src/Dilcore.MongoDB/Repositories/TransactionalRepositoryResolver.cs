@@ -2,7 +2,6 @@ using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Abstractions.Options;
 using Dilcore.MongoDB.Abstractions.Repositories;
-using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Descriptors;
 using Dilcore.MongoDB.Internal;
 using System.Linq.Expressions;
@@ -107,6 +106,3 @@ internal sealed class TransactionalRepositoryResolver(
             }
         };
 }
-
-internal sealed class CrossClusterRejectedException(string clusterName)
-    : InvalidOperationException($"Binding targets cluster '{clusterName}', which is outside the current transaction.");

@@ -39,8 +39,12 @@ dotnet run --project test/Benchmarks/Dilcore.MongoDB.Benchmarks -c Release -- --
 dotnet run --project test/Benchmarks/Dilcore.MongoDB.Benchmarks -c Release -- --filter '*ColdStart*'
 ```
 
-Formatting is defined in [`.editorconfig`](.editorconfig). Prefer editor format-on-save
-and verify changed C# without rewriting the tree:
+Formatting and analyzer severities are defined in [`.editorconfig`](.editorconfig).
+C# files do not end with a newline. Coding agents also follow
+[csharp-code-style](.cursor/rules/csharp-code-style.mdc) and
+[csharp-testing-di](.cursor/rules/csharp-testing-di.mdc) (linked from
+[AGENTS.md](AGENTS.md)). Prefer editor format-on-save and verify without
+rewriting the tree:
 
 ```bash
 dotnet format Dilcore.MongoDB.sln --verify-no-changes
@@ -62,6 +66,31 @@ Roadmap issue hygiene (needs `gh` + `jq`):
 ```bash
 ./scripts/verify-roadmap-coverage.sh
 ```
+
+## Build quality gates
+
+The SDK band is pinned in [`global.json`](global.json) (`rollForward: latestFeature` inside 10.0).
+CI uses that file instead of a floating `dotnet-version`.
+
+Libraries under `src/` generate XML documentation and fail the build on missing public
+docs (`CS1591`). `Microsoft.CodeAnalysis.PublicApiAnalyzers` checks
+`PublicAPI.Shipped.txt` and `PublicAPI.Unshipped.txt`. Release builds treat warnings as
+errors. `CancellationToken` parameters are optional and last (`CA1068`), and cancellable
+calls must receive the token (`CA2016`).
+
+Restore uses a committed `packages.lock.json` per project. CI restore is
+`dotnet restore Dilcore.MongoDB.sln --locked-mode`.
+
+```bash
+dotnet format Dilcore.MongoDB.sln --verify-no-changes
+dotnet build Dilcore.MongoDB.sln --configuration Release -warnaserror -p:ContinuousIntegrationBuild=true
+```
+
+Coding agents follow [csharp-code-style](.cursor/rules/csharp-code-style.mdc) and
+[csharp-testing-di](.cursor/rules/csharp-testing-di.mdc). Run `dotnet format` after each
+implementation stage. C# files do not end with a newline. Member order is constants,
+static fields, instance fields, constructors, properties, events, then methods.
+`StyleCop.Analyzers` is enabled only for `SA1402`: one top-level type per file. Tests set that rule to none. Other StyleCop rules stay off; member order remains a review rule. `IDE0005` is an error, so an unused `using` fails the build. `NU1510` is an error for a direct package the .NET 10 SDK already supplies. A `PackageVersion` with no `PackageReference` fails the architecture tests.
 
 ## Agent tool workflow
 

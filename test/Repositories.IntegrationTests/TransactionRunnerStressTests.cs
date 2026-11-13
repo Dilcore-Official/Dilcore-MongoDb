@@ -4,7 +4,6 @@ using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Abstractions.Transactions;
 using FluentResults;
-using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.Repositories.IntegrationTests;

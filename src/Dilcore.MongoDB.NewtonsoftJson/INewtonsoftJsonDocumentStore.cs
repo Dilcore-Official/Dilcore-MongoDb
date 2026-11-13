@@ -1,5 +1,4 @@
 using Dilcore.MongoDB.Abstractions.Json;
-using Dilcore.MongoDB.Abstractions.Keys;
 using FluentResults;
 using MongoDB.Bson;
 using Newtonsoft.Json;
@@ -12,14 +11,34 @@ namespace Dilcore.MongoDB.NewtonsoftJson;
 /// </summary>
 public interface INewtonsoftJsonDocumentStore
 {
+    /// <summary>
+    /// Gets the BSON/JSON converter shared with the underlying <see cref="IJsonDocumentStore"/>.
+    /// </summary>
     IBsonJsonConverter Converter { get; }
 
+    /// <summary>
+    /// Parses JSON text and inserts the root document into the resolved collection.
+    /// </summary>
+    /// <param name="logicalCollectionName">Logical collection name used for namespace resolution.</param>
+    /// <param name="json">JSON object text to insert.</param>
+    /// <param name="options">Optional conversion rules; when null, defaults apply.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>The inserted <see cref="BsonDocument"/>, or errors from parsing, resolution, or persistence.</returns>
     Task<Result<BsonDocument>> InsertAsync(
         string logicalCollectionName,
         string json,
         JsonBsonConversionOptions? options = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Converts a <see cref="JObject"/> to BSON and inserts it into the resolved collection.
+    /// </summary>
+    /// <param name="logicalCollectionName">Logical collection name used for namespace resolution.</param>
+    /// <param name="document">The JSON object to insert.</param>
+    /// <param name="options">Optional conversion rules.</param>
+    /// <param name="serializerSettings">Optional serializer settings; non-<see cref="TypeNameHandling.None"/> <see cref="JsonSerializerSettings.TypeNameHandling"/> fails conversion.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>The inserted <see cref="BsonDocument"/>, or conversion or persistence errors.</returns>
     Task<Result<BsonDocument>> InsertAsync(
         string logicalCollectionName,
         JObject document,
@@ -27,6 +46,15 @@ public interface INewtonsoftJsonDocumentStore
         JsonSerializerSettings? serializerSettings = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Converts a <see cref="JToken"/> to BSON and inserts it when the root is a document.
+    /// </summary>
+    /// <param name="logicalCollectionName">Logical collection name used for namespace resolution.</param>
+    /// <param name="token">The JSON value to insert.</param>
+    /// <param name="options">Optional conversion rules.</param>
+    /// <param name="serializerSettings">Optional serializer settings; non-<see cref="TypeNameHandling.None"/> <see cref="JsonSerializerSettings.TypeNameHandling"/> fails conversion.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>The inserted <see cref="BsonDocument"/>, or conversion or persistence errors.</returns>
     Task<Result<BsonDocument>> InsertAsync(
         string logicalCollectionName,
         JToken token,
@@ -34,33 +62,55 @@ public interface INewtonsoftJsonDocumentStore
         JsonSerializerSettings? serializerSettings = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Inserts an existing <see cref="BsonDocument"/> into the resolved collection.
+    /// </summary>
+    /// <param name="logicalCollectionName">Logical collection name used for namespace resolution.</param>
+    /// <param name="document">The BSON document to insert.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>The inserted document, or resolution or persistence errors.</returns>
     Task<Result<BsonDocument>> InsertAsync(
         string logicalCollectionName,
         BsonDocument document,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Loads a document by <c>_id</c> from the resolved collection.
+    /// </summary>
+    /// <param name="logicalCollectionName">Logical collection name used for namespace resolution.</param>
+    /// <param name="id">The document identifier.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>The matching <see cref="BsonDocument"/>, or not-found, resolution, or driver errors.</returns>
     Task<Result<BsonDocument>> GetByIdAsync(
         string logicalCollectionName,
         BsonValue id,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Loads a document by <c>_id</c> and converts it to a <see cref="JObject"/>.
+    /// </summary>
+    /// <param name="logicalCollectionName">Logical collection name used for namespace resolution.</param>
+    /// <param name="id">The document identifier.</param>
+    /// <param name="options">Optional rules for BSON-to-JSON conversion.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>A <see cref="JObject"/> view of the document, or load or conversion errors.</returns>
     Task<Result<JObject>> GetJObjectByIdAsync(
         string logicalCollectionName,
         BsonValue id,
         JsonBsonConversionOptions? options = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Loads a document by <c>_id</c> and converts it to a <see cref="JToken"/>.
+    /// </summary>
+    /// <param name="logicalCollectionName">Logical collection name used for namespace resolution.</param>
+    /// <param name="id">The document identifier.</param>
+    /// <param name="options">Optional rules for BSON-to-JSON conversion.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>A <see cref="JToken"/> view of the document root, or load or conversion errors.</returns>
     Task<Result<JToken>> GetJTokenByIdAsync(
         string logicalCollectionName,
         BsonValue id,
         JsonBsonConversionOptions? options = null,
         CancellationToken cancellationToken = default);
-}
-
-/// <summary>
-/// Creates <see cref="INewtonsoftJsonDocumentStore"/> instances bound to a database key.
-/// </summary>
-public interface INewtonsoftJsonDocumentStoreFactory
-{
-    INewtonsoftJsonDocumentStore Create(MongoDatabaseKey databaseKey, string? staticPrefix = null);
 }

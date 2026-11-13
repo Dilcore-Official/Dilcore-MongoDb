@@ -4,6 +4,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Dilcore.MongoDB.NewtonsoftJson;
 
+/// <summary>
+/// Optional DI registration for Newtonsoft.Json document store facades.
+/// </summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>

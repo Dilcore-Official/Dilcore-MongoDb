@@ -6,7 +6,7 @@ This document is the product roadmap. Implementation work is tracked as GitHub i
 **Repository:** [Dilcore-Official/Dilcore-MongoDb](https://github.com/Dilcore-Official/Dilcore-MongoDb)  
 **Issues filter:** [label:roadmap](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues?q=is%3Aissue+label%3Aroadmap)  
 **GitHub Project:** see [GitHub tracking](#github-tracking)  
-**Status:** M3 MongoDB production, JSON, and transactions implemented across stacked branches `#18`–`#23` (correctness, JSON adapters, provisioning, transactions, integration matrix).
+**Status:** M3 MongoDB production, JSON, and transactions implemented across stacked branches `#18`–`#23` (correctness, JSON adapters, provisioning, transactions, integration matrix). M5 [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) build gates (`global.json`, public API analyzer, XML docs, warnings-as-errors, format check) are implemented on this branch.
 
 ---
 
