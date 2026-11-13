@@ -229,6 +229,41 @@ public class GenericRepositoryCorrectnessTests : BaseIntegrationTests
     }
 
     [Test]
+    public async Task ReplaceAsync_MinimalMissingDocument_ReturnsNotFound()
+    {
+        var repository = CreateMinimalRepository("replace-minimal-missing");
+        var missing = new GenericRepositoryTests.MinimalEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "gone"
+        };
+
+        var replaced = await repository.ReplaceAsync(missing);
+
+        replaced.ShouldBeFailure();
+        replaced.ShouldHaveError<DocumentNotFoundError>();
+    }
+
+    [Test]
+    public async Task ReplaceAsync_AuditableWithoutETag_MissingDocument_RestoresUpdatedAt()
+    {
+        var repository = CreateAuditableNoEtagRepository("replace-audit-missing");
+        var entity = new AuditableNoEtagEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "gone",
+            UpdatedAt = DateTime.UtcNow.AddHours(-1)
+        };
+        var previousUpdated = entity.UpdatedAt;
+
+        var replaced = await repository.ReplaceAsync(entity);
+
+        replaced.ShouldBeFailure();
+        replaced.ShouldHaveError<DocumentNotFoundError>();
+        entity.UpdatedAt.ShouldBe(previousUpdated);
+    }
+
+    [Test]
     public async Task StoreAsync_CallerAssignedIdWithoutPolicies_Inserts()
     {
         var repository = CreateMinimalRepository("assigned-id");
@@ -397,6 +432,38 @@ public class GenericRepositoryCorrectnessTests : BaseIntegrationTests
         ex.Message.ShouldContain("Failed to get collection");
     }
 
+    [Test]
+    public async Task GetAsyncEnumerable_Derived_CollectionResolutionFailure_ThrowsCollectionResolutionException()
+    {
+        var services = new ServiceCollection();
+        services.AddScoped<INamespaceSegmentContributor>(_ => new RequiredPrefixContributor());
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(MongoDbContainer.GetConnectionString()))
+            .AddDatabase("StreamDerivedFailDB", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<GenericRepositoryTests.TestEntity1>("stream-derived", d => d
+                    .WithCollectionName("streamDerivedEntities"));
+            }));
+
+        using var provider = AcceptanceServiceProviderFactory.Create(services);
+        using var scope = provider.CreateScope();
+        var repository = scope.ServiceProvider
+            .GetRequiredService<IGenericRepository<GenericRepositoryTests.TestEntity1>>();
+
+        var enumerate = async () =>
+        {
+            await foreach (var _ in repository.GetAsyncEnumerable<GenericRepositoryTests.DerivedTestEntity1>(
+                Builders<GenericRepositoryTests.DerivedTestEntity1>.Filter.Empty))
+            {
+                // Expect CollectionResolutionException before any yield.
+            }
+        };
+
+        var ex = await Should.ThrowAsync<CollectionResolutionException>(enumerate());
+        ex.Message.ShouldContain("Failed to get collection");
+    }
+
     private (IGenericRepository<GenericRepositoryTests.TestEntity1> Repository, IMongoDbCollectionFactory Factory)
         CreateRepository(string collection, bool enableSoftDelete)
     {
@@ -439,6 +506,24 @@ public class GenericRepositoryCorrectnessTests : BaseIntegrationTests
             .CreateScope()
             .ServiceProvider
             .GetRequiredService<IGenericRepository<GenericRepositoryTests.MinimalEntity>>();
+    }
+
+    private IGenericRepository<AuditableNoEtagEntity> CreateAuditableNoEtagRepository(string collection)
+    {
+        var services = new ServiceCollection();
+        services.AddMongoDb(mongo => mongo
+            .AddCluster("primary", c => c.UseConnectionString(MongoDbContainer.GetConnectionString()))
+            .AddDatabase("AuditableNoEtagDB", db =>
+            {
+                db.OnCluster("primary");
+                db.AddDocumentBinding<AuditableNoEtagEntity>("audit-no-etag", d => d
+                    .WithCollectionName(collection));
+            }));
+
+        return AcceptanceServiceProviderFactory.Create(services)
+            .CreateScope()
+            .ServiceProvider
+            .GetRequiredService<IGenericRepository<AuditableNoEtagEntity>>();
     }
 
     private (IGenericRepository<CustomMappedEntity> Repository, IMongoDbCollectionFactory Factory)
@@ -485,6 +570,14 @@ public class GenericRepositoryCorrectnessTests : BaseIntegrationTests
         [BsonElement("updated")]
         public DateTime UpdatedAt { get; set; }
 
+        public string? Name { get; set; }
+    }
+
+    public sealed class AuditableNoEtagEntity : IDocumentEntity<Guid>, IAuditableDocument
+    {
+        public Guid Id { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
         public string? Name { get; set; }
     }
 
