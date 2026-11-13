@@ -34,28 +34,33 @@ public abstract class BaseMongoDbRepository<TDocument> where TDocument : class, 
 
     protected Task<Result<TDocument>> ExecuteAsync(
         Func<IMongoCollection<TDocument>, CancellationToken, Task<Result<TDocument>>> func,
-        CancellationToken cancellationToken = default)
-        => ExecuteMappedAsync(func, result => Result.Fail<TDocument>(result.Errors), cancellationToken);
+        CancellationToken cancellationToken = default,
+        int? estimatedBytes = 256)
+        => ExecuteMappedAsync(func, result => Result.Fail<TDocument>(result.Errors), cancellationToken, estimatedBytes);
 
     protected Task<Result<IReadOnlyList<TDocument>>> ExecuteAsync(
         Func<IMongoCollection<TDocument>, CancellationToken, Task<Result<IReadOnlyList<TDocument>>>> func,
-        CancellationToken cancellationToken = default)
-        => ExecuteMappedAsync(func, result => Result.Fail<IReadOnlyList<TDocument>>(result.Errors), cancellationToken);
+        CancellationToken cancellationToken = default,
+        int? estimatedBytes = 256)
+        => ExecuteMappedAsync(func, result => Result.Fail<IReadOnlyList<TDocument>>(result.Errors), cancellationToken, estimatedBytes);
 
     protected Task<Result> ExecuteAsync(
         Func<IMongoCollection<TDocument>, CancellationToken, Task<Result>> func,
-        CancellationToken cancellationToken = default)
-        => ExecuteMappedAsync(func, result => Result.Fail(result.Errors), cancellationToken);
+        CancellationToken cancellationToken = default,
+        int? estimatedBytes = 256)
+        => ExecuteMappedAsync(func, result => Result.Fail(result.Errors), cancellationToken, estimatedBytes);
 
     protected Task<Result<TResult>> ExecuteAsync<TResult>(
         Func<IMongoCollection<TDocument>, CancellationToken, Task<Result<TResult>>> func,
-        CancellationToken cancellationToken = default)
-        => ExecuteMappedAsync(func, result => Result.Fail<TResult>(result.Errors), cancellationToken);
+        CancellationToken cancellationToken = default,
+        int? estimatedBytes = 256)
+        => ExecuteMappedAsync(func, result => Result.Fail<TResult>(result.Errors), cancellationToken, estimatedBytes);
 
     private async Task<Result<TResult>> ExecuteMappedAsync<TResult>(
         Func<IMongoCollection<TDocument>, CancellationToken, Task<Result<TResult>>> func,
         Func<Result<IMongoCollection<TDocument>>, Result<TResult>> errorHandler,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        int? estimatedBytes)
     {
         var collectionResult = await GetCollectionAsync(cancellationToken);
         if (collectionResult.IsFailed)
@@ -63,9 +68,9 @@ public abstract class BaseMongoDbRepository<TDocument> where TDocument : class, 
             return errorHandler(collectionResult);
         }
 
-        if (Budget is not null)
+        if (Budget is not null && estimatedBytes is int bytes)
         {
-            var reservation = Budget.Reserve(256);
+            var reservation = Budget.Reserve(bytes);
             if (reservation.IsFailed)
             {
                 return Result.Fail<TResult>(reservation.Errors);
@@ -78,6 +83,11 @@ public abstract class BaseMongoDbRepository<TDocument> where TDocument : class, 
         }
         catch (Exception exception) when (exception is MongoException or FormatException)
         {
+            if (Session is not null && IsDriverRetryable(exception))
+            {
+                throw;
+            }
+
             return MongoExceptionMapper.Fail<TResult>(exception);
         }
     }
@@ -85,7 +95,8 @@ public abstract class BaseMongoDbRepository<TDocument> where TDocument : class, 
     private async Task<Result> ExecuteMappedAsync(
         Func<IMongoCollection<TDocument>, CancellationToken, Task<Result>> func,
         Func<Result<IMongoCollection<TDocument>>, Result> errorHandler,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        int? estimatedBytes)
     {
         var collectionResult = await GetCollectionAsync(cancellationToken);
         if (collectionResult.IsFailed)
@@ -93,9 +104,9 @@ public abstract class BaseMongoDbRepository<TDocument> where TDocument : class, 
             return errorHandler(collectionResult);
         }
 
-        if (Budget is not null)
+        if (Budget is not null && estimatedBytes is int bytes)
         {
-            var reservation = Budget.Reserve(256);
+            var reservation = Budget.Reserve(bytes);
             if (reservation.IsFailed)
             {
                 return Result.Fail(reservation.Errors);
@@ -108,9 +119,19 @@ public abstract class BaseMongoDbRepository<TDocument> where TDocument : class, 
         }
         catch (Exception exception) when (exception is MongoException or FormatException)
         {
+            if (Session is not null && IsDriverRetryable(exception))
+            {
+                throw;
+            }
+
             return MongoExceptionMapper.Fail(exception);
         }
     }
+
+    private static bool IsDriverRetryable(Exception exception)
+        => exception is MongoException mongo
+            && (mongo.HasErrorLabel("TransientTransactionError")
+                || mongo.HasErrorLabel("UnknownTransactionCommitResult"));
 
     protected GetCollectionOptions<TDocument> GetOptions() => _options;
 

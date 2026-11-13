@@ -96,6 +96,12 @@ internal sealed class MongoDbTransactionRunner(
                     throw new TransactionCallbackFailedException(result);
                 }
 
+                var time = budget.CheckTimeLimit();
+                if (time.IsFailed)
+                {
+                    throw new TransactionCallbackFailedException(Result.Fail<TResult>(time.Errors));
+                }
+
                 return result;
             }, options.DriverOptions, cancellationToken);
         }

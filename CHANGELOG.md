@@ -10,6 +10,10 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
 
 ### Fixed
 
+- Transaction budgets reserve rendered BSON size for document and bulk writes, reject negative
+  estimates without integer wrap, and enforce the elapsed-time budget when the callback returns.
+  Estimating a document before the client exists no longer breaks Guid serializer registration.
+  Session-bound repository calls rethrow retryable transaction errors so the driver can retry.
 - Repository writes honor BSON policy element names, ETag-guarded replace, assigned-id inserts
   without concurrency, typed delete misses, oversized-document `FormatException` mapping, and
   bulk unmatched-ETag / chunk-index / in-memory restore outcomes.

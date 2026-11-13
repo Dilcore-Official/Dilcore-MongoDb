@@ -9,6 +9,7 @@ using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Internal;
 using FluentResults;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.Repositories;
@@ -42,7 +43,10 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
     }
 
     public Task<Result<TDocument>> StoreAsync(TDocument entity, CancellationToken cancellationToken = default)
-        => ExecuteAsync((collection, ct) => StoreEntityAsync(entity, collection, ct), cancellationToken);
+        => ExecuteAsync(
+            (collection, ct) => StoreEntityAsync(entity, collection, ct),
+            cancellationToken,
+            Estimate(entity));
 
     public Task<Result<TDocument>> ReplaceAsync(TDocument entity, CancellationToken cancellationToken = default)
         => ExecuteAsync((collection, ct) =>
@@ -55,7 +59,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             }
 
             return ReplaceWithoutConcurrencyAsync(entity, collection, replaceEntireDocument: true, ct);
-        }, cancellationToken);
+        }, cancellationToken, Estimate(entity));
 
     public Task<Result<TDocument>> UpdateSnapshotAsync(TDocument entity, CancellationToken cancellationToken = default)
         => ExecuteAsync((collection, ct) =>
@@ -71,7 +75,7 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
             return IdAccessor.IsEmpty(entity)
                 ? CreateAsync(entity, collection, ct)
                 : ReplaceWithoutConcurrencyAsync(entity, collection, replaceEntireDocument: false, ct);
-        }, cancellationToken);
+        }, cancellationToken, Estimate(entity));
 
     public Task<Result<TDocument>> PatchAsync(
         FilterDefinition<TDocument> filter,
@@ -652,6 +656,23 @@ internal class GenericMongoDbRepository<TDocument> : BaseMongoDbRepository<TDocu
         }
 
         RestoreAudit(entity, previousUpdated);
+    }
+
+    private static int? Estimate(TDocument entity)
+    {
+        try
+        {
+            // Snapshot serialization registers the Guid serializer. Doing that before ToBson
+            // avoids locking the process-wide Guid serializer to Unspecified.
+            _ = entity.ToBsonSnapshotUpdateDocument();
+            return entity.ToBson().Length;
+        }
+        catch (Exception exception) when (exception is FormatException or BsonSerializationException)
+        {
+            // Unserializable payloads (for example above the BSON document cap) are left
+            // for the write path, which maps them to DocumentTooLargeError.
+            return null;
+        }
     }
 
     private static void RestoreAudit(TDocument entity, DateTime previousUpdated)

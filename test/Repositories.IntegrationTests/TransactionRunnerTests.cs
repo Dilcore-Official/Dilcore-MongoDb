@@ -14,7 +14,7 @@ using Testcontainers.MongoDb;
 namespace Dilcore.MongoDB.Repositories.IntegrationTests;
 
 [Category("M3Matrix")]
-public class TransactionRunnerTests
+public partial class TransactionRunnerTests
 {
     private MongoDbContainer _replicaSet = null!;
 
@@ -32,7 +32,7 @@ public class TransactionRunnerTests
     public async Task Transaction_CommitsAcrossTwoCollections()
     {
         var (runner, _) = CreateHost();
-        var result = await runner.ExecuteAsync(new MongoClusterKey("primary"), async (tx, ct) =>
+        var result = await runner.WithTransactionAsync(new MongoClusterKey("primary"), async (tx, ct) =>
         {
             var orders = tx.Repositories.GetRepository<Order>("orders");
             var payments = tx.Repositories.GetRepository<Payment>("payments");
@@ -85,17 +85,39 @@ public class TransactionRunnerTests
         result.ShouldHaveError<TransactionBudgetExceededError>();
     }
 
-    private (IMongoDbTransactionRunner Runner, ServiceProvider Provider) CreateHost(string database = "TxDB")
+    private (IMongoDbTransactionRunner Runner, ServiceProvider Provider) CreateHost(
+        string database = "TxDB",
+        string? connectionString = null,
+        bool withSecondCluster = false)
     {
+        var connection = connectionString ?? _replicaSet.GetConnectionString();
         var services = new ServiceCollection();
-        services.AddMongoDb(mongo => mongo
-            .AddCluster("primary", c => c.UseConnectionString(_replicaSet.GetConnectionString()))
-            .AddDatabase(database, db =>
+        services.AddMongoDb(mongo =>
+        {
+            mongo.AddCluster("primary", c => c.UseConnectionString(connection));
+            if (withSecondCluster)
+            {
+                mongo.AddCluster("other", c => c.UseConnectionString(connection));
+            }
+
+            mongo.AddDatabase(database, db =>
             {
                 db.OnCluster("primary");
-                db.AddDocumentBinding<Order>("orders", d => d.WithCollectionName("orders"));
+                db.AddDocumentBinding<Order>("orders", d => d
+                    .WithCollectionName("orders")
+                    .WithBulkRepository());
                 db.AddDocumentBinding<Payment>("payments", d => d.WithCollectionName("payments"));
-            }));
+            });
+
+            if (withSecondCluster)
+            {
+                mongo.AddDatabase(database + "-other", db =>
+                {
+                    db.OnCluster("other");
+                    db.AddDocumentBinding<Order>("other-orders", d => d.WithCollectionName("orders"));
+                });
+            }
+        });
         var provider = services.BuildServiceProvider(new ServiceProviderOptions
         {
             ValidateScopes = true,
@@ -109,6 +131,7 @@ public class TransactionRunnerTests
         public Guid Id { get; set; }
         public long ETag { get; set; }
         public string? Name { get; set; }
+        public string? Payload { get; set; }
     }
 
     public sealed class Payment : IDocumentEntity<Guid>, IHasConcurrencyToken
