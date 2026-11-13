@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794587243001,
+  "lastUpdate": 1794610357066,
   "repoUrl": "https://github.com/Dilcore-Official/Dilcore-MongoDb",
   "entries": {
     "Dilcore.MongoDB Benchmarks": [
@@ -3024,6 +3024,222 @@ window.BENCHMARK_DATA = {
             "value": 397018.8604266827,
             "unit": "ns",
             "range": "± 22574.656723486336"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "654ff49ff67c6fcec09a5b57a297e8aa4a3ae7c8",
+          "message": "chore(deps): bump the actions-minor-patch group across 1 directory with 11 updates (#103)\n\nBumps the actions-minor-patch group with 11 updates in the / directory:\n\n| Package | From | To |\n| --- | --- | --- |\n| [actions/setup-dotnet](https://github.com/actions/setup-dotnet) | `6.0.0` | `6.1.0` |\n| [actions/upload-artifact](https://github.com/actions/upload-artifact) | `7.0.1` | `7.0.2` |\n| [actions/download-artifact](https://github.com/actions/download-artifact) | `8.0.1` | `8.0.2` |\n| [benchmark-action/github-action-benchmark](https://github.com/benchmark-action/github-action-benchmark) | `1.22.1` | `1.22.2` |\n| [danielpalme/ReportGenerator-GitHub-Action](https://github.com/danielpalme/reportgenerator-github-action) | `5.5.11` | `5.5.12` |\n| [github/codeql-action/init](https://github.com/github/codeql-action) | `4.37.6` | `4.39.3` |\n| [github/codeql-action/autobuild](https://github.com/github/codeql-action) | `4.37.6` | `4.39.3` |\n| [github/codeql-action/analyze](https://github.com/github/codeql-action) | `4.37.6` | `4.39.3` |\n| [actions/setup-python](https://github.com/actions/setup-python) | `7.0.0` | `7.1.0` |\n| [ossf/scorecard-action](https://github.com/ossf/scorecard-action) | `2.4.4` | `2.5.0` |\n| [github/codeql-action/upload-sarif](https://github.com/github/codeql-action) | `4.37.6` | `4.39.3` |\n\n\n\nUpdates `actions/setup-dotnet` from 6.0.0 to 6.1.0\n- [Release notes](https://github.com/actions/setup-dotnet/releases)\n- [Commits](https://github.com/actions/setup-dotnet/compare/a98b56852c35b8e3190ac28c8c2271da59106c68...0f4a354dd5547a28c70b7853dbd95d5b67886e73)\n\nUpdates `actions/upload-artifact` from 7.0.1 to 7.0.2\n- [Release notes](https://github.com/actions/upload-artifact/releases)\n- [Commits](https://github.com/actions/upload-artifact/compare/043fb46d1a93c77aae656e7c1c64a875d1fc6a0a...cf430e030ddbb5b0abf93d22962f4752f3646cd9)\n\nUpdates `actions/download-artifact` from 8.0.1 to 8.0.2\n- [Release notes](https://github.com/actions/download-artifact/releases)\n- [Commits](https://github.com/actions/download-artifact/compare/3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c...9000827ccba6bdab643e8b6fd33ac0654aef8333)\n\nUpdates `benchmark-action/github-action-benchmark` from 1.22.1 to 1.22.2\n- [Release notes](https://github.com/benchmark-action/github-action-benchmark/releases)\n- [Changelog](https://github.com/benchmark-action/github-action-benchmark/blob/master/CHANGELOG.md)\n- [Commits](https://github.com/benchmark-action/github-action-benchmark/compare/52576c92bccf6ac60c8223ec7eb2565637cae9ba...4322e5726e6334590d251fc4f92bec0efafc45dc)\n\nUpdates `danielpalme/ReportGenerator-GitHub-Action` from 5.5.11 to 5.5.12\n- [Release notes](https://github.com/danielpalme/reportgenerator-github-action/releases)\n- [Commits](https://github.com/danielpalme/reportgenerator-github-action/compare/d3ebf1f760f7d8ab92cc44d9bcfee7ad73722a31...861674232075b2c6bd1405a04c4bb9b150653e81)\n\nUpdates `github/codeql-action/init` from 4.37.6 to 4.39.3\n- [Release notes](https://github.com/github/codeql-action/releases)\n- [Changelog](https://github.com/github/codeql-action/blob/main/CHANGELOG.md)\n- [Commits](https://github.com/github/codeql-action/compare/5595ccaf912efad79be6eef63a5619ff05969be3...33d7b85da1a04171e211befe2c739303b9a4c066)\n\nUpdates `github/codeql-action/autobuild` from 4.37.6 to 4.39.3\n- [Release notes](https://github.com/github/codeql-action/releases)\n- [Changelog](https://github.com/github/codeql-action/blob/main/CHANGELOG.md)\n- [Commits](https://github.com/github/codeql-action/compare/5595ccaf912efad79be6eef63a5619ff05969be3...33d7b85da1a04171e211befe2c739303b9a4c066)\n\nUpdates `github/codeql-action/analyze` from 4.37.6 to 4.39.3\n- [Release notes](https://github.com/github/codeql-action/releases)\n- [Changelog](https://github.com/github/codeql-action/blob/main/CHANGELOG.md)\n- [Commits](https://github.com/github/codeql-action/compare/5595ccaf912efad79be6eef63a5619ff05969be3...33d7b85da1a04171e211befe2c739303b9a4c066)\n\nUpdates `actions/setup-python` from 7.0.0 to 7.1.0\n- [Release notes](https://github.com/actions/setup-python/releases)\n- [Commits](https://github.com/actions/setup-python/compare/5fda3b95a4ea91299a34e894583c3862153e4b97...6d4fd22b20465ccc0f7354476588e8df7c9ca0e0)\n\nUpdates `ossf/scorecard-action` from 2.4.4 to 2.5.0\n- [Release notes](https://github.com/ossf/scorecard-action/releases)\n- [Changelog](https://github.com/ossf/scorecard-action/blob/main/RELEASE.md)\n- [Commits](https://github.com/ossf/scorecard-action/compare/2d1146689b8cda280b9bc96326124645441f03bc...fa7117db83c52d787ae5a89f350999701505d78e)\n\nUpdates `github/codeql-action/upload-sarif` from 4.37.6 to 4.39.3\n- [Release notes](https://github.com/github/codeql-action/releases)\n- [Changelog](https://github.com/github/codeql-action/blob/main/CHANGELOG.md)\n- [Commits](https://github.com/github/codeql-action/compare/5595ccaf912efad79be6eef63a5619ff05969be3...33d7b85da1a04171e211befe2c739303b9a4c066)\n\n---\nupdated-dependencies:\n- dependency-name: actions/setup-dotnet\n  dependency-version: 6.1.0\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n  dependency-group: actions-minor-patch\n- dependency-name: actions/upload-artifact\n  dependency-version: 7.0.2\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n  dependency-group: actions-minor-patch\n- dependency-name: actions/download-artifact\n  dependency-version: 8.0.2\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n  dependency-group: actions-minor-patch\n- dependency-name: benchmark-action/github-action-benchmark\n  dependency-version: 1.22.2\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n  dependency-group: actions-minor-patch\n- dependency-name: danielpalme/ReportGenerator-GitHub-Action\n  dependency-version: 5.5.12\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n  dependency-group: actions-minor-patch\n- dependency-name: github/codeql-action/init\n  dependency-version: 4.39.3\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n  dependency-group: actions-minor-patch\n- dependency-name: github/codeql-action/autobuild\n  dependency-version: 4.39.3\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n  dependency-group: actions-minor-patch\n- dependency-name: github/codeql-action/analyze\n  dependency-version: 4.39.3\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n  dependency-group: actions-minor-patch\n- dependency-name: actions/setup-python\n  dependency-version: 7.1.0\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n  dependency-group: actions-minor-patch\n- dependency-name: ossf/scorecard-action\n  dependency-version: 2.5.0\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n  dependency-group: actions-minor-patch\n- dependency-name: github/codeql-action/upload-sarif\n  dependency-version: 4.39.3\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n  dependency-group: actions-minor-patch\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>\nCo-authored-by: Arsen Tymchuk <130369488+aytymchuk@users.noreply.github.com>",
+          "timestamp": "2026-11-13T23:45:38+01:00",
+          "tree_id": "cf4edff9d5f5a29812ae580580b0d2d15d79a738",
+          "url": "https://github.com/Dilcore-Official/Dilcore-MongoDb/commit/654ff49ff67c6fcec09a5b57a297e8aa4a3ae7c8"
+        },
+        "date": 1794610356403,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.BulkRepositoryBenchmarks.RawDriver_BulkInsert(BatchSize: 100)",
+            "value": 1671443.3076923077,
+            "unit": "ns",
+            "range": "± 30679.384998683334"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.BulkRepositoryBenchmarks.Library_BulkStoreAsync(BatchSize: 100)",
+            "value": 3039851.3571428573,
+            "unit": "ns",
+            "range": "± 91225.9287724773"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.BulkRepositoryBenchmarks.RawDriver_BulkDelete(BatchSize: 100)",
+            "value": 2207241.1333333333,
+            "unit": "ns",
+            "range": "± 146899.50076248273"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.BulkRepositoryBenchmarks.Library_BulkDeleteAsync(BatchSize: 100)",
+            "value": 2390904.1,
+            "unit": "ns",
+            "range": "± 176055.55565900213"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.BulkRepositoryBenchmarks.RawDriver_BulkInsert(BatchSize: 1000)",
+            "value": 11677825.857142856,
+            "unit": "ns",
+            "range": "± 223632.20224283"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.BulkRepositoryBenchmarks.Library_BulkStoreAsync(BatchSize: 1000)",
+            "value": 24188490.666666668,
+            "unit": "ns",
+            "range": "± 333161.97788554156"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.BulkRepositoryBenchmarks.RawDriver_BulkDelete(BatchSize: 1000)",
+            "value": 14464676,
+            "unit": "ns",
+            "range": "± 427591.9382397619"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.BulkRepositoryBenchmarks.Library_BulkDeleteAsync(BatchSize: 1000)",
+            "value": 15934997.166666666,
+            "unit": "ns",
+            "range": "± 668391.6102302239"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.ColdStartBenchmarks.RawDriver_CreateClientAndGetCollection",
+            "value": 11899.042525227864,
+            "unit": "ns",
+            "range": "± 830.5220466980941"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.ColdStartBenchmarks.Library_ConfigureDiAndResolveBinding",
+            "value": 19683.139866420202,
+            "unit": "ns",
+            "range": "± 195.9738849574098"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.ProjectionRepositoryBenchmarks.RawDriver_ProjectOne",
+            "value": 1134454.7,
+            "unit": "ns",
+            "range": "± 191926.44302101232"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.ProjectionRepositoryBenchmarks.Library_GetProjectedAsync",
+            "value": 1173369.7477864583,
+            "unit": "ns",
+            "range": "± 215864.61271223682"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.ProjectionRepositoryBenchmarks.RawDriver_ProjectList",
+            "value": 1604323.9510416666,
+            "unit": "ns",
+            "range": "± 478618.80854726216"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.ProjectionRepositoryBenchmarks.Library_GetListProjectedAsync",
+            "value": 1655539.678125,
+            "unit": "ns",
+            "range": "± 491554.5702080266"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_Replace",
+            "value": 652390.1428571428,
+            "unit": "ns",
+            "range": "± 21163.199139642755"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_Store_Update",
+            "value": 885912.1333333333,
+            "unit": "ns",
+            "range": "± 30071.634329824286"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_Delete_Soft",
+            "value": 695054.4285714285,
+            "unit": "ns",
+            "range": "± 33484.39634645984"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_Delete_Soft",
+            "value": 819214,
+            "unit": "ns",
+            "range": "± 11901.769035175681"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_Delete_Hard",
+            "value": 626768.9333333333,
+            "unit": "ns",
+            "range": "± 16801.626836481668"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_Delete_Hard",
+            "value": 757566.6923076923,
+            "unit": "ns",
+            "range": "± 18244.027499360876"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_Insert",
+            "value": 358249.37034254806,
+            "unit": "ns",
+            "range": "± 18212.018214861986"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_Store_Insert",
+            "value": 388716.2778695914,
+            "unit": "ns",
+            "range": "± 20262.63988417425"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_FindById",
+            "value": 372854.13134765625,
+            "unit": "ns",
+            "range": "± 13627.929703730459"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_GetAsync",
+            "value": 441574.1462751116,
+            "unit": "ns",
+            "range": "± 35380.54479534855"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_FindList",
+            "value": 536545.7347935268,
+            "unit": "ns",
+            "range": "± 43372.71515071398"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_GetListAsync",
+            "value": 601034.644140625,
+            "unit": "ns",
+            "range": "± 74382.80686715967"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_FindEnumerable",
+            "value": 528469.1858258928,
+            "unit": "ns",
+            "range": "± 37268.739174465954"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_GetAsyncEnumerable",
+            "value": 561398.566545759,
+            "unit": "ns",
+            "range": "± 44340.46572917344"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_Count",
+            "value": 429796.34000651044,
+            "unit": "ns",
+            "range": "± 3464.9341803544007"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_CountAsync",
+            "value": 457026.03759765625,
+            "unit": "ns",
+            "range": "± 3862.66227750075"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_Any",
+            "value": 361416.9191894531,
+            "unit": "ns",
+            "range": "± 2930.148244305843"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_HasAnyAsync",
+            "value": 380052.3481820914,
+            "unit": "ns",
+            "range": "± 10352.908206241125"
           }
         ]
       }
