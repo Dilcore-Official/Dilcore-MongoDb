@@ -81,7 +81,7 @@ public static class DocumentEntityExtensions
     {
         _ = SerializationConfigured.Value;
         var bson = document.ToBsonDocument();
-        bson.Remove("_id");
+        bson.Remove(DocumentElementNames.Id);
         return new BsonDocument(UpdateSetOperator, bson);
     }
 

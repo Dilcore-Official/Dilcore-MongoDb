@@ -2,6 +2,7 @@ using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Exceptions;
 using Dilcore.MongoDB.Abstractions.Extensions;
 using Dilcore.MongoDB.Abstractions.Helpers;
+using Dilcore.MongoDB.Abstractions.Internal;
 using Dilcore.MongoDB.Abstractions.Policies;
 using AutoFixture.NUnit4;
 using MongoDB.Bson;
@@ -101,7 +102,7 @@ public class DocumentEntityExtensionsTests
         var entity = new FullPolicyEntity { Id = Guid.NewGuid(), Value = "x" };
         var bson = entity.ToBsonSnapshotUpdateDocument();
         bson.Contains("$set").ShouldBeTrue();
-        bson["$set"].AsBsonDocument.Contains("_id").ShouldBeFalse();
+        bson["$set"].AsBsonDocument.Contains(DocumentElementNames.Id).ShouldBeFalse();
     }
 
     [Test]

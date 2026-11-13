@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "coverage": {
+      "command": "dotnet-coverage-mcp",
+      "env": {
+        "COVERAGE_MCP_ALLOWED_ROOT": "/Users/arsen/Projects/Dilcore/Libraries/DocumentDb",
+        "COVERAGE_MCP_DOTNET_TEST_TIMEOUT_MS": "1200000"
+      }
+    }
+  }
+}

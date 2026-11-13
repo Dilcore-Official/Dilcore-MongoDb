@@ -76,7 +76,7 @@ public abstract class BaseMongoDbRepository<TDocument> where TDocument : class, 
         {
             return await func(collectionResult.Value, cancellationToken);
         }
-        catch (MongoException exception)
+        catch (Exception exception) when (exception is MongoException or FormatException)
         {
             return MongoExceptionMapper.Fail<TResult>(exception);
         }
@@ -106,7 +106,7 @@ public abstract class BaseMongoDbRepository<TDocument> where TDocument : class, 
         {
             return await func(collectionResult.Value, cancellationToken);
         }
-        catch (MongoException exception)
+        catch (Exception exception) when (exception is MongoException or FormatException)
         {
             return MongoExceptionMapper.Fail(exception);
         }
