@@ -24,12 +24,14 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
   validation, Source Link, `.snupkg` symbol packages, package icon, and `PackageTags` that match
   `docs/product/package-descriptions.md`. `test/PackageTests` asserts description, tags, license, repository,
   README, icon, and symbols on the packed packages.
-- Tag-driven release workflow with OIDC trusted publishing to NuGet.org, a GitHub Release, and a manual
-  dry-run pack. See CONTRIBUTING.md, "Releasing".
+- Manual release workflow with OIDC trusted publishing to NuGet.org. Each run computes the next version from
+  the git tags (`2.0.0-preview.N` for previews, `2.X.Y` for stable), tags the commit, and creates a GitHub
+  Release. A run from another branch is a dry run. See CONTRIBUTING.md, "Releasing".
 
 ### Changed
 
 - Pushes to `main` no longer pack or publish packages (the GitHub Packages auto-patch publish is removed).
+- The placeholder `Version` in `src/Directory.Build.props` is `2.0.0-preview.0` (local builds only).
 - `IProvisioningStep.ExecuteAsync` takes `CancellationToken cancellationToken = default`.
 - Protected `BaseMongoDbRepository.ExecuteAsync` overloads take `estimatedBytes` before
   `CancellationToken`, so the token is the last parameter. Positional callers must swap those arguments.

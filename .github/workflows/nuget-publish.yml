@@ -1,14 +1,22 @@
 name: 📦 Publish NuGet Packages
 
-# Releases are tag driven. Pushing a tag such as v1.2.3 or v2.0.0-rc.1 on a commit that is on main
-# runs the full test suite, packs, and publishes to NuGet.org with OIDC trusted publishing.
-# Running the workflow by hand packs a preview version and uploads it as an artifact. It never publishes.
-# One-time setup (nuget.org policy, GitHub environment, NUGET_USER secret): see CONTRIBUTING.md, "Releasing".
+# Manual release pipeline. Every run computes the next version from the git tags, tests the commit,
+# and publishes to NuGet.org with OIDC trusted publishing. The version is not edited by hand.
+#
+#   preview = true  (default)  2.0.0-preview.N   N is the highest existing v2.0.0-preview.* tag plus one
+#   preview = false            2.X.Y             the patch after the highest stable v2.* tag, or 2.0.0 if none
+#
+# Run it from main to publish: the run creates the vX.Y.Z tag and a GitHub Release. Run it from any other
+# branch for a dry run that packs the next version and uploads the packages as an artifact.
+# One-time setup (nuget.org policy, GitHub environment, NUGET_USER secret): CONTRIBUTING.md, "Releasing".
 
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
+    inputs:
+      preview:
+        description: Publish a preview (2.0.0-preview.N). Untick for a stable 2.X.Y release.
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -16,14 +24,17 @@ permissions:
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
   DOTNET_NOLOGO: true
+  # Major version of every package. Change it only for a new major line.
+  MAJOR_VERSION: "2"
 
+# One release at a time, so two runs never compute the same version.
 concurrency:
-  group: nuget-publish-${{ github.ref }}
+  group: nuget-publish
   cancel-in-progress: false
 
 jobs:
   verify:
-    name: ✅ Verify and test
+    name: ✅ Version, verify and test
     runs-on: ubuntu-latest
     timeout-minutes: 45
     outputs:
@@ -35,29 +46,31 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🔢 Resolve version
+      - name: 🔢 Compute next version
         id: version
         env:
-          REF_TYPE: ${{ github.ref_type }}
-          REF_NAME: ${{ github.ref_name }}
-          RUN_NUMBER: ${{ github.run_number }}
+          PREVIEW: ${{ inputs.preview }}
         run: |
           set -euo pipefail
-          if [[ "${REF_TYPE}" == "tag" ]]; then
-            if [[ ! "${REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$ ]]; then
-              echo "::error::Tag '${REF_NAME}' is not vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-prerelease."
-              exit 1
-            fi
-            if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
-              echo "::error::Tag '${REF_NAME}' points at a commit that is not on main."
-              exit 1
-            fi
-            version="${REF_NAME#v}"
+          git fetch --tags --force --quiet
+          if [[ "${PREVIEW}" == "true" ]]; then
+            last="$(git tag --list "v${MAJOR_VERSION}.0.0-preview.*" | sed -E 's/^.*-preview\.//' | grep -E '^[0-9]+$' | sort -n | tail -1 || true)"
+            version="${MAJOR_VERSION}.0.0-preview.$(( ${last:-0} + 1 ))"
           else
-            version="0.0.0-preview.${RUN_NUMBER}"
+            last="$(git tag --list "v${MAJOR_VERSION}.*" | grep -E "^v${MAJOR_VERSION}\.[0-9]+\.[0-9]+$" | sed 's/^v//' | sort -V | tail -1 || true)"
+            if [[ -z "${last}" ]]; then
+              version="${MAJOR_VERSION}.0.0"
+            else
+              IFS='.' read -r major minor patch <<< "${last}"
+              version="${major}.${minor}.$(( patch + 1 ))"
+            fi
+          fi
+          if git rev-parse --verify --quiet "refs/tags/v${version}" > /dev/null; then
+            echo "::error::Tag v${version} already exists."
+            exit 1
           fi
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
-          echo "📦 Version: ${version}"
+          echo "📦 Next version: ${version}" | tee -a "${GITHUB_STEP_SUMMARY}"
 
       - name: 🛠️ Setup .NET
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
@@ -83,9 +96,9 @@ jobs:
         with:
           artifact-name: release-trx
 
-  preview:
-    name: 🧪 Preview pack (no publish)
-    if: github.event_name == 'workflow_dispatch'
+  dry-run:
+    name: 🧪 Dry run (pack only)
+    if: github.ref != 'refs/heads/main'
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -102,20 +115,20 @@ jobs:
       - name: 📤 Upload packages
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: preview-packages
+          name: dry-run-packages
           path: artifacts/*
           if-no-files-found: error
 
   release:
     name: 🚀 Publish to NuGet.org
-    if: github.ref_type == 'tag'
+    if: github.ref == 'refs/heads/main'
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # The environment name must match the trusted publishing policy on nuget.org.
     environment: nuget
     permissions:
-      contents: write   # GitHub Release
+      contents: write   # version tag and GitHub Release
       id-token: write   # OIDC token for NuGet/login
 
     steps:
@@ -126,6 +139,15 @@ jobs:
         uses: ./.github/actions/pack-nuget
         with:
           version: ${{ needs.verify.outputs.version }}
+
+      # The tag is pushed before the publish, so a failed publish never reuses its version number.
+      - name: 🏷️ Create version tag
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          git tag "v${VERSION}" "${GITHUB_SHA}"
+          git push origin "refs/tags/v${VERSION}"
 
       # Request the short-lived key right before the push. It is valid for about an hour.
       - name: 🔑 NuGet login (OIDC)
@@ -147,12 +169,11 @@ jobs:
       - name: 🏷️ Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
           set -euo pipefail
-          flags=(--generate-notes --verify-tag --title "${TAG}")
+          flags=(--generate-notes --verify-tag --title "v${VERSION}")
           if [[ "${VERSION}" == *-* ]]; then
             flags+=(--prerelease)
           fi
-          gh release create "${TAG}" artifacts/* "${flags[@]}"
+          gh release create "v${VERSION}" artifacts/* "${flags[@]}"

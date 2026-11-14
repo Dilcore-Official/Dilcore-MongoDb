@@ -149,10 +149,24 @@ CODEOWNERS requests review from [@aytymchuk](https://github.com/aytymchuk).
 
 ## Releasing
 
-Releases are tag driven and published to NuGet.org by
+Releases are run from GitHub Actions and published to NuGet.org by
 [`.github/workflows/nuget-publish.yml`](.github/workflows/nuget-publish.yml) with OIDC
 [trusted publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing). No
 NuGet API key is stored in the repository. Pushes to `main` do not publish.
+
+**Versioning.** Versions follow [SemVer](https://semver.org/). The major version is `2` and lives in
+`MAJOR_VERSION` in the workflow. Nobody edits a version by hand: each run computes the next one from the git
+tags, and a publishing run creates the matching `vX.Y.Z` tag.
+
+| Run | Version | Next number |
+|-----|---------|-------------|
+| `preview` ticked (default) | `2.0.0-preview.N` | highest existing `v2.0.0-preview.*` tag plus one, starting at `1` |
+| `preview` unticked | `2.X.Y` | patch after the highest stable `v2.*` tag, or `2.0.0` if there is none |
+
+The pre-release number uses a dot (`preview.10`), so NuGet orders `preview.2` before `preview.10`. A hyphen
+(`preview-10`) would compare as text and put it before `preview-2`. Stable runs only bump the patch number;
+change the minor number with a manual tag (`git tag v2.1.0 && git push origin v2.1.0`), and the next stable run continues
+from it.
 
 **One-time setup (repository owner)**
 
@@ -166,18 +180,19 @@ NuGet API key is stored in the repository. Pushes to `main` do not publish.
    (not an email address).
 4. Optional: reserve the `Dilcore.MongoDB` prefix on nuget.org.
 
-**Cut a release**
+**Publish a release**
 
 1. Merge the release changes to `main`. Move `PublicAPI.Unshipped.txt` entries to `PublicAPI.Shipped.txt`
    and update [CHANGELOG.md](CHANGELOG.md).
-2. Tag the merge commit and push the tag: `git tag v1.2.3 && git push origin v1.2.3`. Pre-releases use
-   `v2.0.0-rc.1`. The tag must be on `main`; the workflow rejects any other tag.
-3. The workflow restores in locked mode, checks formatting, builds with warnings as errors, and runs the whole
-   test suite (including the packed-consumer smoke test and the package metadata tests). After the `nuget`
-   environment is approved it packs with the tag as the version, pushes the `.nupkg` and `.snupkg` files, and
-   creates the GitHub Release with generated notes.
-4. **Dry run:** run the workflow by hand (Actions → Publish NuGet Packages → Run workflow). It packs
-   `0.0.0-preview.<run>` and uploads the packages as an artifact. It never publishes.
+2. Actions → Publish NuGet Packages → **Run workflow** on `main`. Keep `preview` ticked for a preview build.
+3. The run computes the next version, restores in locked mode, checks formatting, builds with warnings as
+   errors, and runs the whole test suite (including the packed-consumer smoke test and the package metadata
+   tests). After the `nuget` environment is approved it packs with that version, pushes the version tag,
+   pushes the `.nupkg` and `.snupkg` files to NuGet.org, and creates the GitHub Release (marked
+   pre-release for preview versions). The tag is pushed before the publish, so a failed publish never
+   reuses a version number.
+4. **Dry run:** run the workflow from any branch other than `main`. It computes the next version, tests,
+   packs, and uploads the packages as an artifact. It never publishes or tags.
 
 A published version cannot be deleted from NuGet.org, only unlisted. After the first release, set
 `PackageValidationBaselineVersion` in `src/Directory.Build.props` so package validation compares the public

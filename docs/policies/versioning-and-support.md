@@ -33,9 +33,9 @@ Related: naming ADR [#4](https://github.com/Dilcore-Official/Dilcore-MongoDb/iss
 | Breaking public API / package rename / TFM drop | Major |
 | Backward-compatible features | Minor |
 | Bug fixes, docs, non-functional packaging | Patch |
-| Preview builds (target scheme) | `2.0.0-alpha.N`, then `2.0.0-rc.N` before GA `2.0.0` |
+| Preview builds | `2.0.0-preview.N` (dot-separated number, so NuGet orders it numerically), then GA `2.0.0` |
 
-**Current** source of truth ([#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30)): git tags on `main` and NuGet.org. `.github/workflows/nuget-publish.yml` publishes on a `vMAJOR.MINOR.PATCH[-prerelease]` tag through OIDC trusted publishing; the tag is the package version. Pushes to `main` do not publish. `src/Directory.Build.props` keeps a placeholder `Version` for local builds. Release steps: [CONTRIBUTING.md](../../CONTRIBUTING.md#releasing).
+**Current** source of truth ([#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30)): git tags on `main` and NuGet.org. `.github/workflows/nuget-publish.yml` is run by hand, computes the next version from the existing tags (`2.0.0-preview.N` for previews, the next `2.X.Y` patch for stable), publishes through OIDC trusted publishing, and creates the `vX.Y.Z` tag. The major version is `MAJOR_VERSION` in that workflow. Pushes to `main` do not publish. `src/Directory.Build.props` keeps a placeholder `Version` for local builds. Release steps: [CONTRIBUTING.md](../../CONTRIBUTING.md#releasing).
 
 ## v1 → v2 migration policy
 
@@ -69,4 +69,4 @@ Applies to **post-v2** removals only:
 - **Supported driver:** pin in `Directory.Packages.props`
 - **Supported servers:** MongoDB’s published matrix for that pin
 - **Product identity:** Dilcore MongoDB toolkit (not Amazon DocumentDB)
-- **Publish:** NuGet.org via tag-driven OIDC trusted publishing in `nuget-publish.yml` (#30)
+- **Publish:** NuGet.org via OIDC trusted publishing from a manually run, auto-versioned workflow in `nuget-publish.yml` (#30)
