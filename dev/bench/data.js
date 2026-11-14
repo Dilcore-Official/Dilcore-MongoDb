@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794624443903,
+  "lastUpdate": 1794656251652,
   "repoUrl": "https://github.com/Dilcore-Official/Dilcore-MongoDb",
   "entries": {
     "Dilcore.MongoDB Benchmarks": [
@@ -3456,6 +3456,222 @@ window.BENCHMARK_DATA = {
             "value": 331146.57346754806,
             "unit": "ns",
             "range": "± 21462.412162094603"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "130369488+aytymchuk@users.noreply.github.com",
+            "name": "Arsen Tymchuk",
+            "username": "aytymchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a4a04004d72addb4fd92bd39d6cee67f7d601a4e",
+          "message": "test: consolidate suites on NUnit and Shouldly (#106)\n\n* test: consolidate suites on NUnit and Shouldly\n\nShare the MongoDB fixture and repo locator in TestSupport, require Arrange/Act/Assert comments, and add package-content and packed-consumer tests for issue #29.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>\n\n* test: reuse packed nupkgs across fixtures\n\nPackage and consumer tests share one locked pack when sources are unchanged, so CI does not pack the libraries twice.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>\n\n---------\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+          "timestamp": "2026-11-14T12:31:38+01:00",
+          "tree_id": "c9c325561b4eb2998981d39a145f02795725f243",
+          "url": "https://github.com/Dilcore-Official/Dilcore-MongoDb/commit/a4a04004d72addb4fd92bd39d6cee67f7d601a4e"
+        },
+        "date": 1794656250888,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.BulkRepositoryBenchmarks.RawDriver_BulkInsert(BatchSize: 100)",
+            "value": 1556135.4333333333,
+            "unit": "ns",
+            "range": "± 41996.626157801"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.BulkRepositoryBenchmarks.Library_BulkStoreAsync(BatchSize: 100)",
+            "value": 3186510,
+            "unit": "ns",
+            "range": "± 70475.05193465491"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.BulkRepositoryBenchmarks.RawDriver_BulkDelete(BatchSize: 100)",
+            "value": 2051420.2857142857,
+            "unit": "ns",
+            "range": "± 38454.44466344074"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.BulkRepositoryBenchmarks.Library_BulkDeleteAsync(BatchSize: 100)",
+            "value": 2346304.285714286,
+            "unit": "ns",
+            "range": "± 33648.1120911219"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.BulkRepositoryBenchmarks.RawDriver_BulkInsert(BatchSize: 1000)",
+            "value": 11803174.833333334,
+            "unit": "ns",
+            "range": "± 161274.24341296486"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.BulkRepositoryBenchmarks.Library_BulkStoreAsync(BatchSize: 1000)",
+            "value": 27024268.866666667,
+            "unit": "ns",
+            "range": "± 1846148.89047246"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.BulkRepositoryBenchmarks.RawDriver_BulkDelete(BatchSize: 1000)",
+            "value": 17578049.2,
+            "unit": "ns",
+            "range": "± 5183947.796987242"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.BulkRepositoryBenchmarks.Library_BulkDeleteAsync(BatchSize: 1000)",
+            "value": 15915870.692307692,
+            "unit": "ns",
+            "range": "± 706048.8842424894"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.ColdStartBenchmarks.RawDriver_CreateClientAndGetCollection",
+            "value": 11459.239825908955,
+            "unit": "ns",
+            "range": "± 157.11169820258354"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.ColdStartBenchmarks.Library_ConfigureDiAndResolveBinding",
+            "value": 19076.182006835938,
+            "unit": "ns",
+            "range": "± 349.19393866213534"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.ProjectionRepositoryBenchmarks.RawDriver_ProjectOne",
+            "value": 1080450.56328125,
+            "unit": "ns",
+            "range": "± 193631.59089465046"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.ProjectionRepositoryBenchmarks.Library_GetProjectedAsync",
+            "value": 1095974.1713541667,
+            "unit": "ns",
+            "range": "± 206509.03054672867"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.ProjectionRepositoryBenchmarks.RawDriver_ProjectList",
+            "value": 1540352.7528645834,
+            "unit": "ns",
+            "range": "± 455050.5744095398"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.ProjectionRepositoryBenchmarks.Library_GetListProjectedAsync",
+            "value": 1582577.1291666667,
+            "unit": "ns",
+            "range": "± 445820.9640875192"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_Replace",
+            "value": 619733.9166666666,
+            "unit": "ns",
+            "range": "± 46300.7956449569"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_Store_Update",
+            "value": 815718.1333333333,
+            "unit": "ns",
+            "range": "± 38711.162832419475"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_Delete_Soft",
+            "value": 650746.1333333333,
+            "unit": "ns",
+            "range": "± 16415.949143033635"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_Delete_Soft",
+            "value": 785449.0714285715,
+            "unit": "ns",
+            "range": "± 17390.362748745843"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_Delete_Hard",
+            "value": 571006.9333333333,
+            "unit": "ns",
+            "range": "± 24795.66544339862"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_Delete_Hard",
+            "value": 741335.4333333333,
+            "unit": "ns",
+            "range": "± 19703.353853257235"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_Insert",
+            "value": 298137.8483886719,
+            "unit": "ns",
+            "range": "± 1589.2595281981207"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_Store_Insert",
+            "value": 358003.85030691966,
+            "unit": "ns",
+            "range": "± 44613.696880892916"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_FindById",
+            "value": 294310.74190848216,
+            "unit": "ns",
+            "range": "± 12863.23921516997"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_GetAsync",
+            "value": 397531.03173828125,
+            "unit": "ns",
+            "range": "± 53562.82553255809"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_FindList",
+            "value": 446348.9069010417,
+            "unit": "ns",
+            "range": "± 10772.17675439706"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_GetListAsync",
+            "value": 500064.9034598214,
+            "unit": "ns",
+            "range": "± 50732.667610895674"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_FindEnumerable",
+            "value": 460587.4170673077,
+            "unit": "ns",
+            "range": "± 28839.43911188637"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_GetAsyncEnumerable",
+            "value": 511413.34518229164,
+            "unit": "ns",
+            "range": "± 62767.60991926369"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_Count",
+            "value": 434676.32600911456,
+            "unit": "ns",
+            "range": "± 3389.3653566693233"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_CountAsync",
+            "value": 489601.97013346356,
+            "unit": "ns",
+            "range": "± 6391.06149684317"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.RawDriver_Any",
+            "value": 304716.0351938101,
+            "unit": "ns",
+            "range": "± 2030.4982304827333"
+          },
+          {
+            "name": "Dilcore.MongoDB.Benchmarks.RepositoryCrudBenchmarks.Library_HasAnyAsync",
+            "value": 339701.15673828125,
+            "unit": "ns",
+            "range": "± 29376.06210622474"
           }
         ]
       }
