@@ -26,7 +26,7 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
   README, icon, and symbols on the packed packages.
 - Manual release workflow with OIDC trusted publishing to NuGet.org. Each run computes the next version from
   the git tags (`2.0.0-preview.N` for previews, `2.X.Y` for stable), tags the commit, and creates a GitHub
-  Release. A run from another branch is a dry run. See CONTRIBUTING.md, "Releasing".
+  Release. A `dry_run` input tests the OIDC login without tagging or publishing. See CONTRIBUTING.md, "Releasing".
 
 ### Changed
 

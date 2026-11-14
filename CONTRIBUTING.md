@@ -191,8 +191,11 @@ from it.
    pushes the `.nupkg` and `.snupkg` files to NuGet.org, and creates the GitHub Release (marked
    pre-release for preview versions). The tag is pushed before the publish, so a failed publish never
    reuses a version number.
-4. **Dry run:** run the workflow from any branch other than `main`. It computes the next version, tests,
-   packs, and uploads the packages as an artifact. It never publishes or tags.
+4. **Dry run:** tick `dry_run` (default off). The run computes the next version, tests, packs, waits for the
+   `nuget` environment approval, and logs in to NuGet.org with OIDC, which proves the trusted publishing policy,
+   `NUGET_USER` and the environment name are right. It then stops: no tag, no push, no release, and the packages
+   are only uploaded as an artifact. It works from any branch, so run it from the PR branch before merging.
+   Without `dry_run`, a run from a branch other than `main` only packs and uploads the artifact.
 
 A published version cannot be deleted from NuGet.org, only unlisted. After the first release, set
 `PackageValidationBaselineVersion` in `src/Directory.Build.props` so package validation compares the public

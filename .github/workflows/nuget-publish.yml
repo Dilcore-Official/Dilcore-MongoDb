@@ -6,8 +6,10 @@ name: 📦 Publish NuGet Packages
 #   preview = true  (default)  2.0.0-preview.N   N is the highest existing v2.0.0-preview.* tag plus one
 #   preview = false            2.X.Y             the patch after the highest stable v2.* tag, or 2.0.0 if none
 #
-# Run it from main to publish: the run creates the vX.Y.Z tag and a GitHub Release. Run it from any other
-# branch for a dry run that packs the next version and uploads the packages as an artifact.
+# Run it from main with dry_run unticked to publish: the run creates the vX.Y.Z tag and a GitHub Release.
+# dry_run = true tests the whole path (tests, pack, environment approval, OIDC login to NuGet.org) and then stops
+# before the tag, the push and the release. It works from any branch, so the nuget.org policy can be checked early.
+# From a branch other than main without dry_run the workflow only packs and uploads the packages as an artifact.
 # One-time setup (nuget.org policy, GitHub environment, NUGET_USER secret): CONTRIBUTING.md, "Releasing".
 
 on:
@@ -17,6 +19,10 @@ on:
         description: Publish a preview (2.0.0-preview.N). Untick for a stable 2.X.Y release.
         type: boolean
         default: true
+      dry_run:
+        description: Dry run. Test the NuGet.org connection (OIDC login) but do not tag, push or release.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -96,9 +102,9 @@ jobs:
         with:
           artifact-name: release-trx
 
-  dry-run:
-    name: 🧪 Dry run (pack only)
-    if: github.ref != 'refs/heads/main'
+  pack-only:
+    name: 🧪 Pack only (not on main)
+    if: github.ref != 'refs/heads/main' && !inputs.dry_run
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -115,13 +121,13 @@ jobs:
       - name: 📤 Upload packages
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: dry-run-packages
+          name: packages
           path: artifacts/*
           if-no-files-found: error
 
   release:
     name: 🚀 Publish to NuGet.org
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || inputs.dry_run
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -142,6 +148,7 @@ jobs:
 
       # The tag is pushed before the publish, so a failed publish never reuses its version number.
       - name: 🏷️ Create version tag
+        if: ${{ !inputs.dry_run }}
         env:
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
@@ -156,8 +163,26 @@ jobs:
         with:
           user: ${{ secrets.NUGET_USER }}
 
+      - name: ✅ Dry run result
+        if: ${{ inputs.dry_run }}
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          KEY_ISSUED: ${{ steps.login.outputs.NUGET_API_KEY != '' }}
+        run: |
+          echo "### 🧪 Dry run ${VERSION}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "OIDC login to NuGet.org succeeded (key issued: ${KEY_ISSUED}). Nothing was tagged, pushed or released." >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: 📤 Upload packages (dry run)
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: packages
+          path: artifacts/*
+          if-no-files-found: error
+
       # Pushing the .nupkg files also pushes the matching .snupkg symbol packages from the same folder.
       - name: 🚀 Push to NuGet.org
+        if: ${{ !inputs.dry_run }}
         env:
           NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
         run: >
@@ -167,6 +192,7 @@ jobs:
           --skip-duplicate
 
       - name: 🏷️ Create GitHub Release
+        if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.verify.outputs.version }}
