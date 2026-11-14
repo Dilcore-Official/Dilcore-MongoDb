@@ -1,5 +1,4 @@
 using System.Xml.Linq;
-using Dilcore.MongoDB.ArchitectureTests.Helpers;
 
 namespace Dilcore.MongoDB.ArchitectureTests;
 
@@ -41,25 +40,33 @@ public class PackageUsageTests
     [Test]
     public void EveryCentralPackageVersion_IsReferencedByAProject()
     {
+        // Arrange
         var root = RepoLocator.FindRepoRoot();
         var referenced = GetAllPackageReferences(root);
         var versions = GetCentralPackageVersions(root);
+
+        // Act
         var unused = versions.Where(version => !referenced.Contains(version));
+
+        // Assert
         unused.ShouldBeEmpty();
     }
 
     [Test]
     public void EveryRuntimePackageReference_IsUsedByThatProject()
     {
+        // Arrange
         var root = RepoLocator.FindRepoRoot();
-        var failures = new List<string>();
         var projects = GetProjectFiles(root);
+        var failures = new List<string>();
 
+        // Act
         foreach (var project in projects)
         {
             CollectPackageFailures(project, root, failures);
         }
 
+        // Assert
         failures.ShouldBeEmpty();
     }
 

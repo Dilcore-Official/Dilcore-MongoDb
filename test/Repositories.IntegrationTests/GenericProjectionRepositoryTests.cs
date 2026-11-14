@@ -48,22 +48,27 @@ public class GenericProjectionRepositoryTests : BaseIntegrationTests
     [Test]
     public async Task GenericProjectionRepository_GetProjected()
     {
+        // Arrange
         var entities = Fixture.Build<TestEntity1>()
             .With(x => x.IsDeleted, false)
             .Without(x => x.ETag)
             .CreateMany(20)
             .ToList();
 
-        (await _bulkRepository.BulkStoreAsync(entities.ToArray())).ShouldBeSuccess();
+        var stored = await _bulkRepository.BulkStoreAsync(entities.ToArray());
 
         var entity = entities.First();
         var filter = Builders<TestEntity1>.Filter.Eq(x => x.Id, entity.Id);
+
+        // Act
         var projectionResult = await _projectionRepository.GetAsync(filter, x => new TestEntityProjection
         {
             Id = x.Id,
             Name = x.Name
         });
 
+        // Assert
+        stored.ShouldBeSuccess();
         projectionResult.ShouldBeSuccess();
         projectionResult.ValueOrDefault!.Id.ShouldBe(entity.Id);
         projectionResult.ValueOrDefault.Name.ShouldBe(entity.Name);
@@ -72,12 +77,17 @@ public class GenericProjectionRepositoryTests : BaseIntegrationTests
     [Test]
     public async Task GenericProjectionRepository_MissingDocument_ReturnsNotFound()
     {
+        // Arrange
         var filter = Builders<TestEntity1>.Filter.Eq(x => x.Id, Guid.NewGuid());
+
+        // Act
         var result = await _projectionRepository.GetAsync(filter, x => new TestEntityProjection
         {
             Id = x.Id,
             Name = x.Name
         });
+
+        // Assert
         result.ShouldBeFailure();
         result.ShouldHaveError<DocumentNotFoundError>();
     }
@@ -85,6 +95,7 @@ public class GenericProjectionRepositoryTests : BaseIntegrationTests
     [Test]
     public async Task GenericProjectionRepository_SoftDeleted_IsExcluded()
     {
+        // Arrange
         var services = new ServiceCollection();
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(MongoDbContainer.GetConnectionString()))
@@ -108,15 +119,20 @@ public class GenericProjectionRepositoryTests : BaseIntegrationTests
             .Without(x => x.ETag)
             .Without(x => x.Id)
             .Create();
-        (await repository.StoreAsync(entity)).ShouldBeSuccess();
-        (await repository.DeleteAsync(entity.Id, entity.ETag)).ShouldBeSuccess();
+        var stored = await repository.StoreAsync(entity);
+        var deleted = await repository.DeleteAsync(entity.Id, entity.ETag);
 
+        // Act
         var missing = await projection.GetAsync(
             Builders<TestEntity1>.Filter.Eq(x => x.Id, entity.Id),
             x => new TestEntityProjection { Id = x.Id, Name = x.Name });
+        var list = await projection.GetListAsync(x => new TestEntityProjection { Id = x.Id, Name = x.Name });
+
+        // Assert
+        stored.ShouldBeSuccess();
+        deleted.ShouldBeSuccess();
         missing.ShouldHaveError<DocumentNotFoundError>();
 
-        var list = await projection.GetListAsync(x => new TestEntityProjection { Id = x.Id, Name = x.Name });
         list.ShouldBeSuccess();
         list.Value.ShouldNotContain(x => x.Id == entity.Id);
     }

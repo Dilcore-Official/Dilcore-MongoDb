@@ -14,6 +14,18 @@ Test projects may place small fixtures, fakes, and documents in the same file as
 
 Use NUnit and **Shouldly**. Do not add FluentAssertions.
 
+## Arrange / Act / Assert
+
+Every `[Test]` method uses explicit section comments: `// Arrange`, `// Act`, and `// Assert`. Put a blank line before each comment unless the comment is the first line of the method.
+
+- One Act section. The Act is the behavior under test. Preconditions (builders, inserts, prior calls) stay in Arrange, even when a later assertion checks those values.
+- Assertions (`Should*`, `Assert.*`) stay in Assert. Do not put logic or further system calls in Assert.
+- Use a single `// Act & Assert` section when the action is the assertion itself, such as `Should.Throw`.
+- Omit Arrange when there is nothing to set up. Do not add these comments to `[OneTimeSetUp]`, `[OneTimeTearDown]`, or helpers.
+- Do not split a test that is one scenario. Split a test only when it covers two independent scenarios.
+
+Shared containers, `AcceptanceServiceProviderFactory`, `ResultAssertions`, `RepoLocator`, and `PackagePacker` live in `test/TestSupport`. Do not copy `BaseIntegrationTests` into an integration project.
+
 ## Dependency injection
 
 Any change to `AddMongoDb` registrations needs a unit test that locks the lifetime. Build the provider with `ValidateScopes` and `ValidateOnBuild`.

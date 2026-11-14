@@ -28,7 +28,7 @@ Formatting source of truth is [`.editorconfig`](.editorconfig). After each imple
 - A loop whose first statement maps the loop variable to another value uses `.Select(...)` or `SelectMany` on the source instead. `S3267` is an error. This matches CodeQL `cs/linq/missed-select`.
 - A method argument is a variable, literal, `nameof`, `default`, property, or `new`. It is not a method invocation. Lambdas are allowed as arguments, and calls inside a lambda are allowed.
 - Keep a LINQ chain deferred when the sequence is enumerated once. Call `ToList`, `ToArray`, `ToHashSet`, or `ToDictionary` only when the next step needs a concrete collection, indexing, or a second pass. `CA1851` (multiple enumeration of `IEnumerable`) is an error.
-- Separate setup, the query, and the result with a blank line. Do not leave a method as one solid block of statements.
+- Separate setup, the query, and the result with a blank line. Do not leave a method as one solid block of statements. Test methods use Arrange / Act / Assert comments instead; that shape is defined in [csharp-testing-di](csharp-testing-di.mdc).
 - A method body has at most one nested block (`if`, `else`, `foreach`, `for`, `while`, `switch`, `try`). A loop or branch whose body is another block moves that work into its own method.
 
 ## XML documentation

@@ -18,11 +18,13 @@ public class NamespacePipelineTests
     [Test]
     public async Task Resolve_AppliesStaticPrefix_WithDefaultSeparator()
     {
+        // Arrange
         var resolver = new DefaultNamespaceResolver(
         [
             new PrefixNamespaceSegmentContributor()
         ], EmptyGraph);
 
+        // Act
         var result = await resolver.ResolveAsync(new NamespaceResolutionRequest
         {
             LogicalName = "orders",
@@ -30,6 +32,7 @@ public class NamespacePipelineTests
             StaticPrefix = "acme"
         });
 
+        // Assert
         result.ShouldBeSuccess();
         result.Value.ShouldBe("acme_orders");
     }
@@ -37,18 +40,21 @@ public class NamespacePipelineTests
     [Test]
     public async Task Resolve_CustomContributor_CanFailClosed()
     {
+        // Arrange
         var resolver = new DefaultNamespaceResolver(
         [
             new PrefixNamespaceSegmentContributor(),
             new FailClosedContributor()
         ], EmptyGraph);
 
+        // Act
         var result = await resolver.ResolveAsync(new NamespaceResolutionRequest
         {
             LogicalName = "orders",
             Target = NamespaceTarget.Collection
         });
 
+        // Assert
         result.ShouldBeFailure();
         result.Errors[0].Message.ShouldContain("required prefix");
     }
@@ -56,11 +62,11 @@ public class NamespacePipelineTests
     [Test]
     public async Task Resolve_CachesWithinScopedResolver()
     {
+        // Arrange
         var resolver = new DefaultNamespaceResolver(
         [
             new PrefixNamespaceSegmentContributor()
         ], EmptyGraph);
-
         var request = new NamespaceResolutionRequest
         {
             LogicalName = "orders",
@@ -68,9 +74,11 @@ public class NamespacePipelineTests
             StaticPrefix = "p"
         };
 
+        // Act
         var first = await resolver.ResolveAsync(request);
         var second = await resolver.ResolveAsync(request);
 
+        // Assert
         first.ShouldBeSuccess();
         second.ShouldBeSuccess();
         first.Value.ShouldBe(second.Value);
@@ -79,34 +87,40 @@ public class NamespacePipelineTests
     [Test]
     public async Task Resolve_InvalidDatabaseName_Fails()
     {
+        // Arrange
         var resolver = new DefaultNamespaceResolver(
         [
             new PrefixNamespaceSegmentContributor()
         ], EmptyGraph);
 
+        // Act
         var result = await resolver.ResolveAsync(new NamespaceResolutionRequest
         {
             LogicalName = "bad/name",
             Target = NamespaceTarget.Database
         });
 
+        // Assert
         result.ShouldBeFailure();
     }
 
     [Test]
     public async Task Resolve_InvalidCollectionName_Fails()
     {
+        // Arrange
         var resolver = new DefaultNamespaceResolver(
         [
             new PrefixNamespaceSegmentContributor()
         ], EmptyGraph);
 
+        // Act
         var result = await resolver.ResolveAsync(new NamespaceResolutionRequest
         {
             LogicalName = "system.indexes",
             Target = NamespaceTarget.Collection
         });
 
+        // Assert
         result.ShouldBeFailure();
         result.Errors[0].Message.ShouldContain("Invalid MongoDB collection name");
     }
@@ -114,17 +128,20 @@ public class NamespacePipelineTests
     [Test]
     public async Task Resolve_UnknownNamespaceTarget_Fails()
     {
+        // Arrange
         var resolver = new DefaultNamespaceResolver(
         [
             new PrefixNamespaceSegmentContributor()
         ], EmptyGraph);
 
+        // Act
         var result = await resolver.ResolveAsync(new NamespaceResolutionRequest
         {
             LogicalName = "orders",
             Target = (NamespaceTarget)999
         });
 
+        // Assert
         result.ShouldBeFailure();
         result.Errors[0].Message.ShouldContain("Unknown namespace target");
     }

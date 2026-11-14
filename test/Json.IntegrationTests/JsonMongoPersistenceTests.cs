@@ -8,31 +8,19 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Newtonsoft.Json.Linq;
 using System.Text.Json;
-using Testcontainers.MongoDb;
 
 namespace Dilcore.MongoDB.Json.IntegrationTests;
 
 [Category("M3Matrix")]
-public class JsonMongoPersistenceTests
+public class JsonMongoPersistenceTests : BaseIntegrationTests
 {
-    private MongoDbContainer _container = null!;
-
-    [OneTimeSetUp]
-    public async Task Start()
-    {
-        _container = MongoTestImages.CreateStandalone();
-        await _container.StartAsync();
-    }
-
-    [OneTimeTearDown]
-    public async Task Stop() => await _container.DisposeAsync();
-
     [Test]
     public async Task InsertedCanonicalJson_PersistsExactBsonTypes()
     {
+        // Arrange
         var services = new ServiceCollection();
         services.AddMongoDb(mongo => mongo
-            .AddCluster("primary", c => c.UseConnectionString(_container.GetConnectionString()))
+            .AddCluster("primary", c => c.UseConnectionString(MongoDbContainer.GetConnectionString()))
             .AddDatabase("JsonDB", db => db.OnCluster("primary")));
         services.AddSystemTextJsonDocuments();
         using var provider = services.BuildServiceProvider();
@@ -42,7 +30,6 @@ public class JsonMongoPersistenceTests
         var store = scope.ServiceProvider
             .GetRequiredService<IJsonDocumentStoreFactory>()
             .Create(new MongoDatabaseKey("JsonDB"));
-
         const string json = """
             {
               "_id": { "$oid": "573a1391f29313caabcd9637" },
@@ -53,39 +40,40 @@ public class JsonMongoPersistenceTests
             }
             """;
 
+        // Act
         var insert = await store.InsertAsync("typed", json);
-        insert.IsSuccess.ShouldBeTrue(string.Join(", ", insert.Errors));
-
         var collection = (await factory.GetCollectionAsync(new MongoDatabaseKey("JsonDB"), "typed")).Value;
         var stored = await collection.Find(Builders<BsonDocument>.Filter.Empty).FirstAsync();
+        var element = stored.ToJsonElement(converter);
+
+        // Assert
+        insert.IsSuccess.ShouldBeTrue(string.Join(", ", insert.Errors));
         stored["_id"].BsonType.ShouldBe(BsonType.ObjectId);
         stored["count"].BsonType.ShouldBe(BsonType.Int32);
         stored["count"].AsInt32.ShouldBe(7);
         stored["big"].BsonType.ShouldBe(BsonType.Int64);
         stored["money"].BsonType.ShouldBe(BsonType.Decimal128);
         stored["when"].BsonType.ShouldBe(BsonType.DateTime);
-
-        var element = stored.ToJsonElement(converter);
         element.IsSuccess.ShouldBeTrue();
     }
 
     [Test]
     public async Task InsertedJsonDocumentAndJObject_PersistSameBsonTypes()
     {
+        // Arrange
         var services = new ServiceCollection();
         services.AddMongoDb(mongo => mongo
-            .AddCluster("primary", c => c.UseConnectionString(_container.GetConnectionString()))
+            .AddCluster("primary", c => c.UseConnectionString(MongoDbContainer.GetConnectionString()))
             .AddDatabase("JsonDomDB", db => db.OnCluster("primary")));
         services.AddSystemTextJsonDocuments();
         services.AddNewtonsoftJsonDocuments();
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
         var factory = scope.ServiceProvider.GetRequiredService<Dilcore.MongoDB.Abstractions.IMongoDbCollectionFactory>();
-        var converter = scope.ServiceProvider.GetRequiredService<IBsonJsonConverter>();
+        _ = scope.ServiceProvider.GetRequiredService<IBsonJsonConverter>();
         var store = scope.ServiceProvider
             .GetRequiredService<IJsonDocumentStoreFactory>()
             .Create(new MongoDatabaseKey("JsonDomDB"));
-
         const string json = """
             {
               "_id": { "$oid": "573a1391f29313caabcd9638" },
@@ -93,36 +81,34 @@ public class JsonMongoPersistenceTests
               "when": { "$date": { "$numberLong": "0" } }
             }
             """;
-
         using var stj = JsonDocument.Parse(json);
-        var stjInsert = await store.InsertAsync("stj-dom", stj);
-        stjInsert.IsSuccess.ShouldBeTrue(string.Join(", ", stjInsert.Errors));
-
         var jObject = JObject.Parse(json);
-        var nsInsert = await store.InsertAsync("ns-dom", jObject);
-        nsInsert.IsSuccess.ShouldBeTrue(string.Join(", ", nsInsert.Errors));
 
+        // Act
+        var stjInsert = await store.InsertAsync("stj-dom", stj);
+        var nsInsert = await store.InsertAsync("ns-dom", jObject);
         var stjRaw = (await factory.GetCollectionAsync(new MongoDatabaseKey("JsonDomDB"), "stj-dom")).Value;
         var nsRaw = (await factory.GetCollectionAsync(new MongoDatabaseKey("JsonDomDB"), "ns-dom")).Value;
         var stjStored = await stjRaw.Find(Builders<BsonDocument>.Filter.Empty).FirstAsync();
         var nsStored = await nsRaw.Find(Builders<BsonDocument>.Filter.Empty).FirstAsync();
+        var asDocument = await store.GetJsonDocumentByIdAsync("stj-dom", stjStored["_id"]);
+        var asJObject = await store.GetJObjectByIdAsync("ns-dom", nsStored["_id"]);
 
+        // Assert
+        stjInsert.IsSuccess.ShouldBeTrue(string.Join(", ", stjInsert.Errors));
+        nsInsert.IsSuccess.ShouldBeTrue(string.Join(", ", nsInsert.Errors));
         stjStored["_id"].BsonType.ShouldBe(BsonType.ObjectId);
         stjStored["count"].BsonType.ShouldBe(BsonType.Int32);
         stjStored["when"].BsonType.ShouldBe(BsonType.DateTime);
         nsStored["_id"].BsonType.ShouldBe(stjStored["_id"].BsonType);
         nsStored["count"].BsonType.ShouldBe(stjStored["count"].BsonType);
         nsStored["when"].BsonType.ShouldBe(stjStored["when"].BsonType);
-
-        var id = stjStored["_id"];
-        var asDocument = await store.GetJsonDocumentByIdAsync("stj-dom", id);
         asDocument.IsSuccess.ShouldBeTrue();
         using (asDocument.Value)
         {
             asDocument.Value.RootElement.GetProperty("count").GetProperty("$numberInt").GetString().ShouldBe("3");
         }
 
-        var asJObject = await store.GetJObjectByIdAsync("ns-dom", nsStored["_id"]);
         asJObject.IsSuccess.ShouldBeTrue();
         asJObject.Value["count"]!["$numberInt"]!.Value<string>().ShouldBe("3");
     }

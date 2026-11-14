@@ -33,6 +33,7 @@ public class MultiClusterAcceptanceTests
     [Test]
     public async Task DistinctCollections_AcrossTwoClusters_StoreAndIsolateData()
     {
+        // Arrange
         var services = new ServiceCollection();
 
         services.AddMongoDb(mongo => mongo
@@ -53,9 +54,11 @@ public class MultiClusterAcceptanceTests
         using var scope = root.CreateScope();
         var sp = scope.ServiceProvider;
 
+        // Act
         await sp.GetRequiredService<IGenericRepository<Order>>().StoreAsync(new Order { Value = 1 });
         await sp.GetRequiredService<IGenericRepository<PageView>>().StoreAsync(new PageView { Value = "home" });
 
+        // Assert
         var clientA = sp.GetRequiredKeyedService<IMongoClient>("clusterA");
         var clientB = sp.GetRequiredKeyedService<IMongoClient>("clusterB");
 
@@ -78,6 +81,7 @@ public class MultiClusterAcceptanceTests
     [Test]
     public async Task SameCollectionNameAndDocumentType_AcrossTwoClusters_RemainIndependent()
     {
+        // Arrange
         var services = new ServiceCollection();
 
         // Both clusters bind the same TDocument to a collection literally named "orders" -
@@ -102,14 +106,15 @@ public class MultiClusterAcceptanceTests
         var sp = scope.ServiceProvider;
         var repositories = sp.GetRequiredService<IRepositoryResolver>();
 
-        // Same TDocument bound twice: the unkeyed repository must stay ambiguous.
-        Should.Throw<InvalidOperationException>(() => repositories.GetRepository<Order>());
-
+        // Act
         var ordersA = repositories.GetRepository<Order>("orders-a");
         var ordersB = repositories.GetRepository<Order>("orders-b");
-
         await ordersA.StoreAsync(new Order { Value = 1 });
         await ordersB.StoreAsync(new Order { Value = 2 });
+
+        // Assert
+        // Same TDocument bound twice: the unkeyed repository must stay ambiguous.
+        Should.Throw<InvalidOperationException>(() => repositories.GetRepository<Order>());
 
         var clientA = sp.GetRequiredKeyedService<IMongoClient>("clusterA");
         var clientB = sp.GetRequiredKeyedService<IMongoClient>("clusterB");

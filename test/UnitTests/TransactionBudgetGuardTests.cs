@@ -9,12 +9,17 @@ public class TransactionBudgetGuardTests
     [Test]
     public void Reserve_AllowsExactlyMaxOperations_ThenFails()
     {
+        // Arrange
         var guard = Guard(maxOperations: 2);
+        var first = guard.Reserve(1);
+        var second = guard.Reserve(1);
 
-        guard.Reserve(1).ShouldBeSuccess();
-        guard.Reserve(1).ShouldBeSuccess();
-
+        // Act
         var third = guard.Reserve(1);
+
+        // Assert
+        first.ShouldBeSuccess();
+        second.ShouldBeSuccess();
         third.ShouldBeFailure();
         third.ShouldHaveError<TransactionBudgetExceededError>()
             .Message.ShouldContain("operation");
@@ -23,69 +28,105 @@ public class TransactionBudgetGuardTests
     [Test]
     public void Reserve_AllowsBytesUpToTheCap_AndRejectsTheNextByte()
     {
+        // Arrange
         var guard = Guard(maxEstimatedBytes: 100);
+        var withinCap = guard.Reserve(100);
 
-        guard.Reserve(100).ShouldBeSuccess();
-        guard.Reserve(1).ShouldBeFailure();
-        guard.Reserve(1).ShouldHaveError<TransactionBudgetExceededError>()
+        // Act
+        var next = guard.Reserve(1);
+        var again = guard.Reserve(1);
+
+        // Assert
+        withinCap.ShouldBeSuccess();
+        next.ShouldBeFailure();
+        again.ShouldHaveError<TransactionBudgetExceededError>()
             .Message.ShouldContain("byte");
     }
 
     [Test]
     public void Reserve_ZeroByteCap_RejectsAnyPositiveEstimate()
     {
+        // Arrange
         var guard = Guard(maxEstimatedBytes: 0);
+        var zero = guard.Reserve(0);
 
-        guard.Reserve(0).ShouldBeSuccess();
-        guard.Reserve(1).ShouldBeFailure();
+        // Act
+        var positive = guard.Reserve(1);
+
+        // Assert
+        zero.ShouldBeSuccess();
+        positive.ShouldBeFailure();
     }
 
     [Test]
     public void Reserve_NegativeEstimate_FailsWithoutConsumingTheOperationSlot()
     {
+        // Arrange
         var guard = Guard(maxOperations: 1);
 
+        // Act
         var negative = guard.Reserve(-1);
+        var after = guard.Reserve(1);
+
+        // Assert
         negative.ShouldBeFailure();
         negative.ShouldHaveError<TransactionBudgetExceededError>();
-
-        guard.Reserve(1).ShouldBeSuccess();
+        after.ShouldBeSuccess();
     }
 
     [Test]
     public void Reserve_DoesNotWrapIntMaxValueIntoASuccessfulReservation()
     {
+        // Arrange
         var guard = Guard(maxEstimatedBytes: int.MaxValue, maxOperations: 5);
+        var atCap = guard.Reserve(int.MaxValue);
 
-        guard.Reserve(int.MaxValue).ShouldBeSuccess();
-        guard.Reserve(1).ShouldBeFailure();
+        // Act
+        var overflow = guard.Reserve(1);
+
+        // Assert
+        atCap.ShouldBeSuccess();
+        overflow.ShouldBeFailure();
     }
 
     [Test]
     public void Reserve_TimeLimit_FailsUntilTheGuardIsRebuilt()
     {
+        // Arrange
         var guard = Guard(timeLimit: TimeSpan.FromMilliseconds(20));
         Thread.Sleep(40);
 
-        guard.Reserve(1).ShouldBeFailure();
-        guard.Reserve(1).ShouldHaveError<TransactionBudgetExceededError>()
-            .Message.ShouldContain("elapsed-time");
-
+        // Act
+        var first = guard.Reserve(1);
+        var second = guard.Reserve(1);
         guard.ResetAttempt();
-        guard.Reserve(1).ShouldBeFailure();
+        var afterReset = guard.Reserve(1);
+
+        // Assert
+        first.ShouldBeFailure();
+        second.ShouldHaveError<TransactionBudgetExceededError>()
+            .Message.ShouldContain("elapsed-time");
+        afterReset.ShouldBeFailure();
     }
 
     [Test]
     public void ResetAttempt_ClearsOperationsAndBytesButNotTheDeadline()
     {
+        // Arrange
         var guard = Guard(maxOperations: 1, maxEstimatedBytes: 10);
+        var beforeOk = guard.Reserve(10);
+        var beforeFail = guard.Reserve(1);
 
-        guard.Reserve(10).ShouldBeSuccess();
-        guard.Reserve(1).ShouldBeFailure();
-
+        // Act
         guard.ResetAttempt();
-        guard.Reserve(10).ShouldBeSuccess();
-        guard.Reserve(1).ShouldBeFailure();
+        var afterOk = guard.Reserve(10);
+        var afterFail = guard.Reserve(1);
+
+        // Assert
+        beforeOk.ShouldBeSuccess();
+        beforeFail.ShouldBeFailure();
+        afterOk.ShouldBeSuccess();
+        afterFail.ShouldBeFailure();
     }
 
     private static TransactionBudgetGuard Guard(

@@ -8,6 +8,7 @@ public class NamespaceBoundaryTests
     [Test]
     public void PublicTypes_UseDilcoreMongoDBNamespaces()
     {
+        // Arrange
         var assemblies = new[]
         {
             typeof(IDocumentEntity).Assembly,
@@ -16,14 +17,14 @@ public class NamespaceBoundaryTests
             typeof(Dilcore.MongoDB.NewtonsoftJson.JsonBsonConvert).Assembly
         };
 
-        foreach (var assembly in assemblies)
+        var types = assemblies.SelectMany(assembly => assembly.GetExportedTypes());
+
+        // Act & Assert
+        foreach (var type in types)
         {
-            foreach (var type in assembly.GetExportedTypes())
-            {
-                type.Namespace.ShouldNotBeNull();
-                type.Namespace!.StartsWith("Dilcore.MongoDB").ShouldBeTrue(type.FullName);
-                type.Namespace.ShouldNotContain("DocumentDb");
-            }
+            type.Namespace.ShouldNotBeNull();
+            type.Namespace!.StartsWith("Dilcore.MongoDB").ShouldBeTrue(type.FullName);
+            type.Namespace.ShouldNotContain("DocumentDb");
         }
     }
 }

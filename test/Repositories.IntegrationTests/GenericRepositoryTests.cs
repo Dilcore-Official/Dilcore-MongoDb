@@ -3,6 +3,7 @@ using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Extensions;
+using FluentResults;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
@@ -46,19 +47,23 @@ public class GenericRepositoryTests : BaseIntegrationTests
     [Test]
     public async Task GenericRepository_Store_CreateDocument()
     {
+        // Arrange
         var entity = Fixture.Build<TestEntity1>()
             .Without(x => x.ETag)
             .Without(x => x.Id)
             .Without(x => x.IsDeleted)
             .Create();
 
+        // Act
         var result = await _repository.StoreAsync(entity);
+        var result2 = result.IsSuccess
+            ? await _repository.GetAsync(result.ValueOrDefault.Id)
+            : null;
+        var createdEntity = result2?.ValueOrDefault;
+
+        // Assert
         result.ShouldBeSuccess();
-
-        var result2 = await _repository.GetAsync(result.ValueOrDefault.Id);
-        result2.ShouldBeSuccess();
-
-        var createdEntity = result2.ValueOrDefault;
+        result2!.ShouldBeSuccess();
         createdEntity.ShouldNotBeNull();
         createdEntity.Id.ShouldNotBe(Guid.Empty);
         createdEntity.ETag.ShouldNotBe(0);
@@ -69,24 +74,34 @@ public class GenericRepositoryTests : BaseIntegrationTests
     [Test]
     public async Task GenericRepository_Store_UpdateDocument()
     {
+        // Arrange
         var entity = Fixture.Build<TestEntity1>()
             .Without(x => x.ETag)
             .Without(x => x.Id)
             .Without(x => x.IsDeleted)
             .Create();
-
         var createResult = await _repository.StoreAsync(entity);
+        var entityToUpdate = createResult.IsSuccess
+            ? (await _repository.GetAsync(createResult.ValueOrDefault.Id)).ValueOrDefault
+            : null;
+        if (entityToUpdate is not null)
+        {
+            entityToUpdate.Name = "UpdatedName";
+            entityToUpdate.Value = "UpdatedValue";
+        }
+
+        // Act
+        var updateResult = entityToUpdate is not null
+            ? await _repository.StoreAsync(entityToUpdate)
+            : null;
+        var updatedEntity = updateResult is { IsSuccess: true }
+            ? (await _repository.GetAsync(createResult.ValueOrDefault.Id)).ValueOrDefault
+            : null;
+
+        // Assert
         createResult.ShouldBeSuccess();
-
-        var entityToUpdate = (await _repository.GetAsync(createResult.ValueOrDefault.Id)).ValueOrDefault!;
-        entityToUpdate.Name = "UpdatedName";
-        entityToUpdate.Value = "UpdatedValue";
-
-        var updateResult = await _repository.StoreAsync(entityToUpdate);
-        updateResult.ShouldBeSuccess();
-
-        var updatedEntity = (await _repository.GetAsync(createResult.ValueOrDefault.Id)).ValueOrDefault!;
-        updatedEntity.ETag.ShouldNotBe(createResult.ValueOrDefault.ETag);
+        updateResult!.ShouldBeSuccess();
+        updatedEntity!.ETag.ShouldNotBe(createResult.ValueOrDefault.ETag);
         updatedEntity.Name.ShouldBe("UpdatedName");
         updatedEntity.Value.ShouldBe("UpdatedValue");
     }
@@ -94,47 +109,68 @@ public class GenericRepositoryTests : BaseIntegrationTests
     [Test]
     public async Task GenericRepository_Store_UpdateDocument_WithWrongEtag_ShouldFail()
     {
+        // Arrange
         var entity = Fixture.Build<TestEntity1>()
             .Without(x => x.ETag)
             .Without(x => x.Id)
             .Without(x => x.IsDeleted)
             .Create();
-
         var createResult = await _repository.StoreAsync(entity);
+        var entityToUpdate = createResult.IsSuccess
+            ? (await _repository.GetAsync(createResult.ValueOrDefault.Id)).ValueOrDefault
+            : null;
+        if (entityToUpdate is not null)
+        {
+            entityToUpdate.Name = "UpdatedName";
+            entityToUpdate.ETag = 123;
+        }
+
+        // Act
+        var updateResult = entityToUpdate is not null
+            ? await _repository.StoreAsync(entityToUpdate)
+            : null;
+        var unchanged = updateResult is { IsFailed: true }
+            ? (await _repository.GetAsync(createResult.ValueOrDefault.Id)).ValueOrDefault
+            : null;
+
+        // Assert
         createResult.ShouldBeSuccess();
-
-        var entityToUpdate = (await _repository.GetAsync(createResult.ValueOrDefault.Id)).ValueOrDefault!;
-        entityToUpdate.Name = "UpdatedName";
-        entityToUpdate.ETag = 123;
-
-        var updateResult = await _repository.StoreAsync(entityToUpdate);
-        updateResult.ShouldBeFailure();
-
-        var unchanged = (await _repository.GetAsync(createResult.ValueOrDefault.Id)).ValueOrDefault!;
-        unchanged.ETag.ShouldBe(createResult.ValueOrDefault.ETag);
+        updateResult!.ShouldBeFailure();
+        unchanged!.ETag.ShouldBe(createResult.ValueOrDefault.ETag);
         unchanged.Name.ShouldBe(createResult.ValueOrDefault.Name);
     }
 
     [Test]
     public async Task GenericRepository_Get_DocumentList()
     {
+        // Arrange
         var entities = Fixture.Build<TestEntity1>()
             .Without(x => x.ETag)
             .Without(x => x.Id)
             .Without(x => x.IsDeleted)
             .CreateMany()
             .ToArray();
-
+        var stored = new List<Result<TestEntity1>>();
         foreach (var entity in entities)
         {
-            (await _repository.StoreAsync(entity)).ShouldBeSuccess();
+            stored.Add(await _repository.StoreAsync(entity));
         }
 
-        var result = await _repository.GetListAsync();
-        result.ShouldBeSuccess();
+        // Act
+        var result = stored.TrueForAll(static item => item.IsSuccess)
+            ? await _repository.GetListAsync()
+            : null;
+
+        // Assert
+        foreach (var item in stored)
+        {
+            item.ShouldBeSuccess();
+        }
+
+        result!.ShouldBeSuccess();
         foreach (var entity in entities)
         {
-            result.ValueOrDefault.ShouldContain(x => x.Id == entity.Id);
+            result!.ValueOrDefault.ShouldContain(x => x.Id == entity.Id);
         }
     }
 
@@ -142,6 +178,7 @@ public class GenericRepositoryTests : BaseIntegrationTests
     [TestCase(false)]
     public async Task GenericRepository_Delete_ShouldBeDeletedFromDb(bool isSoftDelete)
     {
+        // Arrange
         var services = new ServiceCollection();
         var connectionString = MongoDbContainer.GetConnectionString();
 
@@ -169,22 +206,27 @@ public class GenericRepositoryTests : BaseIntegrationTests
             .Without(x => x.Id)
             .Without(x => x.IsDeleted)
             .Create();
-
         var createResult = await repository.StoreAsync(entity);
-        createResult.ShouldBeSuccess();
 
-        var deleteResult = await repository.DeleteAsync(
-            createResult.ValueOrDefault.Id,
-            createResult.ValueOrDefault.ETag);
-        deleteResult.ShouldBeSuccess();
-
+        // Act
+        var deleteResult = createResult.IsSuccess
+            ? await repository.DeleteAsync(
+                createResult.ValueOrDefault.Id,
+                createResult.ValueOrDefault.ETag)
+            : null;
         var factory = scope.ServiceProvider.GetRequiredService<IMongoDbCollectionFactory>();
-        var collectionResult = await factory.GetCollectionAsync<TestEntity1>(new MongoDocumentBindingKey("e1"));
-        collectionResult.ShouldBeSuccess();
-
+        var collectionResult = deleteResult is { IsSuccess: true }
+            ? await factory.GetCollectionAsync<TestEntity1>(new MongoDocumentBindingKey("e1"))
+            : null;
         var filter = Builders<TestEntity1>.Filter.Eq(x => x.Id, createResult.ValueOrDefault.Id);
-        var entityFromDb = await collectionResult.Value.Find(filter).FirstOrDefaultAsync();
+        var entityFromDb = collectionResult is { IsSuccess: true }
+            ? await collectionResult.Value.Find(filter).FirstOrDefaultAsync()
+            : null;
 
+        // Assert
+        createResult.ShouldBeSuccess();
+        deleteResult!.ShouldBeSuccess();
+        collectionResult!.ShouldBeSuccess();
         if (isSoftDelete)
         {
             entityFromDb.ShouldNotBeNull();
@@ -199,18 +241,23 @@ public class GenericRepositoryTests : BaseIntegrationTests
     [Test]
     public async Task GenericRepository_Store_DerivedEntityShouldBeSaved()
     {
+        // Arrange
         var entity = Fixture.Build<DerivedTestEntity1>()
             .Without(x => x.ETag)
             .Without(x => x.Id)
             .Without(x => x.IsDeleted)
             .Create();
 
+        // Act
         var createResult = await _repository.StoreAsync(entity);
-        createResult.ShouldBeSuccess();
+        var derivedEntityResult = createResult.IsSuccess
+            ? await _repository.GetAsync<TestEntity1, DerivedTestEntity1>(createResult.ValueOrDefault.Id)
+            : null;
 
-        var derivedEntityResult = await _repository.GetAsync<TestEntity1, DerivedTestEntity1>(createResult.ValueOrDefault.Id);
-        derivedEntityResult.ShouldBeSuccess();
-        derivedEntityResult.ValueOrDefault!.SomeValue.ShouldBe(entity.SomeValue);
+        // Assert
+        createResult.ShouldBeSuccess();
+        derivedEntityResult!.ShouldBeSuccess();
+        derivedEntityResult!.ValueOrDefault!.SomeValue.ShouldBe(entity.SomeValue);
     }
 
     [BsonDiscriminator(nameof(TestEntity1))]
@@ -250,6 +297,7 @@ public class FlexibleDocumentEntityRepositoryTests : BaseIntegrationTests
     [Test]
     public async Task MinimalEntity_StoreGetDelete_WorksWithoutPolicies()
     {
+        // Arrange
         var services = new ServiceCollection();
         var connectionString = MongoDbContainer.GetConnectionString();
 
@@ -266,32 +314,46 @@ public class FlexibleDocumentEntityRepositoryTests : BaseIntegrationTests
         using var scope = provider.CreateScope();
         var repository = scope.ServiceProvider
             .GetRequiredService<IGenericRepository<GenericRepositoryTests.MinimalEntity>>();
-
         var entity = new GenericRepositoryTests.MinimalEntity { Name = "min" };
+
+        // Act
         var store = await repository.StoreAsync(entity);
+        var get = store.IsSuccess
+            ? await repository.GetAsync(
+                Builders<GenericRepositoryTests.MinimalEntity>.Filter.Eq(x => x.Id, store.Value.Id))
+            : null;
+        if (store.IsSuccess)
+        {
+            store.Value.Name = "updated";
+        }
+
+        var update = store.IsSuccess
+            ? await repository.StoreAsync(store.Value)
+            : null;
+        var deleted = update is { IsSuccess: true }
+            ? await repository.DeleteAsync(
+                Builders<GenericRepositoryTests.MinimalEntity>.Filter.Eq(x => x.Id, store.Value.Id))
+            : null;
+
+        // Assert
         store.ShouldBeSuccess();
         store.Value.Id.ShouldNotBe(Guid.Empty);
         store.Value.Id.Version.ShouldBe(4);
-
-        var get = await repository.GetAsync(
-            Builders<GenericRepositoryTests.MinimalEntity>.Filter.Eq(x => x.Id, store.Value.Id));
-        get.ShouldBeSuccess();
-        get.Value!.Name.ShouldBe("min");
-
-        store.Value.Name = "updated";
-        var update = await repository.StoreAsync(store.Value);
-        update.ShouldBeSuccess();
-        update.Value.Name.ShouldBe("updated");
-
-        var deleted = await repository.DeleteAsync(
-            Builders<GenericRepositoryTests.MinimalEntity>.Filter.Eq(x => x.Id, store.Value.Id));
-        deleted.ShouldBeSuccess();
-        deleted.Value.ShouldBeTrue();
+        var loaded = get!;
+        var updated = update!;
+        var removed = deleted!;
+        loaded.ShouldBeSuccess();
+        loaded.Value!.Name.ShouldBe("min");
+        updated.ShouldBeSuccess();
+        updated.Value.Name.ShouldBe("updated");
+        removed.ShouldBeSuccess();
+        removed.Value.ShouldBeTrue();
     }
 
     [Test]
     public async Task GuidIdGeneration_SequentialVersion7_ProducesUuidV7()
     {
+        // Arrange
         var services = new ServiceCollection();
         var connectionString = MongoDbContainer.GetConnectionString();
 
@@ -310,7 +372,10 @@ public class FlexibleDocumentEntityRepositoryTests : BaseIntegrationTests
         var repository = scope.ServiceProvider
             .GetRequiredService<IGenericRepository<GenericRepositoryTests.MinimalEntity>>();
 
+        // Act
         var store = await repository.StoreAsync(new GenericRepositoryTests.MinimalEntity { Name = "v7" });
+
+        // Assert
         store.ShouldBeSuccess();
         store.Value.Id.Version.ShouldBe(7);
     }
@@ -318,6 +383,7 @@ public class FlexibleDocumentEntityRepositoryTests : BaseIntegrationTests
     [Test]
     public async Task ObjectIdEntity_StoreAndGet_Works()
     {
+        // Arrange
         var services = new ServiceCollection();
         var connectionString = MongoDbContainer.GetConnectionString();
 
@@ -335,13 +401,17 @@ public class FlexibleDocumentEntityRepositoryTests : BaseIntegrationTests
         var repository = scope.ServiceProvider
             .GetRequiredService<IGenericRepository<GenericRepositoryTests.ObjectIdEntity>>();
 
+        // Act
         var store = await repository.StoreAsync(new GenericRepositoryTests.ObjectIdEntity { Name = "oid" });
+        var get = store.IsSuccess
+            ? await repository.GetAsync(
+                Builders<GenericRepositoryTests.ObjectIdEntity>.Filter.Eq(x => x.Id, store.Value.Id))
+            : null;
+
+        // Assert
         store.ShouldBeSuccess();
         store.Value.Id.ShouldNotBe(ObjectId.Empty);
-
-        var get = await repository.GetAsync(
-            Builders<GenericRepositoryTests.ObjectIdEntity>.Filter.Eq(x => x.Id, store.Value.Id));
-        get.ShouldBeSuccess();
-        get.Value!.Name.ShouldBe("oid");
+        get!.ShouldBeSuccess();
+        get!.Value!.Name.ShouldBe("oid");
     }
 }

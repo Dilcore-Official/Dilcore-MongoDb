@@ -16,6 +16,7 @@ public class ProvisioningDiRegistrationTests
     [Test]
     public void AddMongoDb_RegistersIMongoDbProvisioner_AsScoped_AndValidateOnBuild()
     {
+        // Arrange
         var services = new ServiceCollection();
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(PlaceholderConnectionString))
@@ -34,10 +35,12 @@ public class ProvisioningDiRegistrationTests
         using var scope1 = provider.CreateScope();
         using var scope2 = provider.CreateScope();
 
+        // Act
         var first = scope1.ServiceProvider.GetRequiredService<IMongoDbProvisioner>();
         var again = scope1.ServiceProvider.GetRequiredService<IMongoDbProvisioner>();
         var second = scope2.ServiceProvider.GetRequiredService<IMongoDbProvisioner>();
 
+        // Assert
         first.ShouldBeSameAs(again);
         first.ShouldNotBeSameAs(second);
     }
@@ -45,6 +48,7 @@ public class ProvisioningDiRegistrationTests
     [Test]
     public void AddMongoDb_CustomProvisioningStep_IsInjectedIntoEnumerable()
     {
+        // Arrange
         var services = new ServiceCollection();
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(PlaceholderConnectionString))
@@ -62,8 +66,12 @@ public class ProvisioningDiRegistrationTests
         });
         using var scope = provider.CreateScope();
 
-        scope.ServiceProvider.GetRequiredService<IMongoDbProvisioner>().ShouldNotBeNull();
+        // Act
+        var provisioner = scope.ServiceProvider.GetRequiredService<IMongoDbProvisioner>();
         var steps = scope.ServiceProvider.GetServices<IProvisioningStep>().ToList();
+
+        // Assert
+        provisioner.ShouldNotBeNull();
         steps.ShouldContain(step => step is MarkerProvisioningStep);
         steps.ShouldContain(step => step.Name == MarkerProvisioningStep.StepName);
     }

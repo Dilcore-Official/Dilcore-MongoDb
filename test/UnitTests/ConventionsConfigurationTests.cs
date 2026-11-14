@@ -22,15 +22,18 @@ public class ConventionsConfigurationTests
     [Test]
     public void AddMongoDb_WithoutConfigureConventions_UsesDefaultSerialization()
     {
+        // Arrange
         var services = new ServiceCollection();
         RegisterMinimal(services);
 
+        // Act
         var bson = Serialize(new DefaultProbeDocument
         {
             Status = ProbeStatus.Active,
             Optional = null
         });
 
+        // Assert
         bson["status"].BsonType.ShouldBe(BsonType.String);
         bson["status"].AsString.ShouldBe(nameof(ProbeStatus.Active));
         bson.Contains("optional").ShouldBeFalse();
@@ -39,12 +42,15 @@ public class ConventionsConfigurationTests
     [Test]
     public void AddMongoDb_ConfigureConventions_EnumAsInt_SerializesEnumAsInt32()
     {
+        // Arrange
         var services = new ServiceCollection();
         RegisterMinimal(services, mongo => mongo.ConfigureConventions(c =>
             c.UseEnumRepresentation(BsonType.Int32)));
 
+        // Act
         var bson = Serialize(new Int32ProbeDocument { Status = ProbeStatus.Inactive });
 
+        // Assert
         bson["status"].BsonType.ShouldBe(BsonType.Int32);
         bson["status"].AsInt32.ShouldBe((int)ProbeStatus.Inactive);
     }
@@ -52,8 +58,10 @@ public class ConventionsConfigurationTests
     [Test]
     public void AddMongoDb_ConfigureConventionsCalledTwice_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
 
+        // Act & Assert
         var ex = Should.Throw<InvalidOperationException>(() =>
             services.AddMongoDb(mongo => mongo
                 .ConfigureConventions(_ => { })
@@ -71,9 +79,11 @@ public class ConventionsConfigurationTests
     [Test]
     public void AddMongoDb_DuplicateConventionPackName_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
         var pack = new ConventionPack();
 
+        // Act & Assert
         var ex = Should.Throw<InvalidOperationException>(() =>
             services.AddMongoDb(mongo => mongo
                 .ConfigureConventions(c => c
@@ -92,9 +102,11 @@ public class ConventionsConfigurationTests
     [Test]
     public void AddMongoDb_ReservedDefaultConventionPackName_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
         var pack = new ConventionPack();
 
+        // Act & Assert
         var ex = Should.Throw<ArgumentException>(() =>
             services.AddMongoDb(mongo => mongo
                 .ConfigureConventions(c => c
@@ -113,6 +125,7 @@ public class ConventionsConfigurationTests
     [Test]
     public void EnsureRegistered_ReservedDefaultConventionPackName_ThrowsWithoutRegistering()
     {
+        // Arrange
         var conventions = ConventionsDescriptor.CreateDefault() with
         {
             AdditionalPacks =
@@ -124,6 +137,7 @@ public class ConventionsConfigurationTests
             ]
         };
 
+        // Act & Assert
         var ex = Should.Throw<InvalidOperationException>(() =>
             MongoConventionRegistrar.EnsureRegistered(conventions));
 
@@ -135,20 +149,24 @@ public class ConventionsConfigurationTests
     [Test]
     public void AddMongoDb_CalledTwiceWithSameConventions_IsIdempotent()
     {
+        // Arrange
         var first = new ServiceCollection();
         RegisterMinimal(first);
-
         var second = new ServiceCollection();
+
+        // Act & Assert
         Should.NotThrow(() => RegisterMinimal(second));
     }
 
     [Test]
     public void AddMongoDb_CalledTwiceWithConflictingConventions_Throws()
     {
+        // Arrange
         var first = new ServiceCollection();
         RegisterMinimal(first);
-
         var second = new ServiceCollection();
+
+        // Act & Assert
         var ex = Should.Throw<InvalidOperationException>(() =>
             RegisterMinimal(second, mongo => mongo.ConfigureConventions(c =>
                 c.UseEnumRepresentation(BsonType.Int32))));
@@ -160,16 +178,17 @@ public class ConventionsConfigurationTests
     [Test]
     public void AddMongoDb_CalledTwiceWithSameCustomConventionInstance_IsIdempotent()
     {
+        // Arrange
         var convention = new IgnoreIfDefaultConvention(true);
         var pack = new ConventionPack();
         Func<Type, bool> filter = static _ => true;
-
         var first = new ServiceCollection();
         RegisterMinimal(first, mongo => mongo.ConfigureConventions(c => c
             .AddConvention(convention)
             .AddConventionPack("custom", pack, filter)));
-
         var second = new ServiceCollection();
+
+        // Act & Assert
         Should.NotThrow(() => RegisterMinimal(second, mongo => mongo.ConfigureConventions(c => c
             .AddConvention(convention)
             .AddConventionPack("custom", pack, filter))));
@@ -178,11 +197,13 @@ public class ConventionsConfigurationTests
     [Test]
     public void AddMongoDb_CalledTwiceWithSeparateCustomConventionInstances_Throws()
     {
+        // Arrange
         var first = new ServiceCollection();
         RegisterMinimal(first, mongo => mongo.ConfigureConventions(c =>
             c.AddConvention(new IgnoreIfDefaultConvention(true))));
-
         var second = new ServiceCollection();
+
+        // Act & Assert
         var ex = Should.Throw<InvalidOperationException>(() =>
             RegisterMinimal(second, mongo => mongo.ConfigureConventions(c =>
                 c.AddConvention(new IgnoreIfDefaultConvention(true)))));
@@ -193,8 +214,10 @@ public class ConventionsConfigurationTests
     [Test]
     public void UseEnumRepresentation_UnsupportedBsonType_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
 
+        // Act & Assert
         var ex = Should.Throw<ArgumentException>(() =>
             services.AddMongoDb(mongo => mongo
                 .ConfigureConventions(c => c.UseEnumRepresentation(BsonType.Boolean))

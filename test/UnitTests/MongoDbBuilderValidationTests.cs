@@ -11,8 +11,10 @@ public class MongoDbBuilderValidationTests
     [Test]
     public void AddMongoDb_NoClusters_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
 
+        // Act & Assert
         var ex = Should.Throw<InvalidOperationException>(() =>
             services.AddMongoDb(_ => { }));
 
@@ -22,8 +24,10 @@ public class MongoDbBuilderValidationTests
     [Test]
     public void AddMongoDb_EmptyConnectionString_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
 
+        // Act & Assert
         var ex = Should.Throw<ArgumentException>(() =>
             services.AddMongoDb(mongo => mongo
                 .AddCluster("primary", c => c.UseConnectionString(" "))
@@ -39,8 +43,10 @@ public class MongoDbBuilderValidationTests
     [Test]
     public void AddMongoDb_PoolSizeLessOrEqualZero_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
 
+        // Act & Assert
         var ex = Should.Throw<ArgumentException>(() =>
             services.AddMongoDb(mongo => mongo
                 .AddCluster("primary", c => c
@@ -58,8 +64,10 @@ public class MongoDbBuilderValidationTests
     [Test]
     public void AddMongoDb_DuplicateCluster_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
 
+        // Act & Assert
         Should.Throw<InvalidOperationException>(() =>
             services.AddMongoDb(mongo => mongo
                 .AddCluster("primary", c => c.UseConnectionString("mongodb://localhost"))
@@ -74,8 +82,10 @@ public class MongoDbBuilderValidationTests
     [Test]
     public void AddMongoDb_DuplicateDatabase_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
 
+        // Act & Assert
         Should.Throw<InvalidOperationException>(() =>
             services.AddMongoDb(mongo => mongo
                 .AddCluster("primary", c => c.UseConnectionString("mongodb://localhost"))
@@ -90,8 +100,10 @@ public class MongoDbBuilderValidationTests
     [Test]
     public void AddMongoDb_OrphanDatabase_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
 
+        // Act & Assert
         var ex = Should.Throw<InvalidOperationException>(() =>
             services.AddMongoDb(mongo => mongo
                 .AddCluster("primary", c => c.UseConnectionString("mongodb://localhost"))
@@ -107,8 +119,10 @@ public class MongoDbBuilderValidationTests
     [Test]
     public void AddMongoDb_DuplicateBindingAcrossDatabases_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
 
+        // Act & Assert
         var ex = Should.Throw<InvalidOperationException>(() =>
             services.AddMongoDb(mongo => mongo
                 .AddCluster("primary", c => c.UseConnectionString("mongodb://localhost"))
@@ -129,8 +143,10 @@ public class MongoDbBuilderValidationTests
     [Test]
     public void AddMongoDb_OrphanCluster_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
 
+        // Act & Assert
         var ex = Should.Throw<InvalidOperationException>(() =>
             services.AddMongoDb(mongo => mongo
                 .AddCluster("primary", c => c.UseConnectionString("mongodb://localhost"))
@@ -147,8 +163,10 @@ public class MongoDbBuilderValidationTests
     [Test]
     public void AddMongoDb_MissingCollectionName_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
 
+        // Act & Assert
         Should.Throw<InvalidOperationException>(() =>
             services.AddMongoDb(mongo => mongo
                 .AddCluster("primary", c => c.UseConnectionString("mongodb://localhost"))
@@ -162,8 +180,10 @@ public class MongoDbBuilderValidationTests
     [Test]
     public void AddMongoDb_DuplicateNamespacePrefixResolverOnDatabase_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
 
+        // Act & Assert
         Should.Throw<InvalidOperationException>(() =>
             services.AddMongoDb(mongo => mongo
                 .AddCluster("primary", c => c.UseConnectionString("mongodb://localhost"))
@@ -179,8 +199,10 @@ public class MongoDbBuilderValidationTests
     [Test]
     public void AddMongoDb_DuplicateNamespacePrefixResolverOnBinding_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
 
+        // Act & Assert
         Should.Throw<InvalidOperationException>(() =>
             services.AddMongoDb(mongo => mongo
                 .AddCluster("primary", c => c.UseConnectionString("mongodb://localhost"))
@@ -199,8 +221,10 @@ public class MongoDbBuilderValidationTests
     [Test]
     public void AddMongoDb_SoftDeleteWithoutISoftDeletable_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
 
+        // Act & Assert
         var ex = Should.Throw<InvalidOperationException>(() =>
             services.AddMongoDb(mongo => mongo
                 .AddCluster("primary", c => c.UseConnectionString("mongodb://localhost"))
@@ -218,8 +242,10 @@ public class MongoDbBuilderValidationTests
     [Test]
     public void AddMongoDb_GuidIdGenerationOnNonGuidId_Throws()
     {
+        // Arrange
         var services = new ServiceCollection();
 
+        // Act & Assert
         var ex = Should.Throw<InvalidOperationException>(() =>
             services.AddMongoDb(mongo => mongo
                 .AddCluster("primary", c => c.UseConnectionString("mongodb://localhost"))

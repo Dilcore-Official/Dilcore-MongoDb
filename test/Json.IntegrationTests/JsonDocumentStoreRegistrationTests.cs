@@ -19,7 +19,10 @@ public class JsonDocumentStoreRegistrationTests
     [Test]
     public void AddSystemTextJsonDocuments_WithoutAddMongoDb_FailsClosed()
     {
+        // Arrange
         var services = new ServiceCollection();
+
+        // Act & Assert
         Should.Throw<InvalidOperationException>(() => services.AddSystemTextJsonDocuments())
             .Message.ShouldContain("AddMongoDb");
     }
@@ -27,7 +30,10 @@ public class JsonDocumentStoreRegistrationTests
     [Test]
     public void AddNewtonsoftJsonDocuments_WithoutAddMongoDb_FailsClosed()
     {
+        // Arrange
         var services = new ServiceCollection();
+
+        // Act & Assert
         Should.Throw<InvalidOperationException>(() => services.AddNewtonsoftJsonDocuments())
             .Message.ShouldContain("AddMongoDb");
     }
@@ -35,6 +41,7 @@ public class JsonDocumentStoreRegistrationTests
     [Test]
     public void AddSystemTextJsonDocuments_IsIdempotent_AndValidateOnBuild()
     {
+        // Arrange
         var services = new ServiceCollection();
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(PlaceholderConnectionString))
@@ -42,6 +49,7 @@ public class JsonDocumentStoreRegistrationTests
         services.AddSystemTextJsonDocuments();
         services.AddSystemTextJsonDocuments();
 
+        // Act
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions
         {
             ValidateScopes = true,
@@ -50,13 +58,17 @@ public class JsonDocumentStoreRegistrationTests
         using var scope = provider.CreateScope();
         var factory = scope.ServiceProvider.GetRequiredService<ISystemTextJsonDocumentStoreFactory>();
         var store = factory.Create(new MongoDatabaseKey("JsonRegDB"));
+        var documentStoreFactory = scope.ServiceProvider.GetRequiredService<IJsonDocumentStoreFactory>();
+
+        // Assert
         store.Converter.ShouldBeOfType<Dilcore.MongoDB.Json.BsonJsonConverter>();
-        scope.ServiceProvider.GetRequiredService<IJsonDocumentStoreFactory>().ShouldNotBeNull();
+        documentStoreFactory.ShouldNotBeNull();
     }
 
     [Test]
     public void AddNewtonsoftJsonDocuments_IsIdempotent_AndValidateOnBuild()
     {
+        // Arrange
         var services = new ServiceCollection();
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(PlaceholderConnectionString))
@@ -64,6 +76,7 @@ public class JsonDocumentStoreRegistrationTests
         services.AddNewtonsoftJsonDocuments();
         services.AddNewtonsoftJsonDocuments();
 
+        // Act
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions
         {
             ValidateScopes = true,
@@ -71,25 +84,31 @@ public class JsonDocumentStoreRegistrationTests
         });
         using var scope = provider.CreateScope();
         var factory = scope.ServiceProvider.GetRequiredService<INewtonsoftJsonDocumentStoreFactory>();
-        factory.Create(new MongoDatabaseKey("JsonNsRegDB")).ShouldNotBeNull();
+        var store = factory.Create(new MongoDatabaseKey("JsonNsRegDB"));
+
+        // Assert
+        store.ShouldNotBeNull();
     }
 
     [Test]
     public async Task UnknownDatabaseKey_FailsClosed()
     {
+        // Arrange
         var services = new ServiceCollection();
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(PlaceholderConnectionString))
             .AddDatabase("KnownDB", db => db.OnCluster("primary")));
         services.AddSystemTextJsonDocuments();
-
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
         var store = scope.ServiceProvider
             .GetRequiredService<ISystemTextJsonDocumentStoreFactory>()
             .Create(new MongoDatabaseKey("MissingDB"));
 
+        // Act
         var result = await store.InsertAsync("payloads", """{"v":1}""");
+
+        // Assert
         result.IsFailed.ShouldBeTrue();
         result.Errors[0].Message.ShouldContain("Unknown database key");
     }

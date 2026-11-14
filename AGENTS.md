@@ -39,7 +39,7 @@ Treat this as an **externally consumed library**: public surface is a contract, 
 Cursor rules are the agent-facing style contract. Do not copy their text here.
 
 - [C# code style](.cursor/rules/csharp-code-style.mdc) — no trailing newline on C# files, one top-level type per file (`SA1402`, tests exempt), unused `using` directives removed (`IDE0005` error), unused NuGet packages removed at the project and from central versions, `dotnet format` after each stage, `CancellationToken cancellationToken = default` forwarded into every cancellable call, single-purpose methods, a loop source and a method argument are locals (a lambda may be an argument), LINQ stays deferred unless a concrete collection or a second pass is required (`CA1851` error), blank lines split setup from the query and the result, a method has at most one nested block, XML docs on the interface (or on the type when it has no interface), standard member order, current .NET practices checked with Context7 and Microsoft Learn.
-- [Tests and DI lifetimes](.cursor/rules/csharp-testing-di.mdc) — NUnit + Shouldly, and a strict singleton / scoped / transient test for every DI registration (`ValidateScopes` and `ValidateOnBuild`).
+- [Tests and DI lifetimes](.cursor/rules/csharp-testing-di.mdc) — NUnit + Shouldly, Arrange / Act / Assert comments on every `[Test]`, and a strict singleton / scoped / transient test for every DI registration (`ValidateScopes` and `ValidateOnBuild`). Test layout is in [test/AGENTS.md](test/AGENTS.md).
 
 ## Build props and package versions
 
@@ -116,6 +116,9 @@ When a PR changes `src/`, say whether public API, docs, and tests moved together
 - Unit tests cover conventions, extensions, and isolated logic.
 - `IntegrationTests` = DI acceptance (`ValidateScopes` / `ValidateOnBuild`).
 - `Repositories.IntegrationTests` = repository behavior on real MongoDB.
+- `Json.IntegrationTests` = JSON adapter fidelity and persistence.
+- `PackageTests` inspect packed `.nupkg` contents. `ConsumerTests` compile and run `AddMongoDb` against those packages. Neither needs Docker.
+- Shared fixtures live in `test/TestSupport`. Details and the AAA rule are in [test/AGENTS.md](test/AGENTS.md).
 - Fixing D14–D26 requires tests; do not “simplify” Result/streaming/ETag/soft-delete behavior without them.
 
 Samples illustrate consumption; they are not the public API contract.
