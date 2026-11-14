@@ -159,6 +159,8 @@ NuGet API key is stored in the repository. Pushes to `main` do not publish.
 1. nuget.org → user menu → **Trusted Publishing** → create a policy: package owner = the nuget.org
    account or organization that owns the packages, repository owner `Dilcore-Official`, repository
    `Dilcore-MongoDb`, workflow file `nuget-publish.yml`, environment `nuget`.
+   Glob patterns and packages (one per line): `Dilcore.MongoDB` and `Dilcore.MongoDB.*`. Pre-release builds
+   use the same package IDs, so they need no extra pattern.
 2. GitHub → Settings → Environments → create `nuget` (add required reviewers to gate each publish).
 3. GitHub → Settings → Secrets and variables → Actions → secret `NUGET_USER` = the nuget.org profile name
    (not an email address).
