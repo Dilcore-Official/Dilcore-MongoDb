@@ -19,6 +19,17 @@ Owned by [#12](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/12) (t
 
 Core includes repository interfaces, composable document policies, named bindings, and process-wide serialization conventions. Copy in each `.csproj` `PackageDescription` must stay aligned with this table.
 
+## PackageTags (shipped packages)
+
+`PackageTags` in each `.csproj` must equal the value below (space-separated, as NuGet stores them). `test/PackageTests` asserts both the description and these tags against the packed `.nuspec`.
+
+| NuGet ID | PackageTags |
+|----------|-------------|
+| `Dilcore.MongoDB.Abstractions` | mongodb abstractions contracts repository document-policies dotnet |
+| `Dilcore.MongoDB` | mongodb dependency-injection multi-tenant namespace-resolution repository document-policies mongodb-driver dotnet |
+| `Dilcore.MongoDB.SystemTextJson` | mongodb system-text-json json extended-json dotnet |
+| `Dilcore.MongoDB.NewtonsoftJson` | mongodb newtonsoft-json json extended-json dotnet |
+
 ## Optional integrations
 
 | NuGet ID | Milestone | When to use | PackageDescription |

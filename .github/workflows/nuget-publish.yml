@@ -1,10 +1,13 @@
 name: 📦 Publish NuGet Packages
 
+# Releases are tag driven. Pushing a tag such as v1.2.3 or v2.0.0-rc.1 on a commit that is on main
+# runs the full test suite, packs, and publishes to NuGet.org with OIDC trusted publishing.
+# Running the workflow by hand packs a preview version and uploads it as an artifact. It never publishes.
+# One-time setup (nuget.org policy, GitHub environment, NUGET_USER secret): see CONTRIBUTING.md, "Releasing".
+
 on:
   push:
-    branches: [main]
-    paths:
-      - 'src/**'
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -13,17 +16,18 @@ permissions:
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
   DOTNET_NOLOGO: true
-  NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+concurrency:
+  group: nuget-publish-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  publish:
-    name: 🚀 Pack & Publish
+  verify:
+    name: ✅ Verify and test
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    # contents: write is required to push the release git tag created by this job.
-    permissions:
-      contents: write
-      packages: write
+    timeout-minutes: 45
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: 📥 Checkout
@@ -31,55 +35,124 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🔢 Calculate Version
+      - name: 🔢 Resolve version
         id: version
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          RUN_NUMBER: ${{ github.run_number }}
         run: |
-          # Get the latest tag or default to 1.0.0
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          LATEST_VERSION=${LATEST_TAG#v}
-          
-          # Parse major.minor.patch
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST_VERSION"
-          
-          # Increment patch version
-          PATCH=$((PATCH + 1))
-          
-          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
-          echo "version=${NEW_VERSION}" >> "${GITHUB_OUTPUT}"
-          echo "📦 New version: ${NEW_VERSION}"
+          set -euo pipefail
+          if [[ "${REF_TYPE}" == "tag" ]]; then
+            if [[ ! "${REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$ ]]; then
+              echo "::error::Tag '${REF_NAME}' is not vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-prerelease."
+              exit 1
+            fi
+            if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
+              echo "::error::Tag '${REF_NAME}' points at a commit that is not on main."
+              exit 1
+            fi
+            version="${REF_NAME#v}"
+          else
+            version="0.0.0-preview.${RUN_NUMBER}"
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "📦 Version: ${version}"
 
       - name: 🛠️ Setup .NET
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           global-json-file: global.json
 
+      - name: 🐳 Docker preflight
+        run: |
+          docker version
+          docker info
+
       - name: 📦 Restore dependencies
         run: dotnet restore Dilcore.MongoDB.sln --locked-mode
 
+      - name: 🎨 Verify formatting
+        run: dotnet format Dilcore.MongoDB.sln --verify-no-changes --no-restore
+
       - name: 🔨 Build
-        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release
+        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release -warnaserror -p:ContinuousIntegrationBuild=true
 
-      - name: 📦 Pack packages
+      - name: 🧪 Test (unit, architecture, package, consumer smoke, integration)
+        uses: ./.github/actions/dotnet-test
+        with:
+          artifact-name: release-trx
+
+  preview:
+    name: 🧪 Preview pack (no publish)
+    if: github.event_name == 'workflow_dispatch'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: 📦 Pack
+        uses: ./.github/actions/pack-nuget
+        with:
+          version: ${{ needs.verify.outputs.version }}
+
+      - name: 📤 Upload packages
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: preview-packages
+          path: artifacts/*
+          if-no-files-found: error
+
+  release:
+    name: 🚀 Publish to NuGet.org
+    if: github.ref_type == 'tag'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The environment name must match the trusted publishing policy on nuget.org.
+    environment: nuget
+    permissions:
+      contents: write   # GitHub Release
+      id-token: write   # OIDC token for NuGet/login
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: 📦 Pack
+        uses: ./.github/actions/pack-nuget
+        with:
+          version: ${{ needs.verify.outputs.version }}
+
+      # Request the short-lived key right before the push. It is valid for about an hour.
+      - name: 🔑 NuGet login (OIDC)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      # Pushing the .nupkg files also pushes the matching .snupkg symbol packages from the same folder.
+      - name: 🚀 Push to NuGet.org
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: >
+          dotnet nuget push "artifacts/*.nupkg"
+          --api-key "${NUGET_API_KEY}"
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+      - name: 🏷️ Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.verify.outputs.version }}
         run: |
-          dotnet pack src/Dilcore.MongoDB.Abstractions/Dilcore.MongoDB.Abstractions.csproj \
-            --no-build --configuration Release --output ./nupkgs \
-            -p:Version=${{ steps.version.outputs.version }}
-          dotnet pack src/Dilcore.MongoDB/Dilcore.MongoDB.csproj \
-            --no-build --configuration Release --output ./nupkgs \
-            -p:Version=${{ steps.version.outputs.version }}
-          dotnet pack src/Dilcore.MongoDB.SystemTextJson/Dilcore.MongoDB.SystemTextJson.csproj \
-            --no-build --configuration Release --output ./nupkgs \
-            -p:Version=${{ steps.version.outputs.version }}
-          dotnet pack src/Dilcore.MongoDB.NewtonsoftJson/Dilcore.MongoDB.NewtonsoftJson.csproj \
-            --no-build --configuration Release --output ./nupkgs \
-            -p:Version=${{ steps.version.outputs.version }}
-
-      - name: 🚀 Push to GitHub Packages
-        run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/Dilcore-Official/index.json" --skip-duplicate
-
-      - name: 🏷️ Create Git Tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
-          git push origin "v${{ steps.version.outputs.version }}"
+          set -euo pipefail
+          flags=(--generate-notes --verify-tag --title "${TAG}")
+          if [[ "${VERSION}" == *-* ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "${TAG}" artifacts/* "${flags[@]}"

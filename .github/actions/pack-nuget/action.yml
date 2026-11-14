@@ -1,0 +1,53 @@
+name: pack nuget
+description: Restore with locked mode, pack every packable project, and check that each package has its symbol package.
+
+inputs:
+  version:
+    description: Package version, for example 1.2.3 or 1.2.3-rc.1.
+    required: true
+  output:
+    description: Directory that receives the .nupkg and .snupkg files.
+    required: false
+    default: artifacts
+
+runs:
+  using: composite
+  steps:
+    - name: 🛠️ Setup .NET
+      uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+      with:
+        global-json-file: global.json
+
+    - name: 📦 Restore dependencies
+      shell: bash
+      run: dotnet restore Dilcore.MongoDB.sln --locked-mode
+
+    - name: 📦 Pack
+      shell: bash
+      env:
+        PACK_VERSION: ${{ inputs.version }}
+        PACK_OUTPUT: ${{ inputs.output }}
+      run: |
+        set -euo pipefail
+        dotnet pack Dilcore.MongoDB.sln \
+          --no-restore \
+          --configuration Release \
+          --output "${PACK_OUTPUT}" \
+          -p:Version="${PACK_VERSION}" \
+          -p:ContinuousIntegrationBuild=true
+
+    - name: 🔎 Check pack output
+      shell: bash
+      env:
+        PACK_OUTPUT: ${{ inputs.output }}
+      run: |
+        set -euo pipefail
+        shopt -s nullglob
+        packages=("${PACK_OUTPUT}"/*.nupkg)
+        symbols=("${PACK_OUTPUT}"/*.snupkg)
+        echo "Packages: ${#packages[@]}, symbol packages: ${#symbols[@]}"
+        if [[ ${#packages[@]} -ne 4 || ${#symbols[@]} -ne 4 ]]; then
+          echo "::error::Expected 4 .nupkg and 4 .snupkg files in ${PACK_OUTPUT}."
+          ls -la "${PACK_OUTPUT}"
+          exit 1
+        fi

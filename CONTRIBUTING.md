@@ -147,6 +147,49 @@ Other tools:
 
 CODEOWNERS requests review from [@aytymchuk](https://github.com/aytymchuk).
 
+## Releasing
+
+Releases are tag driven and published to NuGet.org by
+[`.github/workflows/nuget-publish.yml`](.github/workflows/nuget-publish.yml) with OIDC
+[trusted publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing). No
+NuGet API key is stored in the repository. Pushes to `main` do not publish.
+
+**One-time setup (repository owner)**
+
+1. nuget.org → user menu → **Trusted Publishing** → create a policy: package owner = the nuget.org
+   account or organization that owns the packages, repository owner `Dilcore-Official`, repository
+   `Dilcore-MongoDb`, workflow file `nuget-publish.yml`, environment `nuget`.
+2. GitHub → Settings → Environments → create `nuget` (add required reviewers to gate each publish).
+3. GitHub → Settings → Secrets and variables → Actions → secret `NUGET_USER` = the nuget.org profile name
+   (not an email address).
+4. Optional: reserve the `Dilcore.MongoDB` prefix on nuget.org.
+
+**Cut a release**
+
+1. Merge the release changes to `main`. Move `PublicAPI.Unshipped.txt` entries to `PublicAPI.Shipped.txt`
+   and update [CHANGELOG.md](CHANGELOG.md).
+2. Tag the merge commit and push the tag: `git tag v1.2.3 && git push origin v1.2.3`. Pre-releases use
+   `v2.0.0-rc.1`. The tag must be on `main`; the workflow rejects any other tag.
+3. The workflow restores in locked mode, checks formatting, builds with warnings as errors, and runs the whole
+   test suite (including the packed-consumer smoke test and the package metadata tests). After the `nuget`
+   environment is approved it packs with the tag as the version, pushes the `.nupkg` and `.snupkg` files, and
+   creates the GitHub Release with generated notes.
+4. **Dry run:** run the workflow by hand (Actions → Publish NuGet Packages → Run workflow). It packs
+   `0.0.0-preview.<run>` and uploads the packages as an artifact. It never publishes.
+
+A published version cannot be deleted from NuGet.org, only unlisted. After the first release, set
+`PackageValidationBaselineVersion` in `src/Directory.Build.props` so package validation compares the public
+surface with the last published version.
+
+**Package metadata.** `PackageDescription` and `PackageTags` in each `.csproj` must match
+[docs/product/package-descriptions.md](docs/product/package-descriptions.md); `test/PackageTests` fails
+otherwise. Descriptions say MongoDB and never use DocumentDB branding.
+
+**Signing and provenance (assessed).** NuGet.org signs every package with its repository signature on upload.
+Author signing is not used: it needs a code-signing certificate and adds a key to protect. Provenance comes from
+the OIDC policy (only this repository, workflow and environment can publish), deterministic builds, Source Link,
+and symbol packages. Build attestations can be added later if consumers ask for them.
+
 ## Dependency updates
 
 - Dependabot opens weekly PRs for **NuGet** (`Directory.Packages.props` and

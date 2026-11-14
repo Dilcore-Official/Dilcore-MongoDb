@@ -20,8 +20,16 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
   `dotnet format`, and builds with `-warnaserror`.
 - Strict DI lifetime tests for `AddMongoDb` registrations and the optional JSON store factories.
 
+- Packaging for NuGet.org ([#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30)): package
+  validation, Source Link, `.snupkg` symbol packages, package icon, and `PackageTags` that match
+  `docs/product/package-descriptions.md`. `test/PackageTests` asserts description, tags, license, repository,
+  README, icon, and symbols on the packed packages.
+- Tag-driven release workflow with OIDC trusted publishing to NuGet.org, a GitHub Release, and a manual
+  dry-run pack. See CONTRIBUTING.md, "Releasing".
+
 ### Changed
 
+- Pushes to `main` no longer pack or publish packages (the GitHub Packages auto-patch publish is removed).
 - `IProvisioningStep.ExecuteAsync` takes `CancellationToken cancellationToken = default`.
 - Protected `BaseMongoDbRepository.ExecuteAsync` overloads take `estimatedBytes` before
   `CancellationToken`, so the token is the last parameter. Positional callers must swap those arguments.
