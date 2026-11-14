@@ -59,10 +59,14 @@ two-core-package plus optional JSON topology and dependency boundaries without D
 build the container with `ValidateScopes` / `ValidateOnBuild` via
 `AcceptanceServiceProviderFactory` in `test/TestSupport`. CI runs Architecture Tests, DI Acceptance,
 an Integration Matrix job (`TestCategory=M3Matrix`, Docker preflight), and the full Build & Test job.
-CI also runs `.github/workflows/mongo-7.0.yml`, `mongo-8.0.yml`, and `mongo-9.0.yml`.
-Each calls `.github/workflows/mongo-compat.yml` with `MONGODB_IMAGE_TAG` set to that
-major.minor tag and runs the integration projects. The existing DI Acceptance and
-Integration Matrix jobs in `ci.yml` stay on the default `9.0` image. A weekly schedule
+Those jobs, and the MongoDB version workflows, call
+[`.github/actions/dotnet-test`](.github/actions/dotnet-test/action.yml). That action runs
+`dotnet test` with `GitHubActionsTestLogger` (job summary and failure annotations) and
+uploads the TRX artifact on every run. CI also runs `.github/workflows/mongo-7.0.yml`,
+`mongo-8.0.yml`, and `mongo-9.0.yml`. Each calls `.github/workflows/mongo-compat.yml`
+with `MONGODB_IMAGE_TAG` set to that major.minor tag and runs the integration projects.
+The existing DI Acceptance and Integration Matrix jobs in `ci.yml` stay on the default
+`9.0` image. A weekly schedule
 on those version workflows picks up new patch tags of the same major.minor image.
 The **Benchmarks** workflow (`.github/workflows/benchmarks.yml`) runs BenchmarkDotNet on
 PRs that touch `src/` or `test/Benchmarks/`, posts a non-blocking results comment, and

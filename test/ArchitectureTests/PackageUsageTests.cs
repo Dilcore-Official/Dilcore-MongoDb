@@ -18,6 +18,7 @@ public class PackageUsageTests
         "StyleCop.Analyzers",
         "Microsoft.NET.Test.Sdk",
         "NUnit3TestAdapter",
+        "GitHubActionsTestLogger",
         "coverlet.collector",
     };
 

@@ -40,17 +40,7 @@ jobs:
         run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release -warnaserror -p:ContinuousIntegrationBuild=true
 
       - name: 🧪 Integration tests
-        run: >
-          dotnet test Dilcore.MongoDB.sln
-          --no-build
-          --configuration Release
-          --verbosity normal
-          --filter "FullyQualifiedName~IntegrationTests|TestCategory=M3Matrix"
-          --logger "trx;LogFileName=mongo-compat.trx"
-
-      - name: 📤 Upload TRX
-        if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/dotnet-test
         with:
-          name: mongo-${{ inputs.mongo-version }}-trx
-          path: "**/TestResults/**/*.trx"
+          filter: FullyQualifiedName~IntegrationTests|TestCategory=M3Matrix
+          artifact-name: mongo-${{ inputs.mongo-version }}-trx
