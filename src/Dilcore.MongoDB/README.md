@@ -5,9 +5,9 @@
 [![CI](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/Dilcore-Official/Dilcore-MongoDb)](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/LICENSE)
 
-An opinionated **MongoDB application toolkit for .NET**. It gives every service the same validated MongoDB setup, tenant-aware collection naming, reusable document policies, and repositories that return `Result<T>`, and it keeps the official `MongoDB.Driver` one call away.
+An opinionated **MongoDB application toolkit for .NET**. Every service gets the same validated MongoDB setup, tenant-aware collection naming, reusable document policies and repositories that return `Result<T>`, and the official `MongoDB.Driver` stays one call away.
 
-> **Preview.** Version 2 is in preview. The public API can still change before `2.0.0`. Planned work (streaming, observability, vector search) is on the [roadmap](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/ROADMAP.md) and is **not** in these packages yet.
+> **Preview.** Version 2 is in preview, so the public API can still change before `2.0.0`. Planned work (streaming, observability, vector search) is on the [roadmap](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/ROADMAP.md) and is **not** in these packages yet.
 
 ## Install
 
@@ -17,11 +17,26 @@ dotnet add package Dilcore.MongoDB --prerelease
 
 Targets .NET 10. Tested against MongoDB 7.0, 8.0 and 9.0.
 
+## Key features
+
+- **Multi-cluster, multi-database DI.** A single `AddMongoDb` entry point, validated at startup, with one singleton `IMongoClient` per unique cluster settings.
+- **Tenant-aware namespaces.** Your app supplies an `INamespacePrefixResolver`; a missing prefix fails closed. The library has no first-class tenant types.
+- **Document policies.** Optimistic concurrency (`IHasConcurrencyToken`), audit timestamps (`IAuditableDocument`) and soft delete (`ISoftDeletable`) are opt-in interfaces you compose on your document.
+- **Repositories with typed failures.** Generic, bulk and projection repositories return FluentResults; errors such as `ConcurrencyConflictError` and `DuplicateKeyError` are values, not exceptions. Keyset paging, replace, snapshot, patch, restore and purge are built in.
+- **Explicit provisioning.** Indexes and TTL are created by `IMongoDbProvisioner.DryRunAsync` / `ApplyAsync`, never as a side effect of resolving a collection.
+- **Multi-document transactions.** `IMongoDbTransactionRunner` coordinates driver sessions on a replica set and applies client-side size budgets.
+- **Process-wide BSON conventions.** Configured once in `AddMongoDb` with `ConfigureConventions`; the defaults are string enums, camelCase names, ignore nulls and ignore extra elements.
+- **JSON conversion.** `IBsonJsonConverter` and `IJsonDocumentStoreFactory` are registered for the optional JSON packages.
+- **Direct driver access.** Resolve the keyed `IMongoClient`, `IMongoDatabase` or `IMongoDbCollectionFactory` whenever the toolkit is not enough.
+
 ## Quick start
 
-Describe a document. Policies are opt-in interfaces: add only the ones you need.
+Describe a document. Policies are opt-in interfaces, so add only the ones you need.
 
 ```csharp
+using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Policies;
+
 public sealed class Order : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
 {
     public Guid Id { get; set; }
@@ -36,6 +51,9 @@ public sealed class Order : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDe
 Register the cluster, database and binding once at startup:
 
 ```csharp
+using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Extensions;
+
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
     .AddDatabase("shop", db =>
@@ -51,45 +69,53 @@ services.AddMongoDb(mongo => mongo
 Create indexes and collections explicitly, outside the request path:
 
 ```csharp
+using Dilcore.MongoDB.Abstractions.Provisioning;
+
 using var scope = app.Services.CreateScope();
 var provisioner = scope.ServiceProvider.GetRequiredService<IMongoDbProvisioner>();
 await provisioner.ApplyAsync();
 ```
 
-Inject the repository and use it. Failures come back as typed errors, not exceptions:
+Inject the repository and use it. Failures come back as typed errors:
 
 ```csharp
+using Dilcore.MongoDB.Abstractions.Repositories;
+using Dilcore.MongoDB.Abstractions.Results;
+using FluentResults;
+using MongoDB.Driver;
+
 public sealed class OrderService(IGenericRepository<Order> orders)
 {
-    public Task<Result<Order>> CreateAsync(Order order, CancellationToken cancellationToken)
-        => orders.StoreAsync(order, cancellationToken);
+    public async Task<Result<Order>> CreateAsync(Order order, CancellationToken cancellationToken)
+    {
+        var stored = await orders.StoreAsync(order, cancellationToken);
+
+        if (stored.HasError<DuplicateKeyError>())
+        {
+            // An order with the same key already exists.
+        }
+
+        return stored;
+    }
 
     public Task<Result<Order>> FindAsync(Guid id, CancellationToken cancellationToken)
         => orders.GetAsync(Builders<Order>.Filter.Eq(x => x.Id, id), cancellationToken);
 }
 ```
 
-A write with a stale `ETag` fails with `ConcurrencyConflictError`; a duplicate key fails with `DuplicateKeyError`.
+A write with a stale `ETag` fails with `ConcurrencyConflictError`.
 
-## What you get
+When the toolkit is not enough, use the driver directly:
 
-- **Multi-cluster, multi-database DI** that is validated at startup, with one `IMongoClient` per unique cluster settings.
-- **Tenant-aware namespaces.** Your app supplies an `INamespacePrefixResolver`; a missing prefix fails closed. There are no first-class tenant types.
-- **Document policies:** optimistic concurrency (`ETag`), audit timestamps, and soft delete with restore and purge.
-- **Repositories** for generic, bulk and projection access, keyset paging, replace, snapshot and patch.
-- **Explicit provisioning** of indexes and TTL with `DryRunAsync` and `ApplyAsync`.
-- **Multi-document transactions** through `IMongoDbTransactionRunner` (replica set required), with client-side size budgets.
-- **Process-wide BSON conventions** configured once on `AddMongoDb`.
-- **Direct driver access.** Inject the keyed `IMongoClient`, `IMongoDatabase` or `IMongoDbCollectionFactory` whenever the toolkit is not enough.
+```csharp
+using MongoDB.Driver;
+
+var client = provider.GetRequiredKeyedService<IMongoClient>("primary");
+```
 
 ## When not to use it
 
 This is not a replacement for `MongoDB.Driver`, not Amazon DocumentDB, and not a provider-neutral repository. If your app needs one client and a few collection calls, use the driver directly.
-
-## Optional packages
-
-- [`Dilcore.MongoDB.SystemTextJson`](https://www.nuget.org/packages/Dilcore.MongoDB.SystemTextJson) and [`Dilcore.MongoDB.NewtonsoftJson`](https://www.nuget.org/packages/Dilcore.MongoDB.NewtonsoftJson) add JSON document stores that use the same database and namespace resolution.
-- [`Dilcore.MongoDB.Abstractions`](https://www.nuget.org/packages/Dilcore.MongoDB.Abstractions) is already a dependency; reference it alone from libraries that must not take a DI host.
 
 ## Guides
 
@@ -100,6 +126,8 @@ This is not a replacement for `MongoDB.Driver`, not Amazon DocumentDB, and not a
 | Namespace resolution and tenancy | [namespace resolution](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/namespace-resolution.md) |
 | Provisioning, indexes, TTL | [provisioning](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/provisioning.md) |
 | Transactions and budgets | [transactions](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/transactions.md) |
+| JSON adapters | [JSON adapters](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-adapters.md) |
+| Driver escape hatches | [driver escape hatches](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/product/driver-escape-hatches.md) |
 | BSON conventions | [ADR 0003](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/adr/0003-serialization-conventions.md) |
 | Production MongoDB posture | [production MongoDB](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/security/production-mongodb.md) |
 

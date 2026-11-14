@@ -5,9 +5,9 @@
 [![CI](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Dilcore-Official/Dilcore-MongoDb/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/Dilcore-Official/Dilcore-MongoDb)](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/LICENSE)
 
-The **contracts** of the Dilcore MongoDB toolkit: document and policy interfaces, repository interfaces, namespace resolution, provisioning and transaction contracts, and typed operation errors. It has no DI host wiring, so a library can define its data access against these types and leave hosting to the application.
+The **contracts** of the Dilcore MongoDB toolkit: document and policy interfaces, repository interfaces, namespace resolution, provisioning and transaction contracts, and typed operation errors. It has no DI host wiring, so a library can write its data access against these types and leave hosting to the application.
 
-> **Preview.** Version 2 is in preview. The public API can still change before `2.0.0`. Planned work (streaming, observability, vector search) is on the [roadmap](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/ROADMAP.md) and is **not** in these packages yet.
+> **Preview.** Version 2 is in preview, so the public API can still change before `2.0.0`. Planned work (streaming, observability, vector search) is on the [roadmap](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/ROADMAP.md) and is **not** in these packages yet.
 
 ## Install
 
@@ -19,17 +19,28 @@ Targets .NET 10. Depends on `MongoDB.Driver` and `FluentResults`.
 
 Building an application? Reference [`Dilcore.MongoDB`](https://www.nuget.org/packages/Dilcore.MongoDB) instead; it brings this package along.
 
-## What is inside
+## Key features
 
-- **Documents:** `IDocumentEntity` and `IDocumentEntity<TId>` (Guid, ObjectId or your own identifier type).
-- **Opt-in policies:** `IHasConcurrencyToken`, `ISoftDeletable`, `IAuditableDocument`.
-- **Repositories:** `IGenericRepository<T>`, `IGenericBulkRepository<T>`, `IGenericProjectionRepository<T>`, all returning `FluentResults` results.
-- **Namespace resolution:** `INamespaceResolver` and `INamespacePrefixResolver` for tenant-aware database and collection names.
-- **Provisioning and transactions:** `IMongoDbProvisioner`, `IMongoDbTransactionRunner` and their options.
-- **Typed errors:** `MongoOperationError` and its subtypes, such as `ConcurrencyConflictError` and `DuplicateKeyError`.
-- **Driver escape hatches:** `IMongoDbCollectionFactory` and `IMongoDatabaseResolver`.
+- **No host dependency.** Interfaces and small types only; `AddMongoDb` and the implementations live in `Dilcore.MongoDB`.
+- **Document model.** `IDocumentEntity` and `IDocumentEntity<TId>` for Guid, ObjectId or your own identifier type, plus `GuidIdGenerationStrategy`.
+- **Opt-in policies.** `IHasConcurrencyToken`, `ISoftDeletable` and `IAuditableDocument` compose on any document.
+- **Repository contracts.** `IGenericRepository<T>`, `IGenericBulkRepository<T>` and `IGenericProjectionRepository<T>` return FluentResults results; keyset paging types are included.
+- **Typed operation errors.** `MongoOperationError` and its subtypes, such as `ConcurrencyConflictError`, `DuplicateKeyError`, `DocumentNotFoundError` and `TransactionBudgetExceededError`.
+- **Namespace resolution contracts.** `INamespaceResolver` and `INamespacePrefixResolver` for tenant-aware database and collection names.
+- **Provisioning and transactions.** `IMongoDbProvisioner` and `IMongoDbTransactionRunner` with their options.
+- **JSON contracts.** `IBsonJsonConverter` and `IJsonDocumentStore`, implemented by the JSON adapter packages.
+- **Driver escape hatches.** `IMongoDbCollectionFactory` and `IMongoDatabaseResolver` keep `MongoDB.Driver` types reachable.
+
+## Quick start
+
+Define a document and depend on the repository contract:
 
 ```csharp
+using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Policies;
+using Dilcore.MongoDB.Abstractions.Repositories;
+using FluentResults;
+
 public sealed class Note : IDocumentEntity<Guid>, IAuditableDocument
 {
     public Guid Id { get; set; }
@@ -45,7 +56,7 @@ public sealed class NoteArchive(IGenericRepository<Note> notes)
 }
 ```
 
-The implementation and `AddMongoDb` live in `Dilcore.MongoDB`.
+The host application registers the binding with `AddMongoDb` from `Dilcore.MongoDB`.
 
 ## Packages
 

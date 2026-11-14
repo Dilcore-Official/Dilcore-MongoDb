@@ -70,6 +70,28 @@ public class PackageMetadataTests
         }
     }
 
+    [Test]
+    [CancelAfter(300000)]
+    public void PackedPackages_ShipTheirOwnReadmeWithInstallCommand()
+    {
+        // Arrange
+        var feed = Directory.CreateTempSubdirectory("dilcore-package-readme").FullName;
+        PackagePacker.Pack(feed);
+        var packages = Directory.GetFiles(feed, "*.nupkg").OrderBy(path => path, StringComparer.Ordinal).ToArray();
+
+        // Act
+        var readmes = packages.Select(path => (Id: ReadValue(ReadNuspec(path), "id"), Text: ReadEntryText(path, "README.md"))).ToArray();
+
+        // Assert
+        readmes.Length.ShouldBe(4);
+        foreach (var readme in readmes)
+        {
+            readme.Text.ShouldStartWith($"# {readme.Id}");
+            readme.Text.ShouldContain($"dotnet add package {readme.Id}");
+            readme.Text.ShouldContain("## Key features");
+        }
+    }
+
     private static void AssertCatalogMetadata(XDocument nuspec)
     {
         var id = ReadValue(nuspec, "id");
@@ -115,6 +137,16 @@ public class PackageMetadataTests
         using var stream = entry.Open();
 
         return XDocument.Load(stream);
+    }
+
+    private static string ReadEntryText(string packagePath, string entryName)
+    {
+        using var archive = ZipFile.OpenRead(packagePath);
+        var entry = archive.GetEntry(entryName);
+        entry.ShouldNotBeNull($"{entryName} is missing from {Path.GetFileName(packagePath)}");
+        using var reader = new StreamReader(entry.Open());
+
+        return reader.ReadToEnd();
     }
 
     private static string[] ReadEntries(string packagePath)

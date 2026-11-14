@@ -10,6 +10,7 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
 
 ### Added
 
+- Per-package NuGet READMEs (`src/<package>/README.md`) with install command, key features, quick start and preview note, and a rewritten repository README. `test/PackageTests` checks that each package ships its own README.
 - Package `Copyright` metadata that matches the `LICENSE` copyright line; `test/PackageTests` asserts it.
 - Test suites for packed package contents and for an external caller that restores
   `Dilcore.MongoDB` from those packages and builds a container with `ValidateScopes`

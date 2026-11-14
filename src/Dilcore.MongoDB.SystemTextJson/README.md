@@ -7,7 +7,7 @@
 
 System.Text.Json adapters for the Dilcore MongoDB toolkit. Convert JSON to BSON and back without losing BSON types, and store untyped JSON documents through the same database and namespace resolution as your typed documents.
 
-> **Preview.** Version 2 is in preview. The public API can still change before `2.0.0`. Planned work (streaming, observability, vector search) is on the [roadmap](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/ROADMAP.md) and is **not** in these packages yet.
+> **Preview.** Version 2 is in preview, so the public API can still change before `2.0.0`. Planned work (streaming, observability, vector search) is on the [roadmap](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/ROADMAP.md) and is **not** in these packages yet.
 
 ## Install
 
@@ -15,11 +15,23 @@ System.Text.Json adapters for the Dilcore MongoDB toolkit. Convert JSON to BSON 
 dotnet add package Dilcore.MongoDB.SystemTextJson --prerelease
 ```
 
-This package needs [`Dilcore.MongoDB`](https://www.nuget.org/packages/Dilcore.MongoDB) and an `AddMongoDb` call in your host. It fails at startup if `AddMongoDb` was not called first.
+This package needs [`Dilcore.MongoDB`](https://www.nuget.org/packages/Dilcore.MongoDB) and an `AddMongoDb` call in your host. `AddSystemTextJsonDocuments` fails at startup if `AddMongoDb` was not called first.
+
+## Key features
+
+- **System.Text.Json types.** `JsonElement`, `JsonDocument` and `JsonNode` convert to and from BSON; strings and `BsonDocument` can be inserted directly.
+- **Document store.** `ISystemTextJsonDocumentStoreFactory.Create(databaseKey, staticPrefix)` returns a store that inserts and reads documents by logical collection name, with no typed binding required.
+- **BSON type fidelity.** Canonical Extended JSON keeps `$oid`, `$numberLong`, `$numberDecimal` and `$date`; relaxed output is also available.
+- **Conversion options.** `JsonBsonConversionOptions` controls output mode, number typing, maximum depth, maximum size, duplicate property names and Extended JSON interpretation.
+- **Same pipeline as typed documents.** Database keys, collection names and namespace prefixes resolve the same way, so tenant prefixes apply to JSON too.
+- **Safe registration.** `AddSystemTextJsonDocuments` is idempotent and fails closed without `AddMongoDb`.
+- **Typed reads.** `GetJsonElementByIdAsync` and `GetJsonDocumentByIdAsync` return the stored document as System.Text.Json types.
 
 ## Quick start
 
 ```csharp
+using Dilcore.MongoDB.Abstractions.Keys;
+using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.SystemTextJson;
 
 services.AddMongoDb(mongo => mongo
@@ -35,22 +47,18 @@ var store = scope.ServiceProvider
     .GetRequiredService<ISystemTextJsonDocumentStoreFactory>()
     .Create(new MongoDatabaseKey("app"));
 
-var inserted = await store.InsertAsync("payloads", jsonElement);
-var loaded = await store.GetJsonDocumentByIdAsync("payloads", id);
+using System.Text.Json;
+
+using var json = JsonDocument.Parse("""{ "sku": "A-1", "qty": 2 }""");
+var inserted = await store.InsertAsync("payloads", json.RootElement);
+var loaded = await store.GetJsonElementByIdAsync("payloads", inserted.Value["_id"]);
 ```
 
-The collection name (`"payloads"`) is a plain string. It does not need a typed document binding, and it flows through the same namespace resolvers as typed documents.
+Every call returns a FluentResults `Result`. The collection name (`"payloads"`) is a plain string and does not need a typed document binding.
 
-## What you get
+## Which JSON package?
 
-- **System.Text.Json types:** `JsonElement`, `JsonDocument` and `JsonNode` convert to and from BSON.
-- **Canonical Extended JSON** output keeps BSON types (`$oid`, `$numberLong`, `$numberDecimal`, `$date`). Relaxed mode is also available.
-- **Conversion limits** for depth and size, and a switch to reject duplicate property names.
-- **Same pipeline as typed documents:** database keys, collection names and namespace prefixes behave the same.
-
-## When to choose this package
-
-Use one JSON adapter per application. Pick the one that matches the JSON stack you already use. `Dilcore.MongoDB` itself has no dependency on either stack, so System.Text.Json apps never pull in Newtonsoft.Json.
+Use the adapter that matches the JSON stack you already use. `Dilcore.MongoDB` itself depends on neither, so System.Text.Json apps never pull in Newtonsoft.Json.
 
 ## Packages
 
