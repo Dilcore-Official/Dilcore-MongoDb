@@ -80,6 +80,16 @@ public sealed class OrderService(IGenericRepository<Order> orders)
 
 Create indexes and collections explicitly at startup with `IMongoDbProvisioner.ApplyAsync()`. Production hosts should inject a connection string; the samples start MongoDB with Testcontainers for demo purposes only.
 
+## AI coding assistants
+
+Install the usage skill so your assistant picks the right package, follows the rules (typed errors, fail-closed tenancy, explicit provisioning, transaction scope) and starts from tested examples:
+
+```bash
+npx skills add https://github.com/Dilcore-Official/Dilcore-MongoDb --skill using-dilcore-mongodb
+```
+
+It is a standard [Agent Skills](https://agentskills.io) folder, so you can also copy [`skills/using-dilcore-mongodb`](skills/using-dilcore-mongodb) into your agent's skills directory by hand. The documentation is also available through [Context7](https://context7.com) as `/dilcore-official/dilcore-mongodb` once the library is indexed.
+
 ## Documentation
 
 | Topic | Doc |

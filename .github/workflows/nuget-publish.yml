@@ -10,9 +10,9 @@ name: 📦 Publish NuGet Packages
 #   preview = false            2.X.Y             the patch after the highest stable v2.* tag, or 2.0.0 if none
 #
 # All libraries are packed in the same run with the same version, so they are always released together.
-# On main a publishing run creates the vX.Y.Z tag and a GitHub Release. dry_run = true tests the whole path
-# (tests, pack, environment approval, OIDC login) and stops before the tag, the push and the release; it works
-# from any branch. From another branch without dry_run the workflow only packs and uploads an artifact.
+# On main a publishing run pushes the packages and, only after that succeeded, tags the commit vX.Y.Z and creates
+# a GitHub Release. dry_run = true tests the whole path (tests, pack, environment approval, OIDC login) and stops
+# before the push, the tag and the release; it works from any branch. From another branch without dry_run the workflow only packs and uploads an artifact.
 # One-time setup (nuget.org policy, GitHub environment, NUGET_USER secret): CONTRIBUTING.md, "Releasing".
 
 on:
@@ -34,7 +34,7 @@ on:
         type: boolean
         default: true
       dry_run:
-        description: Dry run. Test the NuGet.org connection (OIDC login) but do not tag, push or release.
+        description: Dry run. Test the NuGet.org connection (OIDC login) but do not push, tag or release.
         type: boolean
         default: false
 
@@ -161,16 +161,6 @@ jobs:
         with:
           version: ${{ needs.verify.outputs.version }}
 
-      # The tag is pushed before the publish, so a failed publish never reuses its version number.
-      - name: 🏷️ Create version tag
-        if: ${{ !inputs.dry_run }}
-        env:
-          VERSION: ${{ needs.verify.outputs.version }}
-        run: |
-          set -euo pipefail
-          git tag "v${VERSION}" "${GITHUB_SHA}"
-          git push origin "refs/tags/v${VERSION}"
-
       # Request the short-lived key right before the push. It is valid for about an hour.
       - name: 🔑 NuGet login (OIDC)
         id: login
@@ -185,7 +175,7 @@ jobs:
           KEY_ISSUED: ${{ steps.login.outputs.NUGET_API_KEY != '' }}
         run: |
           echo "### 🧪 Dry run ${VERSION}" >> "${GITHUB_STEP_SUMMARY}"
-          echo "OIDC login to NuGet.org succeeded (key issued: ${KEY_ISSUED}). Nothing was tagged, pushed or released." >> "${GITHUB_STEP_SUMMARY}"
+          echo "OIDC login to NuGet.org succeeded (key issued: ${KEY_ISSUED}). Nothing was pushed, tagged or released." >> "${GITHUB_STEP_SUMMARY}"
 
       - name: 📤 Upload packages (dry run)
         if: ${{ inputs.dry_run }}
@@ -205,6 +195,19 @@ jobs:
           --api-key "${NUGET_API_KEY}"
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate
+
+      # The tag marks the commit that produced the published version, so the commit history shows which commit is
+      # which version. It is created only after the push succeeded: a failed run leaves no tag and the next run
+      # reuses the same version number. If this step fails after a successful push, re-run the failed jobs of the
+      # same run: the push is skipped as a duplicate and the tag is created on the same commit.
+      - name: 🏷️ Tag the published commit
+        if: ${{ !inputs.dry_run }}
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          git tag "v${VERSION}" "${GITHUB_SHA}"
+          git push origin "refs/tags/v${VERSION}"
 
       - name: 🏷️ Create GitHub Release
         if: ${{ !inputs.dry_run }}

@@ -117,6 +117,16 @@ var client = provider.GetRequiredKeyedService<IMongoClient>("primary");
 
 This is not a replacement for `MongoDB.Driver`, not Amazon DocumentDB, and not a provider-neutral repository. If your app needs one client and a few collection calls, use the driver directly.
 
+## AI coding assistants
+
+Install the usage skill so your assistant picks the right package and follows the rules (typed errors, fail-closed tenancy, explicit provisioning, transaction scope):
+
+```bash
+npx skills add https://github.com/Dilcore-Official/Dilcore-MongoDb --skill using-dilcore-mongodb
+```
+
+It is a standard [Agent Skills](https://agentskills.io) folder: [`skills/using-dilcore-mongodb`](https://github.com/Dilcore-Official/Dilcore-MongoDb/tree/main/skills/using-dilcore-mongodb).
+
 ## Guides
 
 | Topic | Guide |

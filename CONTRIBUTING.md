@@ -198,13 +198,15 @@ from it.
    version, run it by hand: Actions → Publish NuGet Packages → **Run workflow** on `main` with `preview` unticked.
 3. The run computes the next version, restores in locked mode, checks formatting, builds with warnings as
    errors, and runs the whole test suite (including the packed-consumer smoke test and the package metadata
-   tests). After the `nuget` environment is approved it packs with that version, pushes the version tag,
-   pushes the `.nupkg` and `.snupkg` files to NuGet.org, and creates the GitHub Release (marked
-   pre-release for preview versions). The tag is pushed before the publish, so a failed publish never
-   reuses a version number.
+   tests). After the `nuget` environment is approved it packs with that version, pushes the `.nupkg` and
+   `.snupkg` files to NuGet.org, and only then tags the published commit `vX.Y.Z` and creates the GitHub
+   Release (marked pre-release for preview versions). The tag is created after a successful push, so the
+   commit history shows which commit produced which version, and a failed publish leaves no tag and the next
+   run reuses the same version number. If the tag step fails after a successful push, re-run the failed jobs of that
+   same run: the push is skipped as a duplicate and the tag is created on the same commit.
 4. **Dry run:** tick `dry_run` (default off). The run computes the next version, tests, packs, waits for the
    `nuget` environment approval, and logs in to NuGet.org with OIDC, which proves the trusted publishing policy,
-   `NUGET_USER` and the environment name are right. It then stops: no tag, no push, no release, and the packages
+   `NUGET_USER` and the environment name are right. It then stops: no push, no tag, no release, and the packages
    are only uploaded as an artifact. It works from any branch, so run it from the PR branch before merging.
    Without `dry_run`, a run from a branch other than `main` only packs and uploads the artifact.
 
@@ -220,6 +222,42 @@ otherwise. Descriptions say MongoDB and never use DocumentDB branding.
 Author signing is not used: it needs a code-signing certificate and adds a key to protect. Provenance comes from
 the OIDC policy (only this repository, workflow and environment can publish), deterministic builds, Source Link,
 and symbol packages. Build attestations can be added later if consumers ask for them.
+
+## Context7 and the consumer skill
+
+Two things help AI coding assistants use the library correctly. Both are for people who **consume** the packages, so
+they are kept apart from [AGENTS.md](AGENTS.md), which is for maintainers.
+
+**Context7** serves the library documentation to assistants. [`context7.json`](context7.json) lists what is indexed
+(consumer docs, package READMEs, samples) and what is not (`AGENTS.md`, `CONTRIBUTING.md`, tests, skills, tooling
+folders), plus usage rules. `.github/workflows/context7-refresh.yml` calls the Context7 refresh API after a merge
+into `main` that changes Markdown, `docs/`, `samples/` or `context7.json`. Library code alone does not trigger it.
+
+- Preview documentation is `main`. Preview tags (`v2.0.0-preview.N`) are **not** added as Context7 versions: each
+  one would become a separate version (a claimed library is limited to 20) and most would be identical to `main`.
+- Stable versions are added to `previousVersions` in `context7.json` (`{ "tag": "v2.0.0", "title": "version 2.0.0" }`)
+  in the release pull request, and the tag must already exist. Context7 then serves `/dilcore-official/dilcore-mongodb/v2.0.0`
+  next to the latest docs.
+- After changing `context7.json` or after a first setup, query Context7 for these topics and check that the
+  answers come from the consumer docs and not from `AGENTS.md` or tests: DI setup, namespace prefixes and tenancy,
+  JSON adapters, transactions and budgets, typed errors, provisioning, and driver escape hatches.
+
+One-time owner setup (not automated):
+
+1. Add the library on [context7.com](https://context7.com) (`/dilcore-official/dilcore-mongodb`).
+2. Create an API key and store it as the repository secret `CONTEXT7_API_KEY`. Without it the refresh job
+   logs a notice and does nothing.
+3. Claim the library in the Context7 dashboard. Add the generated `url` and `public_key` fields to
+   `context7.json`. A claimed library gets higher refresh limits and can manage versions.
+
+**Consumer skill.** [`skills/using-dilcore-mongodb`](skills/using-dilcore-mongodb) follows the open Agent Skills
+format (`SKILL.md` with `name` and `description` frontmatter, plus `references/`), so any compatible agent can load
+it. It holds the decision guide (toolkit or plain driver, which package, which feature), the rules that prevent real
+bugs, and commented examples of the most common combinations. It links to the guides in `docs/` instead of
+repeating the API reference. `.cursor/skills/using-dilcore-mongodb` is a symlink to it for Cursor.
+
+When you change a guide or a public API in a way that affects usage, update the skill in the same pull request. Keep
+every example consistent with `docs/guides/` and the samples.
 
 ## Dependency updates
 

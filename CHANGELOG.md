@@ -8,8 +8,14 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
 
 ## [Unreleased]
 
+### Changed
+
+- The release workflow now creates the `vX.Y.Z` tag only after the packages were pushed to NuGet.org, so the commit history shows which commit produced which version and a failed publish leaves no tag.
+
 ### Added
 
+- Consumer skill `skills/using-dilcore-mongodb` in the open Agent Skills format: decision guide, usage rules, troubleshooting, a docs index and ten commented examples of the most common combinations. `.cursor/skills/using-dilcore-mongodb` links to it ([#42](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/42)).
+- Context7 configuration (`context7.json`: consumer docs only, usage rules) and `.github/workflows/context7-refresh.yml`, which refreshes the library after a merge into `main` that changes docs ([#40](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/40)).
 - Per-package NuGet READMEs (`src/<package>/README.md`) with install command, key features, quick start and preview note, and a rewritten repository README. `test/PackageTests` checks that each package ships its own README.
 - Package `Copyright` metadata that matches the `LICENSE` copyright line; `test/PackageTests` asserts it.
 - Test suites for packed package contents and for an external caller that restores

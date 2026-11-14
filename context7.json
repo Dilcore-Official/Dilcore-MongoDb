@@ -1,0 +1,43 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Dilcore MongoDB",
+  "description": "Opinionated MongoDB application toolkit for .NET: validated multi-cluster DI, tenant-aware namespaces, document policies, typed repositories, provisioning and transactions on top of MongoDB.Driver.",
+  "folders": [],
+  "excludeFolders": [
+    ".github",
+    ".cursor",
+    ".claude",
+    ".serena",
+    "skills",
+    "test",
+    "scripts",
+    "assets",
+    "docs/policies"
+  ],
+  "excludeFiles": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CONTRIBUTING.md",
+    "GOVERNANCE.md",
+    "ROADMAP.md",
+    "CODE_OF_CONDUCT.md",
+    "SECURITY.md",
+    "SUPPORT.md",
+    "CHANGELOG.md",
+    "v1-defects.md",
+    "v2-goals.md",
+    "package-descriptions.md"
+  ],
+  "rules": [
+    "Reference Dilcore.MongoDB for an application host. Use Dilcore.MongoDB.Abstractions only in libraries that need contracts without DI.",
+    "Version 2 is in preview. Install with dotnet add package Dilcore.MongoDB --prerelease and keep all Dilcore.MongoDB packages on the same version.",
+    "If an app needs one MongoClient and a few collection calls, use MongoDB.Driver directly instead of this toolkit.",
+    "Call AddMongoDb once. Do not create MongoClient instances yourself; the toolkit shares one client per unique cluster settings.",
+    "Repository methods return FluentResults Result values. Check IsFailed or HasError<TError>() and map typed errors such as DocumentNotFoundError, ConcurrencyConflictError and DuplicateKeyError.",
+    "Namespace prefix resolvers must fail closed: return Result.Fail when the tenant is unknown, never an empty prefix.",
+    "Create indexes with IMongoDbProvisioner at startup or in a deploy job, not in request handlers. Name every index.",
+    "Transactions need a replica set. Resolve repositories from IMongoDbTransactionContext.Repositories inside the callback, not from the request scope.",
+    "AddSystemTextJsonDocuments and AddNewtonsoftJsonDocuments must be called after AddMongoDb. Never add the Newtonsoft package to a System.Text.Json-only app.",
+    "OpenTelemetry instrumentation, vector search and streaming redesign are planned and not in the packages yet."
+  ]
+}
