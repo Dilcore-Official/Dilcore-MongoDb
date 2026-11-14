@@ -149,10 +149,19 @@ CODEOWNERS requests review from [@aytymchuk](https://github.com/aytymchuk).
 
 ## Releasing
 
-Releases are run from GitHub Actions and published to NuGet.org by
+Packages are published to NuGet.org by
 [`.github/workflows/nuget-publish.yml`](.github/workflows/nuget-publish.yml) with OIDC
 [trusted publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing). No
-NuGet API key is stored in the repository. Pushes to `main` do not publish.
+NuGet API key is stored in the repository.
+
+**Triggers.** A merge into `main` that changes library code publishes a **preview** automatically. Library
+code means `src/**` (except Markdown files), `Directory.Build.props`, `Directory.Packages.props`,
+`global.json`, `nuget.config` and `assets/icon.png`. Changes to docs, tests, samples or workflows do not publish.
+A person can also run the workflow by hand to publish a stable version or to do a dry run.
+
+**All libraries ship together.** Every run packs all four packages with one version, so
+`Dilcore.MongoDB.Abstractions`, `Dilcore.MongoDB`, `Dilcore.MongoDB.SystemTextJson` and
+`Dilcore.MongoDB.NewtonsoftJson` always share a version number. A run fails if it does not produce all four.
 
 **Versioning.** Versions follow [SemVer](https://semver.org/). The major version is `2` and lives in
 `MAJOR_VERSION` in the workflow. Nobody edits a version by hand: each run computes the next one from the git
@@ -175,7 +184,8 @@ from it.
    `Dilcore-MongoDb`, workflow file `nuget-publish.yml`, environment `nuget`.
    Glob patterns and packages (one per line): `Dilcore.MongoDB` and `Dilcore.MongoDB.*`. Pre-release builds
    use the same package IDs, so they need no extra pattern.
-2. GitHub → Settings → Environments → create `nuget` (add required reviewers to gate each publish).
+2. GitHub → Settings → Environments → create `nuget` (required reviewers gate each publish, including the automatic previews after a merge; leave the list empty
+   if previews should go out without approval).
 3. GitHub → Settings → Secrets and variables → Actions → secret `NUGET_USER` = the nuget.org profile name
    (not an email address).
 4. Optional: reserve the `Dilcore.MongoDB` prefix on nuget.org.
@@ -184,7 +194,8 @@ from it.
 
 1. Merge the release changes to `main`. Move `PublicAPI.Unshipped.txt` entries to `PublicAPI.Shipped.txt`
    and update [CHANGELOG.md](CHANGELOG.md).
-2. Actions → Publish NuGet Packages → **Run workflow** on `main`. Keep `preview` ticked for a preview build.
+2. A merge that changes library code starts the workflow by itself and publishes the next preview. For a stable
+   version, run it by hand: Actions → Publish NuGet Packages → **Run workflow** on `main` with `preview` unticked.
 3. The run computes the next version, restores in locked mode, checks formatting, builds with warnings as
    errors, and runs the whole test suite (including the packed-consumer smoke test and the package metadata
    tests). After the `nuget` environment is approved it packs with that version, pushes the version tag,

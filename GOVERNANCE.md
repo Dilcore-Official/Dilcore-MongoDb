@@ -21,7 +21,7 @@ triage, and roadmap prioritization.
 
 ## Releases
 
-The maintainer owns releases. A release is a manual run of the publish workflow on `main`; it computes the next
+The maintainer owns releases. A merge into `main` that changes library code publishes a preview automatically, and a stable release is a manual run of the publish workflow on `main`. Each run publishes all libraries together; it computes the next
 version (major `2`, `2.0.0-preview.N` for previews), tests the commit, publishes to NuGet.org through OIDC
 trusted publishing after approval of the `nuget` GitHub environment, tags the commit, and creates the GitHub Release. Steps and one-time setup are in
 [CONTRIBUTING.md](CONTRIBUTING.md#releasing). Package descriptions and tags follow

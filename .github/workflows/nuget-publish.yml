@@ -1,18 +1,32 @@
 name: 📦 Publish NuGet Packages
 
-# Manual release pipeline. Every run computes the next version from the git tags, tests the commit,
-# and publishes to NuGet.org with OIDC trusted publishing. The version is not edited by hand.
+# Release pipeline for all libraries. Every run computes the next version from the git tags, tests the commit,
+# and publishes to NuGet.org with OIDC trusted publishing. The version is never edited by hand.
+#
+# Automatic: a merge into main that changes library code (see the paths below) publishes a preview.
+# Manual (workflow_dispatch): choose preview or stable, or tick dry_run to test the NuGet.org connection.
 #
 #   preview = true  (default)  2.0.0-preview.N   N is the highest existing v2.0.0-preview.* tag plus one
 #   preview = false            2.X.Y             the patch after the highest stable v2.* tag, or 2.0.0 if none
 #
-# Run it from main with dry_run unticked to publish: the run creates the vX.Y.Z tag and a GitHub Release.
-# dry_run = true tests the whole path (tests, pack, environment approval, OIDC login to NuGet.org) and then stops
-# before the tag, the push and the release. It works from any branch, so the nuget.org policy can be checked early.
-# From a branch other than main without dry_run the workflow only packs and uploads the packages as an artifact.
+# All libraries are packed in the same run with the same version, so they are always released together.
+# On main a publishing run creates the vX.Y.Z tag and a GitHub Release. dry_run = true tests the whole path
+# (tests, pack, environment approval, OIDC login) and stops before the tag, the push and the release; it works
+# from any branch. From another branch without dry_run the workflow only packs and uploads an artifact.
 # One-time setup (nuget.org policy, GitHub environment, NUGET_USER secret): CONTRIBUTING.md, "Releasing".
 
 on:
+  push:
+    branches: [main]
+    # Only files that change what the libraries do or contain. Docs, tests, samples and workflows do not publish.
+    paths:
+      - 'src/**'
+      - '!src/**/*.md'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'nuget.config'
+      - 'assets/icon.png'
   workflow_dispatch:
     inputs:
       preview:
@@ -55,7 +69,8 @@ jobs:
       - name: 🔢 Compute next version
         id: version
         env:
-          PREVIEW: ${{ inputs.preview }}
+          # A push to main always publishes a preview. Manual runs follow the input.
+          PREVIEW: ${{ github.event_name == 'push' || inputs.preview }}
         run: |
           set -euo pipefail
           git fetch --tags --force --quiet
