@@ -8,14 +8,32 @@ using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.Json;
 
+/// <summary>
+/// Untyped BSON document store for a specific database key, using the same namespace resolution as typed collections.
+/// </summary>
+/// <param name="collectionFactory">Resolves physical collections for logical names.</param>
+/// <param name="converter">Parses JSON payloads before insert.</param>
+/// <param name="databaseKey">The registered database this store targets.</param>
+/// <param name="staticPrefix">Optional static namespace prefix override for collection resolution.</param>
 public sealed class JsonDocumentStore(
     IMongoDbCollectionFactory collectionFactory,
     IBsonJsonConverter converter,
     MongoDatabaseKey databaseKey,
     string? staticPrefix = null) : IJsonDocumentStore
 {
+    /// <summary>
+    /// The JSON converter used to parse string payloads before insert.
+    /// </summary>
     public IBsonJsonConverter Converter { get; } = converter;
 
+    /// <summary>
+    /// Parses <paramref name="json"/> and inserts the resulting document into the resolved collection.
+    /// </summary>
+    /// <param name="logicalCollectionName">Logical collection name within the bound database.</param>
+    /// <param name="json">JSON object text; the root must be a document.</param>
+    /// <param name="options">Optional parse options passed to <see cref="Converter"/>.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The inserted document, or a failure from parsing, namespace resolution, or the driver.</returns>
     public async Task<Result<BsonDocument>> InsertAsync(
         string logicalCollectionName,
         string json,
@@ -36,6 +54,14 @@ public sealed class JsonDocumentStore(
         return await InsertAsync(logicalCollectionName, parsed.Value.AsBsonDocument, cancellationToken);
     }
 
+    /// <summary>
+    /// Inserts a BSON document into the resolved collection.
+    /// </summary>
+    /// <param name="logicalCollectionName">Logical collection name within the bound database.</param>
+    /// <param name="document">The document to insert; must be under 16 MiB when serialized.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The inserted document, or a failure from validation, namespace resolution, or the driver.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="document"/> is <see langword="null"/>.</exception>
     public async Task<Result<BsonDocument>> InsertAsync(
         string logicalCollectionName,
         BsonDocument document,
@@ -65,6 +91,13 @@ public sealed class JsonDocumentStore(
         }
     }
 
+    /// <summary>
+    /// Loads a document by <c>_id</c> from the resolved collection.
+    /// </summary>
+    /// <param name="logicalCollectionName">Logical collection name within the bound database.</param>
+    /// <param name="id">The BSON identifier value.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The document when found; otherwise <see cref="DocumentNotFoundError"/> or resolution errors.</returns>
     public async Task<Result<BsonDocument>> GetByIdAsync(
         string logicalCollectionName,
         BsonValue id,

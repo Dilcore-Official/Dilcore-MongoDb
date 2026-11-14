@@ -155,7 +155,7 @@ internal class GenericMongoDbBulkRepository<TDocument> : BaseMongoDbRepository<T
                 RestoreUncommitted(snapshots, processed, entityList.Count);
                 throw;
             }
-        }, cancellationToken, estimatedBytes: null);
+        }, estimatedBytes: null, cancellationToken);
 
     public Task<Result> BulkDeleteAsync(
         Expression<Func<TDocument, bool>> expression,
@@ -172,12 +172,12 @@ internal class GenericMongoDbBulkRepository<TDocument> : BaseMongoDbRepository<T
 
             filter = ApplyNotDeleteFilter(filter);
             return SoftDeleteManyAsync(collection, filter, token);
-        }, cancellationToken);
+        }, cancellationToken: cancellationToken);
 
     private async Task<Result> SoftDeleteManyAsync(
         IMongoCollection<TDocument> collection,
         FilterDefinition<TDocument> filter,
-        CancellationToken token)
+        CancellationToken token = default)
     {
         UpdateDefinition<TDocument> update = Builders<TDocument>.Update.Set(
             PolicyElementNames.IsDeleted<TDocument>(), true);
@@ -201,7 +201,7 @@ internal class GenericMongoDbBulkRepository<TDocument> : BaseMongoDbRepository<T
     private async Task<Result> PermanentDeleteAsync(
         IMongoCollection<TDocument> collection,
         FilterDefinition<TDocument> filter,
-        CancellationToken token)
+        CancellationToken token = default)
     {
         var result = await MongoCollectionCalls.DeleteManyAsync(
             collection, _callContext.Session, filter, token);
@@ -351,7 +351,7 @@ internal class GenericMongoDbBulkRepository<TDocument> : BaseMongoDbRepository<T
         IReadOnlyList<WriteModel<TDocument>> writeModels,
         int processed,
         int batchCount,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         var unmatched = new Dictionary<int, string>();
         for (var offset = 0; offset < batchCount; offset++)
@@ -384,7 +384,7 @@ internal class GenericMongoDbBulkRepository<TDocument> : BaseMongoDbRepository<T
         return unmatched;
     }
 
-    private Result<IReadOnlyList<TDocument>> CompletePartialFailure(
+    private static Result<IReadOnlyList<TDocument>> CompletePartialFailure(
         IReadOnlyList<EntitySnapshot> snapshots,
         int totalCount,
         int processed,

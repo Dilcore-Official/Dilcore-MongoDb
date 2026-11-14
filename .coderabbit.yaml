@@ -35,10 +35,23 @@ reviews:
     - "!**/nupkgs/**"
     - "!**/.vs/**"
   path_instructions:
+    - path: "**/*.cs"
+      instructions: |
+        Apply .cursor/rules/csharp-code-style.mdc and .editorconfig. These are review rules, not suggestions.
+        - C# files do not end with a trailing newline. One top-level type per file (SA1402) outside test/.
+        - Unused usings fail the build (IDE0005). Imports stay at the top of the file.
+        - A foreach source that is a method call or a LINQ chain is a named local above the loop.
+        - A loop whose first statement maps the loop variable uses Select or SelectMany. S3267 is an error (CodeQL cs/linq/missed-select). Do not ask to enable any other Sonar rule; SonarAnalyzer.globalconfig sets those ids to none. StyleCop is only SA1402.
+        - A method argument is a variable, literal, nameof, default, property, or new — not a method invocation. Lambdas are allowed, and calls inside a lambda are allowed.
+        - Keep a LINQ chain deferred when it is enumerated once. Materialize only for a concrete collection, indexing, or a second pass. CA1851 is an error.
+        - Separate setup, the query, and the result with a blank line.
+        - A method body has at most one nested block. A loop or branch whose body is another block moves into its own method.
+        - CancellationToken is optional, last, and forwarded into every cancellable call (CA1068, CA2016).
     - path: "src/**/*.cs"
       instructions: |
         Review as a public OSS MongoDB toolkit, not an application.
         - Flag public API additions/removals that lack PublicAPI.Shipped.txt or PublicAPI.Unshipped.txt updates.
+        - Public XML docs are required (CS1591). Document the interface; implementations use inheritdoc.
         - Keep IMongoClient singleton-per-cluster; do not create clients per request.
         - Preserve async + CancellationToken; do not leak undisposed cursors or sessions.
         - Namespace resolution must fail closed; do not add first-class tenant types.
@@ -48,10 +61,12 @@ reviews:
         - Prefer existing FluentResults patterns; keep driver types visible (no LCD query abstraction).
     - path: "test/**/*.cs"
       instructions: |
-        - Assertions must use Shouldly, not FluentAssertions.
+        - Assertions must use Shouldly, not FluentAssertions. Follow .cursor/rules/csharp-testing-di.mdc.
         - Tests should name behavior and cover failure paths, not only happy paths.
         - Do not require Docker in UnitTests or ArchitectureTests.
         - Repository/DI acceptance tests that need MongoDB must use Testcontainers.
+        - An AddMongoDb registration change needs a lifetime test with ValidateScopes and ValidateOnBuild: singleton, scoped, and transient. Do not start MongoDB for that test.
+        - A PackageVersion with no PackageReference fails the architecture tests. Build-only analyzers do not need a source usage token.
         - Fixes for inventoried defects need regression tests.
     - path: "samples/**/*.cs"
       instructions: |
@@ -67,6 +82,11 @@ reviews:
       instructions: |
         Keep MongoDB-toolkit positioning. AGENTS.md is maintainer What/Why, not a command
         cookbook. CONTRIBUTING.md owns How. Do not invent provider-neutral DocumentDB claims.
+    - path: "{Directory.Build.props,src/Directory.Build.props,Directory.Packages.props,SonarAnalyzer.globalconfig}"
+      instructions: |
+        - StyleCop.Analyzers is only SA1402. SonarAnalyzer.CSharp is only S3267. Other Sonar rule ids stay none in SonarAnalyzer.globalconfig; regenerate that file when the SonarAnalyzer.CSharp version changes.
+        - Analyzer packages stay private assets. Do not copy package versions into docs.
+        - A new PackageVersion must be referenced by a project, and the matching packages.lock.json files must be updated. CI restore uses --locked-mode.
     - path: ".serena/**"
       instructions: |
         Memories must match the two-core-package plus optional JSON Dilcore.MongoDB state and point to ADRs/CONTRIBUTING
@@ -84,3 +104,11 @@ knowledge_base:
       - "**/CONTRIBUTING.md"
       - "docs/adr/*.md"
       - ".editorconfig"
+      - files: ".cursor/rules/csharp-code-style.mdc"
+        applyTo: "**/*.cs"
+      - files: ".cursor/rules/csharp-testing-di.mdc"
+        applyTo: "test/**/*.cs"
+      - files: "SonarAnalyzer.globalconfig"
+        applyTo: "**/*.cs"
+      - files: ".serena/memories/style_and_conventions.md"
+        applyTo: "**/*.{cs,md}"

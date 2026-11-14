@@ -1,0 +1,58 @@
+---
+description: C# code style for Dilcore MongoDB (formatting, cancellation, docs, member order, modern .NET)
+globs: "**/*.cs"
+alwaysApply: false
+---
+
+# C# code style
+
+Formatting source of truth is [`.editorconfig`](.editorconfig). After each implementation stage, run `dotnet format Dilcore.MongoDB.sln` on the files you changed, then `dotnet format Dilcore.MongoDB.sln --verify-no-changes` before finishing.
+
+## Files
+
+- C# files must not end with a trailing newline (`insert_final_newline = false` for `*.cs`). Do not add a blank line after the last token.
+- One file holds one top-level type: class, record, struct, interface, enum, or delegate. Nested types stay inside their parent. `SA1402` enforces this outside `test/`. Test projects may keep fixtures in the test file.
+- Remove a `using` when the file does not use that namespace. `IDE0005` is an error. Do not keep a using for an unused alias or a static import.
+- A NuGet package stays only when this project or another project in the solution uses it. Remove an unused `PackageReference` from the project. Remove a `PackageVersion` from `Directory.Packages.props` when no project references it. `NU1510` is an error for packages the .NET 10 SDK already provides. Analyzers, the test SDK, the NUnit adapter, and coverlet are build tools; they stay while the project uses them.
+
+## Cancellation
+
+- Every `CancellationToken` parameter is optional and last: `CancellationToken cancellationToken = default`.
+- If a method awaits work that accepts a `CancellationToken`, that method takes a token and forwards it. Do not drop a token at an `await`.
+
+## Methods
+
+- One method, one purpose. Split mixed work into named helpers.
+- The name states the outcome (`ResolveDatabaseName`, `StampAudit`, `MapDuplicateKey`). Avoid `Handle`, `Process`, `DoWork`.
+- A `foreach` source that is a method call or a LINQ chain is assigned to a named local on the lines above the loop.
+- A loop whose first statement maps the loop variable to another value uses `.Select(...)` or `SelectMany` on the source instead. `S3267` is an error. This matches CodeQL `cs/linq/missed-select`.
+- A method argument is a variable, literal, `nameof`, `default`, property, or `new`. It is not a method invocation. Lambdas are allowed as arguments, and calls inside a lambda are allowed.
+- Keep a LINQ chain deferred when the sequence is enumerated once. Call `ToList`, `ToArray`, `ToHashSet`, or `ToDictionary` only when the next step needs a concrete collection, indexing, or a second pass. `CA1851` (multiple enumeration of `IEnumerable`) is an error.
+- Separate setup, the query, and the result with a blank line. Do not leave a method as one solid block of statements.
+- A method body has at most one nested block (`if`, `else`, `foreach`, `for`, `while`, `switch`, `try`). A loop or branch whose body is another block moves that work into its own method.
+
+## XML documentation
+
+- Every public member has XML docs.
+- If the member implements an interface, document it on the interface. The implementation uses `<inheritdoc />` and does not repeat the text.
+- Types with no interface are documented on the type.
+- Include `<param>`, `<returns>`, and `<exception>` when they apply. Mention cancellation and namespace/tenant failure behavior when the member depends on them.
+
+## Member order
+
+Inside a type, use this order:
+
+1. Constants
+2. Static fields
+3. Instance fields
+4. Constructors
+5. Properties
+6. Events
+7. Public methods
+8. Non-public methods
+
+Order members of the same kind by accessibility: public, internal, protected, private.
+
+## Modern .NET
+
+Follow current .NET and `Microsoft.Extensions` guidance. Confirm APIs with Context7 and Microsoft Learn before writing them. Prefer `ArgumentNullException.ThrowIfNull`, collection expressions, file-scoped namespaces, and primary constructors when they match nearby code. Do not hide `MongoDB.Driver` types behind a lowest-common-denominator wrapper.

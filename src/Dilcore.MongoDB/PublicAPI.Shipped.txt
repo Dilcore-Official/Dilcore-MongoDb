@@ -1,7 +1,16 @@
 #nullable enable
-interface Dilcore.MongoDB.DependencyInjection.IMongoClusterBuilder
-interface Dilcore.MongoDB.DependencyInjection.IMongoDatabaseBuilder
-interface Dilcore.MongoDB.DependencyInjection.IMongoDbBuilder
-interface Dilcore.MongoDB.DependencyInjection.IMongoDocumentBindingBuilder`1
-static class Dilcore.MongoDB.Extensions.ServiceCollectionExtensions
-static class Dilcore.MongoDB.Repositories.GenericRepositoryExtensions
+Dilcore.MongoDB.DependencyInjection.IMongoClusterBuilder
+Dilcore.MongoDB.DependencyInjection.IMongoClusterBuilder.UseConnectionString(string! connectionString) -> Dilcore.MongoDB.DependencyInjection.IMongoClusterBuilder!
+Dilcore.MongoDB.DependencyInjection.IMongoClusterBuilder.UseExistingClient(MongoDB.Driver.IMongoClient! client, Dilcore.MongoDB.Abstractions.Ownership.MongoClientOwnership ownership) -> Dilcore.MongoDB.DependencyInjection.IMongoClusterBuilder!
+Dilcore.MongoDB.DependencyInjection.IMongoClusterBuilder.UseMaxConnectionPoolSize(int maxConnectionPoolSize) -> Dilcore.MongoDB.DependencyInjection.IMongoClusterBuilder!
+Dilcore.MongoDB.DependencyInjection.IMongoDatabaseBuilder
+Dilcore.MongoDB.DependencyInjection.IMongoDatabaseBuilder.AddDocumentBinding<TDocument>(string! name, System.Action<Dilcore.MongoDB.DependencyInjection.IMongoDocumentBindingBuilder<TDocument!>!>! configure) -> Dilcore.MongoDB.DependencyInjection.IMongoDatabaseBuilder!
+Dilcore.MongoDB.DependencyInjection.IMongoDatabaseBuilder.OnCluster(string! clusterName) -> Dilcore.MongoDB.DependencyInjection.IMongoDatabaseBuilder!
+Dilcore.MongoDB.DependencyInjection.IMongoDatabaseBuilder.WithNamespacePrefix(string! prefix) -> Dilcore.MongoDB.DependencyInjection.IMongoDatabaseBuilder!
+Dilcore.MongoDB.DependencyInjection.IMongoDatabaseBuilder.WithNamespacePrefixResolver<TResolver>() -> Dilcore.MongoDB.DependencyInjection.IMongoDatabaseBuilder!
+Dilcore.MongoDB.DependencyInjection.IMongoDbBuilder
+Dilcore.MongoDB.DependencyInjection.IMongoDbBuilder.AddCluster(string! name, System.Action<Dilcore.MongoDB.DependencyInjection.IMongoClusterBuilder!>! configure) -> Dilcore.MongoDB.DependencyInjection.IMongoDbBuilder!
+Dilcore.MongoDB.DependencyInjection.IMongoDbBuilder.AddDatabase(string! name, System.Action<Dilcore.MongoDB.DependencyInjection.IMongoDatabaseBuilder!>! configure) -> Dilcore.MongoDB.DependencyInjection.IMongoDbBuilder!
+Dilcore.MongoDB.DependencyInjection.IMongoDbBuilder.ConfigureConventions(System.Action<Dilcore.MongoDB.DependencyInjection.IConventionsBuilder!>! configure) -> Dilcore.MongoDB.DependencyInjection.IMongoDbBuilder!
+Dilcore.MongoDB.Extensions.ServiceCollectionExtensions
+Dilcore.MongoDB.Repositories.GenericRepositoryExtensions

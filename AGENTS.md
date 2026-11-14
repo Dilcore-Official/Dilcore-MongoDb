@@ -34,6 +34,37 @@ Treat this as an **externally consumed library**: public surface is a contract, 
 - Public API changes update `PublicAPI.Shipped.txt` / `PublicAPI.Unshipped.txt` in the same PR.
 - Tests: NUnit + **Shouldly** (not FluentAssertions). Formatting: [`.editorconfig`](.editorconfig).
 
+## Code style rules
+
+Cursor rules are the agent-facing style contract. Do not copy their text here.
+
+- [C# code style](.cursor/rules/csharp-code-style.mdc) — no trailing newline on C# files, one top-level type per file (`SA1402`, tests exempt), unused `using` directives removed (`IDE0005` error), unused NuGet packages removed at the project and from central versions, `dotnet format` after each stage, `CancellationToken cancellationToken = default` forwarded into every cancellable call, single-purpose methods, a loop source and a method argument are locals (a lambda may be an argument), LINQ stays deferred unless a concrete collection or a second pass is required (`CA1851` error), blank lines split setup from the query and the result, a method has at most one nested block, XML docs on the interface (or on the type when it has no interface), standard member order, current .NET practices checked with Context7 and Microsoft Learn.
+- [Tests and DI lifetimes](.cursor/rules/csharp-testing-di.mdc) — NUnit + Shouldly, and a strict singleton / scoped / transient test for every DI registration (`ValidateScopes` and `ValidateOnBuild`).
+
+## Build props and package versions
+
+Two MSBuild files cover every project. Do not copy version numbers from them into docs or into a `.csproj`.
+
+[Directory.Build.props](Directory.Build.props) sits at the repository root. The SDK imports the nearest `Directory.Build.props` it finds by walking up from the project. It is the shared compile surface: `net10.0`, latest C#, implicit usings, nullable, deterministic builds, .NET analyzers at `AnalysisLevel=latest` and `AnalysisMode=Default`, `StyleCop.Analyzers` with only `SA1402` enabled (one top-level type per file; tests set that rule to none), `SonarAnalyzer.CSharp` with only `S3267` enabled (`SonarAnalyzer.globalconfig` turns the other rule ids off; a loop that maps its iteration variable uses LINQ), editorconfig style rules enforced in the build, Release warnings-as-errors, NuGet audit, and `RestorePackagesWithLockFile`. `NU1608` stays a warning because AutoFixture.NUnit4 does not declare NUnit 5. `ContinuousIntegrationBuild` turns on when `GITHUB_ACTIONS` is set.
+
+[src/Directory.Build.props](src/Directory.Build.props) is closer to the libraries, so it is the file the SDK imports for `src/` projects. It re-imports the root file with `GetPathOfFileAbove`, then adds the packable layer: `IsPackable`, package metadata, the README packed at the package root, `GenerateDocumentationFile`, `AnalysisMode=Recommended`, and `Microsoft.CodeAnalysis.PublicApiAnalyzers` (private assets). Tests and samples stay on the root file only, so they stay unpackable and on `AnalysisMode=Default`.
+
+[Directory.Packages.props](Directory.Packages.props) is central package management (`ManagePackageVersionsCentrally`, transitive pinning off). A package version is added there once. Projects reference it with `PackageReference Include="…"` and no `Version`. Analyzer packages set `PrivateAssets` and `IncludeAssets` on the `PackageVersion` and again on the `PackageReference` that opts in. Restore writes `packages.lock.json` next to each project; CI restore uses `--locked-mode`.
+
+### Namespace
+
+`RootNamespace` is a per-project property. The props files supply compile and package settings. Each library and test `.csproj` sets `RootNamespace` to that project's identity:
+
+| Project | `RootNamespace` |
+|---------|-----------------|
+| `Dilcore.MongoDB.Abstractions` | `Dilcore.MongoDB.Abstractions` |
+| `Dilcore.MongoDB` | `Dilcore.MongoDB` |
+| `Dilcore.MongoDB.SystemTextJson` | `Dilcore.MongoDB.SystemTextJson` |
+| `Dilcore.MongoDB.NewtonsoftJson` | `Dilcore.MongoDB.NewtonsoftJson` |
+| `test/*` | The test assembly name (`Dilcore.MongoDB.UnitTests`, and the same pattern for the other test projects) |
+
+A source file's namespace is that `RootNamespace` plus the folder path under the project. `src/Dilcore.MongoDB/Extensions/ServiceCollectionExtensions.cs` is `namespace Dilcore.MongoDB.Extensions`. The declaration is written in the file; MSBuild does not generate it. A new file uses the same rule. Samples omit `RootNamespace`, so the SDK default is the project file name.
+
 ## Documentation authority
 
 | Question | Source |
@@ -47,7 +78,7 @@ Treat this as an **externally consumed library**: public surface is a contract, 
 | Historical v1 API | [docs/api/v1-public-api.md](docs/api/v1-public-api.md) |
 | Open correctness defects | [docs/product/v1-defects.md](docs/product/v1-defects.md) |
 | Live public surface | `src/*/PublicAPI.*.txt` |
-| Versions / deps | `Directory.Packages.props`, `Directory.Build.props` |
+| Versions / deps / `RootNamespace` | [Build props and package versions](#build-props-and-package-versions); pins stay in `Directory.Packages.props` and `Directory.Build.props` |
 | Serena invariants | [`.serena/memories/`](.serena/memories/) |
 
 Do not duplicate command lists, version pins, file trees, or PublicAPI member lists in this file.
@@ -71,7 +102,7 @@ If docs and code disagree, **code + tests + PublicAPI baselines** win, then upda
 
 Follow [CONTRIBUTING.md](CONTRIBUTING.md): .NET SDK 10.0.x, Docker for integration/benchmarks, Shouldly, PublicAPI baselines, roadmap script when ROADMAP changes, focused PRs, no secrets. Security reports go through [SECURITY.md](SECURITY.md), never a public issue.
 
-Preserve [`.editorconfig`](.editorconfig) on new C#. Verify changed files with the CONTRIBUTING `dotnet format --verify-no-changes` check. Do not mass-reformat unrelated files. CodeRabbit uses this file plus ADRs as review guidelines; do not fight those invariants in review replies without an ADR.
+Preserve [`.editorconfig`](.editorconfig) on new C#. Verify changed files with the CONTRIBUTING `dotnet format --verify-no-changes` check. Do not mass-reformat unrelated files. CodeRabbit uses this file, the cursor rules, `.editorconfig`, `SonarAnalyzer.globalconfig`, and ADRs as review guidelines; do not fight those invariants in review replies without an ADR.
 
 ## Security and OSS
 

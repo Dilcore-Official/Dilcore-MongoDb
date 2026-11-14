@@ -81,7 +81,7 @@ public class ProvisioningDiRegistrationTests
         public Task<Result<ProvisioningStepResult>> ExecuteAsync(
             IMongoDatabaseResolver databaseResolver,
             bool apply,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken = default)
             => Task.FromResult(Result.Ok(new ProvisioningStepResult
             {
                 Name = Name,

@@ -7,8 +7,19 @@ using MongoDB.Bson;
 
 namespace Dilcore.MongoDB.SystemTextJson;
 
+/// <summary>
+/// Converts between System.Text.Json values and BSON.
+/// </summary>
 public static class JsonBsonConvert
 {
+    /// <summary>
+    /// Converts a <see cref="JsonElement"/> to BSON by parsing its raw JSON text through <see cref="IBsonJsonConverter"/>.
+    /// </summary>
+    /// <param name="element">The element to convert.</param>
+    /// <param name="converter">Shared converter that parses JSON text.</param>
+    /// <param name="options">Optional conversion rules.</param>
+    /// <returns>A converted <see cref="BsonValue"/>, or a conversion error.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="converter"/> is null.</exception>
     public static Result<BsonValue> ToBson(
         this JsonElement element,
         IBsonJsonConverter converter,
@@ -20,6 +31,14 @@ public static class JsonBsonConvert
         return converter.Parse(element.GetRawText(), options);
     }
 
+    /// <summary>
+    /// Converts a <see cref="JsonDocument"/> root element to BSON.
+    /// </summary>
+    /// <param name="document">The document to convert.</param>
+    /// <param name="converter">Shared converter that parses JSON text.</param>
+    /// <param name="options">Optional conversion rules.</param>
+    /// <returns>A converted <see cref="BsonValue"/>, or a conversion error.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="document"/> or <paramref name="converter"/> is null.</exception>
     public static Result<BsonValue> ToBson(
         this JsonDocument document,
         IBsonJsonConverter converter,
@@ -29,6 +48,14 @@ public static class JsonBsonConvert
         return document.RootElement.ToBson(converter, options);
     }
 
+    /// <summary>
+    /// Converts a <see cref="JsonNode"/> to BSON via its JSON text; null yields BSON null.
+    /// </summary>
+    /// <param name="node">The node to convert, or null for BSON null.</param>
+    /// <param name="converter">Shared converter that parses JSON text.</param>
+    /// <param name="options">Optional conversion rules.</param>
+    /// <returns>A converted <see cref="BsonValue"/>, or a conversion error.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="converter"/> is null.</exception>
     public static Result<BsonValue> ToBson(
         this JsonNode? node,
         IBsonJsonConverter converter,
@@ -44,6 +71,13 @@ public static class JsonBsonConvert
         return converter.Parse(node.ToJsonString(), options);
     }
 
+    /// <summary>
+    /// Converts a <see cref="BsonValue"/> to a standalone root <see cref="JsonElement"/> clone.
+    /// </summary>
+    /// <param name="value">The BSON value to convert.</param>
+    /// <param name="converter">Converter used to produce JSON text.</param>
+    /// <param name="options">Optional conversion rules.</param>
+    /// <returns>A cloned root element, or a conversion error.</returns>
     public static Result<JsonElement> ToJsonElement(
         this BsonValue value,
         IBsonJsonConverter converter,
@@ -61,6 +95,14 @@ public static class JsonBsonConvert
         }
     }
 
+    /// <summary>
+    /// Converts a <see cref="BsonValue"/> to a <see cref="JsonDocument"/>; the caller owns disposal.
+    /// </summary>
+    /// <param name="value">The BSON value to convert.</param>
+    /// <param name="converter">Converter used to produce JSON text.</param>
+    /// <param name="options">Optional conversion rules.</param>
+    /// <returns>A parsed <see cref="JsonDocument"/>, or a conversion error.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> or <paramref name="converter"/> is null.</exception>
     public static Result<JsonDocument> ToJsonDocument(
         this BsonValue value,
         IBsonJsonConverter converter,

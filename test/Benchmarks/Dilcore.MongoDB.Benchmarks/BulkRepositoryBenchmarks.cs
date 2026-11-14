@@ -7,7 +7,7 @@ using MongoDB.Driver;
 namespace Dilcore.MongoDB.Benchmarks;
 
 /// <summary>
-/// Bulk store/delete vs raw <see cref="IMongoCollection{TDocument}.BulkWriteAsync"/>.
+/// Bulk store/delete vs raw <c>IMongoCollection&lt;TDocument&gt;.BulkWriteAsync</c>.
 /// </summary>
 public class BulkRepositoryBenchmarks
 {

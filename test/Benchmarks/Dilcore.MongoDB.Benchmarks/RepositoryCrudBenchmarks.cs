@@ -2,7 +2,6 @@ using BenchmarkDotNet.Attributes;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Benchmarks.Infrastructure;
 using Dilcore.MongoDB.Benchmarks.Models;
-using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.Repositories;
 using MongoDB.Driver;
 

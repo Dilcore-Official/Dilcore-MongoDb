@@ -1,6 +1,5 @@
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Keys;
-using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 
 namespace MongoDb.Capabilities.Sample.Endpoints;

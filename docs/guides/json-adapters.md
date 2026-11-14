@@ -89,7 +89,8 @@ Load tokens with `DateParseHandling.None` and `FloatParseHandling.Decimal` when 
 
 | Case | Result |
 |------|--------|
-| Malformed / oversized JSON | `Error` / `DocumentTooLargeError` |
+| Malformed JSON | `JsonConversionError` (`json_conversion`) |
+| Oversized JSON | `DocumentTooLargeError` |
 | Root not a document on insert | `"JSON root must be a document."` |
 | Missing id | `DocumentNotFoundError` |
 | Duplicate `_id` | `DuplicateKeyError` |

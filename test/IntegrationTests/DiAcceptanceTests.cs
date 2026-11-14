@@ -7,7 +7,6 @@ using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.IntegrationTests.Infrastructure;
 using Dilcore.MongoDB.Internal;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.IntegrationTests;

@@ -1,5 +1,5 @@
 using Dilcore.MongoDB.Abstractions.Json;
-using Dilcore.MongoDB.Json;
+using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.NewtonsoftJson;
 using MongoDB.Bson;
 using Newtonsoft.Json.Linq;
@@ -107,6 +107,7 @@ public class NewtonsoftJsonBsonConvertTests
         var nested = new JObject { ["a"] = new JObject { ["b"] = 1 } };
         var result = nested.ToBson(Converter, new JsonBsonConversionOptions { MaxDepth = 0 });
         result.IsFailed.ShouldBeTrue();
+        result.HasError<JsonConversionError>().ShouldBeTrue();
         result.Errors[0].Message.ShouldContain("MaxDepth");
     }
 
@@ -116,6 +117,7 @@ public class NewtonsoftJsonBsonConvertTests
         var token = new JObject { ["v"] = new JObject { ["$oid"] = "nothex" } };
         var result = token.ToBson(Converter);
         result.IsFailed.ShouldBeTrue();
+        result.HasError<JsonConversionError>().ShouldBeTrue();
     }
 
     [Test]

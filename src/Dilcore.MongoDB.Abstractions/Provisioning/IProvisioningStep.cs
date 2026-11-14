@@ -1,4 +1,3 @@
-using Dilcore.MongoDB.Abstractions;
 using FluentResults;
 
 namespace Dilcore.MongoDB.Abstractions.Provisioning;
@@ -10,10 +9,22 @@ namespace Dilcore.MongoDB.Abstractions.Provisioning;
 /// </summary>
 public interface IProvisioningStep
 {
+    /// <summary>
+    /// Stable name of this step for reports and logging.
+    /// </summary>
     string Name { get; }
 
+    /// <summary>
+    /// Resolves targets via <paramref name="databaseResolver"/> and either simulates or applies the step.
+    /// </summary>
+    /// <param name="databaseResolver">Resolves tenant-aware database handles for bound keys.</param>
+    /// <param name="apply"><see langword="true"/> to mutate MongoDB; <see langword="false"/> to describe planned actions only.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>
+    /// A successful result with step outcome metadata; otherwise a failed result (for example resolution or driver errors).
+    /// </returns>
     Task<Result<ProvisioningStepResult>> ExecuteAsync(
         IMongoDatabaseResolver databaseResolver,
         bool apply,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken = default);
 }

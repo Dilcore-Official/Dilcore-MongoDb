@@ -1,0 +1,46 @@
+name: MongoDB compatibility
+
+on:
+  workflow_call:
+    inputs:
+      mongo-version:
+        description: Official mongo image tag (major.minor), for example 8.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    name: 🧪 MongoDB ${{ inputs.mongo-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      MONGODB_IMAGE_TAG: ${{ inputs.mongo-version }}
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: 🛠️ Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: 🐳 Docker preflight
+        run: |
+          docker version
+          docker info
+
+      - name: 📦 Restore dependencies
+        run: dotnet restore Dilcore.MongoDB.sln --locked-mode
+
+      - name: 🔨 Build
+        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release -warnaserror -p:ContinuousIntegrationBuild=true
+
+      - name: 🧪 Integration tests
+        uses: ./.github/actions/dotnet-test
+        with:
+          filter: FullyQualifiedName~IntegrationTests|TestCategory=M3Matrix
+          artifact-name: mongo-${{ inputs.mongo-version }}-trx

@@ -3,7 +3,6 @@ using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Extensions;
-using Dilcore.MongoDB.Repositories;
 using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.Repositories.IntegrationTests;

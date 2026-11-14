@@ -100,14 +100,16 @@ internal static class KeysetCursor
             return Result.Ok();
         }
 
-        foreach (var key in keys)
+        var fields = keys.Select(key => key.Field).ToList();
+
+        foreach (var field in fields)
         {
-            if (rendered.TryGetValue(key.Field, out var projected)
+            if (rendered.TryGetValue(field, out var projected)
                 && !IsInclusionValue(projected)
                 && !IsExclusionValue(projected))
             {
                 return Result.Fail(
-                    $"Keyset paging projection must not replace sort key '{key.Field}'.");
+                    $"Keyset paging projection must not replace sort key '{field}'.");
             }
         }
 
@@ -116,9 +118,9 @@ internal static class KeysetCursor
 
         if (isInclusion)
         {
-            foreach (var key in keys)
+            foreach (var field in fields)
             {
-                if (key.Field == DocumentElementNames.Id)
+                if (field == DocumentElementNames.Id)
                 {
                     if (rendered.TryGetValue(DocumentElementNames.Id, out var idValue) && IsExclusionValue(idValue))
                     {
@@ -129,22 +131,22 @@ internal static class KeysetCursor
                     continue;
                 }
 
-                if (!rendered.TryGetValue(key.Field, out var value) || !IsInclusionValue(value))
+                if (!rendered.TryGetValue(field, out var value) || !IsInclusionValue(value))
                 {
                     return Result.Fail(
-                        $"Keyset paging projection must include sort key '{key.Field}'.");
+                        $"Keyset paging projection must include sort key '{field}'.");
                 }
             }
 
             return Result.Ok();
         }
 
-        foreach (var key in keys)
+        foreach (var field in fields)
         {
-            if (rendered.TryGetValue(key.Field, out var value) && IsExclusionValue(value))
+            if (rendered.TryGetValue(field, out var value) && IsExclusionValue(value))
             {
                 return Result.Fail(
-                    $"Keyset paging projection must not exclude sort key '{key.Field}'.");
+                    $"Keyset paging projection must not exclude sort key '{field}'.");
             }
         }
 

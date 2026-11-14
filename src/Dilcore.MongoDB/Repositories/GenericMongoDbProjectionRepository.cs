@@ -40,7 +40,7 @@ internal class GenericMongoDbProjectionRepository<TDocument> : BaseMongoDbReposi
             return entity is null
                 ? Result.Fail<TProjection>(new DocumentNotFoundError())
                 : Result.Ok(entity);
-        }, cancellationToken);
+        }, cancellationToken: cancellationToken);
 
     public Task<Result<IReadOnlyList<TProjection>>> GetListAsync<TProjection>(
         FilterDefinition<TDocument> filter,
@@ -54,7 +54,7 @@ internal class GenericMongoDbProjectionRepository<TDocument> : BaseMongoDbReposi
                 .Project(projection)
                 .ToListAsync(token);
             return Result.Ok<IReadOnlyList<TProjection>>(entities);
-        }, cancellationToken);
+        }, cancellationToken: cancellationToken);
 
     public Task<Result<IReadOnlyList<TProjection>>> GetListAsync<TProjection>(
         Expression<Func<TDocument, TProjection>> projection,
@@ -67,5 +67,5 @@ internal class GenericMongoDbProjectionRepository<TDocument> : BaseMongoDbReposi
                 .Project(projection)
                 .ToListAsync(token);
             return Result.Ok<IReadOnlyList<TProjection>>(entities);
-        }, cancellationToken);
+        }, cancellationToken: cancellationToken);
 }

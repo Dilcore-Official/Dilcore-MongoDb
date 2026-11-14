@@ -94,6 +94,7 @@ Expected failures are `MongoOperationError` subtypes (FluentResults `Error`). Ma
 | `TransientWriteError` | `transient_write` |
 | `WriteConcernFailureError` | `write_concern_failure` |
 | `DocumentTooLargeError` | `document_too_large` |
+| `JsonConversionError` | `json_conversion` |
 | `CrossClusterOperationError` | `cross_cluster_operation` |
 | `TransactionBudgetExceededError` | `transaction_budget_exceeded` |
 | `BulkWritePartialFailureError` | `bulk_write_partial_failure` |

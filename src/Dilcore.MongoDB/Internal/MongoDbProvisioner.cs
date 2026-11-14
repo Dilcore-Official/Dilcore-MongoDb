@@ -1,6 +1,5 @@
 using System.Linq.Expressions;
 using Dilcore.MongoDB.Abstractions;
-using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Abstractions.Provisioning;
 using Dilcore.MongoDB.Descriptors;
 using FluentResults;
@@ -26,7 +25,7 @@ internal sealed class MongoDbProvisioner(
     public Task<Result<ProvisioningReport>> ApplyAsync(CancellationToken cancellationToken = default)
         => RunAsync(apply: true, cancellationToken);
 
-    private async Task<Result<ProvisioningReport>> RunAsync(bool apply, CancellationToken cancellationToken)
+    private async Task<Result<ProvisioningReport>> RunAsync(bool apply, CancellationToken cancellationToken = default)
     {
         var steps = new List<ProvisioningStepResult>();
 
@@ -79,10 +78,10 @@ internal sealed class MongoDbProvisioner(
             }
 
             var applyIndexes = typeof(MongoDbProvisioner)
-                .GetMethod(nameof(ApplyIndexesAsync), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                .GetMethod(nameof(ApplyIndexesAsync), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
                 .MakeGenericMethod(binding.DocumentType);
             var task = (Task<Result>)applyIndexes.Invoke(
-                this,
+                null,
                 [database, collectionName, binding, apply, exists, steps, cancellationToken])!;
             var indexResult = await task;
             if (indexResult.IsFailed)
@@ -91,6 +90,25 @@ internal sealed class MongoDbProvisioner(
             }
         }
 
+        var extraResult = await ExecuteExtraStepsAsync(apply, steps, cancellationToken);
+        if (extraResult.IsFailed)
+        {
+            return extraResult;
+        }
+
+        if (apply)
+        {
+            await RecordProvisioningLedgerAsync(cancellationToken);
+        }
+
+        return Result.Ok(new ProvisioningReport { Applied = apply, Steps = steps });
+    }
+
+    private async Task<Result> ExecuteExtraStepsAsync(
+        bool apply,
+        List<ProvisioningStepResult> steps,
+        CancellationToken cancellationToken)
+    {
         foreach (var extraStep in extraSteps)
         {
             var extra = await extraStep.ExecuteAsync(databaseResolver, apply, cancellationToken);
@@ -102,33 +120,40 @@ internal sealed class MongoDbProvisioner(
             steps.Add(extra.Value);
         }
 
-        if (apply && graph.Databases.Count > 0)
-        {
-            var firstDb = await databaseResolver.GetDatabaseAsync(graph.Databases[0].Key, cancellationToken);
-            if (firstDb.IsSuccess)
-            {
-                var ledger = firstDb.Value.GetCollection<BsonDocument>(LedgerCollection);
-                await ledger.UpdateOneAsync(
-                    Builders<BsonDocument>.Filter.Eq("_id", PlanVersion),
-                    Builders<BsonDocument>.Update
-                        .SetOnInsert("appliedAt", DateTime.UtcNow)
-                        .Set("lastRunAt", DateTime.UtcNow),
-                    new UpdateOptions { IsUpsert = true },
-                    cancellationToken);
-            }
-        }
-
-        return Result.Ok(new ProvisioningReport { Applied = apply, Steps = steps });
+        return Result.Ok();
     }
 
-    private async Task<Result> ApplyIndexesAsync<TDocument>(
+    private async Task RecordProvisioningLedgerAsync(CancellationToken cancellationToken)
+    {
+        if (graph.Databases.Count == 0)
+        {
+            return;
+        }
+
+        var firstDb = await databaseResolver.GetDatabaseAsync(graph.Databases[0].Key, cancellationToken);
+        if (firstDb.IsFailed)
+        {
+            return;
+        }
+
+        var ledger = firstDb.Value.GetCollection<BsonDocument>(LedgerCollection);
+        await ledger.UpdateOneAsync(
+            Builders<BsonDocument>.Filter.Eq("_id", PlanVersion),
+            Builders<BsonDocument>.Update
+                .SetOnInsert("appliedAt", DateTime.UtcNow)
+                .Set("lastRunAt", DateTime.UtcNow),
+            new UpdateOptions { IsUpsert = true },
+            cancellationToken);
+    }
+
+    private static async Task<Result> ApplyIndexesAsync<TDocument>(
         IMongoDatabase database,
         string collectionName,
         DocumentBindingDescriptor binding,
         bool apply,
         bool collectionExists,
         List<ProvisioningStepResult> steps,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
         where TDocument : class, IDocumentEntity
     {
         var desired = BuildDesiredIndexModels<TDocument>(binding, collectionName);

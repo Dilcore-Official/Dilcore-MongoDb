@@ -1,0 +1,29 @@
+---
+description: NUnit + Shouldly tests and strict DI lifetime checks
+globs: "test/**/*.cs"
+alwaysApply: false
+---
+
+# Tests and DI lifetimes
+
+## Files
+
+Test projects may place small fixtures, fakes, and documents in the same file as the test class. Production and sample code stay at one top-level type per file (`SA1402`).
+
+## Assertions
+
+Use NUnit and **Shouldly**. Do not add FluentAssertions.
+
+## Dependency injection
+
+Any change to `AddMongoDb` registrations needs a unit test that locks the lifetime. Build the provider with `ValidateScopes` and `ValidateOnBuild`.
+
+For each service, assert:
+
+- **Singleton:** the same instance from the root provider and from two scopes.
+- **Scoped:** the same instance twice inside one scope; different instances across scopes.
+- **Transient:** a new instance on every resolve, including inside one scope.
+
+A scoped or transient dependency captured by a singleton must fail `ValidateScopes` / `ValidateOnBuild`. Follow `ProvisioningDiRegistrationTests` and `AcceptanceServiceProviderFactory`.
+
+Do not start MongoDB for lifetime tests. Use a placeholder connection string and resolve only the DI graph.

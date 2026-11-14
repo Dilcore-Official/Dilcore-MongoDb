@@ -1,11 +1,9 @@
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Abstractions.Options;
-using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.Extensions;
-using Dilcore.MongoDB.Repositories;
 using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.Repositories.IntegrationTests;

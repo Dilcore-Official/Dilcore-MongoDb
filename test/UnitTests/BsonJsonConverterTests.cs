@@ -159,7 +159,9 @@ public class BsonJsonConverterTests
     [TestCase("""{"v":""")]
     public void MalformedJson_Fails(string json)
     {
-        Converter.Parse(json).IsFailed.ShouldBeTrue();
+        var result = Converter.Parse(json);
+        result.IsFailed.ShouldBeTrue();
+        result.HasError<JsonConversionError>().ShouldBeTrue();
     }
 
     [Test]
@@ -177,13 +179,19 @@ public class BsonJsonConverterTests
         var options = new JsonBsonConversionOptions { MaxDepth = 1 };
         var result = Converter.Parse("""{"a":{"b":1}}""", options);
         result.IsFailed.ShouldBeTrue();
+        result.HasError<JsonConversionError>().ShouldBeTrue();
     }
 
     [Test]
     public void InvalidExtendedJson_Fails()
     {
-        Converter.Parse("""{"v":{"$oid":"nothex"}}""").IsFailed.ShouldBeTrue();
-        Converter.Parse("""{"v":{"$numberLong":"abc"}}""").IsFailed.ShouldBeTrue();
+        var oid = Converter.Parse("""{"v":{"$oid":"nothex"}}""");
+        oid.IsFailed.ShouldBeTrue();
+        oid.HasError<JsonConversionError>().ShouldBeTrue();
+
+        var number = Converter.Parse("""{"v":{"$numberLong":"abc"}}""");
+        number.IsFailed.ShouldBeTrue();
+        number.HasError<JsonConversionError>().ShouldBeTrue();
     }
 
     [Test]

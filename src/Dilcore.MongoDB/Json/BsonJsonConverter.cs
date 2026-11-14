@@ -10,8 +10,18 @@ using MongoDB.Bson.Serialization;
 
 namespace Dilcore.MongoDB.Json;
 
+/// <summary>
+/// Default <see cref="IBsonJsonConverter"/> that parses UTF-8 JSON into <see cref="BsonValue"/> and serializes BSON to Extended JSON.
+/// </summary>
 public sealed class BsonJsonConverter : IBsonJsonConverter
 {
+    /// <summary>
+    /// Parses a JSON string into BSON, honoring depth, size, number, and Extended JSON options.
+    /// </summary>
+    /// <param name="json">The JSON text to parse.</param>
+    /// <param name="options">Optional conversion limits and behavior; defaults apply when <see langword="null"/>.</param>
+    /// <returns>A successful <see cref="BsonValue"/> or a failure with conversion or size errors.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is <see langword="null"/>.</exception>
     public Result<BsonValue> Parse(string json, JsonBsonConversionOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(json);
@@ -40,15 +50,37 @@ public sealed class BsonJsonConverter : IBsonJsonConverter
         }
         catch (JsonException exception)
         {
-            return Result.Fail(new Error(exception.Message));
+            return ConversionFailed(exception);
         }
-        catch (Exception exception) when (exception is FormatException or BsonSerializationException or BsonException
-                                              or InvalidOperationException or OverflowException)
+        catch (FormatException exception)
         {
-            return Result.Fail(new Error(exception.Message));
+            return ConversionFailed(exception);
+        }
+        catch (BsonSerializationException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (BsonException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (OverflowException exception)
+        {
+            return ConversionFailed(exception);
         }
     }
 
+    /// <summary>
+    /// Serializes a <see cref="BsonValue"/> to Extended JSON using canonical or relaxed output mode.
+    /// </summary>
+    /// <param name="value">The BSON value to serialize.</param>
+    /// <param name="options">Optional output mode; defaults apply when <see langword="null"/>.</param>
+    /// <returns>A JSON string on success, or a failure with conversion errors.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <see langword="null"/>.</exception>
     public Result<string> ToJson(BsonValue value, JsonBsonConversionOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -61,12 +93,30 @@ public sealed class BsonJsonConverter : IBsonJsonConverter
         {
             return Result.Ok(value.ToJson(new JsonWriterSettings { OutputMode = mode }));
         }
-        catch (Exception exception) when (exception is FormatException or BsonSerializationException or BsonException
-                                              or InvalidOperationException or ArgumentException)
+        catch (FormatException exception)
         {
-            return Result.Fail(new Error(exception.Message));
+            return ConversionFailed(exception);
+        }
+        catch (BsonSerializationException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (BsonException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return ConversionFailed(exception);
+        }
+        catch (ArgumentException exception)
+        {
+            return ConversionFailed(exception);
         }
     }
+
+    private static Result ConversionFailed(Exception exception)
+        => Result.Fail(new JsonConversionError(exception.Message));
 
     /// <summary>
     /// Maps an ordinary JSON number token (not an Extended JSON wrapper) using <paramref name="mode"/>.

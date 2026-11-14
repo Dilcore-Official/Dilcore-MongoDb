@@ -27,10 +27,10 @@ Optional JSON packages (`Dilcore.MongoDB.SystemTextJson`, `Dilcore.MongoDB.Newto
 |--------|---------|-----------|--------------|
 | Line coverage (solution src) | Collected in CI; not gated at v2 target | **≥ 80%** line | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28), [#29](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/29) |
 | Branch coverage (solution src) | Not gated | **≥ 70%** branch | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
-| Public API XML docs | Missing | **100%** of public APIs documented | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
+| Public API XML docs | **100%** of public APIs documented (`CS1591` error in `src`) | **100%** of public APIs documented | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28) |
 | CI integration tests | Docker preflight + DI acceptance + full solution job | Stay green with Testcontainers in CI | [#28](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/28), [#23](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/23) |
 
-M2.6 conventions are implemented; promoting `ConfigureConventions` from `PublicAPI.Unshipped.txt` to shipped is part of public-API analyzer work (#28), not a new feature.
+M2.6 conventions are implemented. `ConfigureConventions` is in `PublicAPI.Shipped.txt` and the public API analyzer enforces the baselines (#28).
 
 ## Performance / telemetry budgets
 

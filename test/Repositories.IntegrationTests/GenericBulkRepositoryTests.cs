@@ -2,7 +2,6 @@
 using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Extensions;
-using Dilcore.MongoDB.Repositories;
 
 namespace Dilcore.MongoDB.Repositories.IntegrationTests;
 

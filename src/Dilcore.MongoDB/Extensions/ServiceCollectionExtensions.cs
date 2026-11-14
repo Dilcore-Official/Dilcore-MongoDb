@@ -20,8 +20,18 @@ using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.Extensions;
 
+/// <summary>
+/// Dependency injection extensions for registering Dilcore MongoDB services.
+/// </summary>
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// Registers MongoDB clusters, databases, typed repositories, JSON stores, and related services using the fluent builder.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configure">Configures clusters, databases, conventions, and document bindings.</param>
+    /// <returns>The same <paramref name="services"/> instance for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> or <paramref name="configure"/> is <see langword="null"/>.</exception>
     public static IServiceCollection AddMongoDb(
         this IServiceCollection services,
         Action<IMongoDbBuilder> configure)

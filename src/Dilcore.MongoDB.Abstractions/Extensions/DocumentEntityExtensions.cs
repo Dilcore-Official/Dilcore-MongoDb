@@ -8,11 +8,18 @@ using MongoDB.Bson.Serialization.Serializers;
 
 namespace Dilcore.MongoDB.Abstractions.Extensions;
 
+/// <summary>
+/// Helpers for document identity, audit/concurrency policies, and BSON update snapshots.
+/// </summary>
 public static class DocumentEntityExtensions
 {
     private const string UpdateSetOperator = "$set";
     private static readonly Lazy<bool> SerializationConfigured = new(RegisterGuidSerializer);
 
+    /// <summary>
+    /// Assigns a new ETag when the document implements <see cref="IHasConcurrencyToken"/>.
+    /// </summary>
+    /// <param name="document">Target document.</param>
     public static void GenerateETag(this IDocumentEntity document)
     {
         if (document is IHasConcurrencyToken concurrencyToken)
@@ -21,6 +28,10 @@ public static class DocumentEntityExtensions
         }
     }
 
+    /// <summary>
+    /// Sets <see cref="IAuditableDocument.CreatedAt"/> to the current UTC time when the document is auditable.
+    /// </summary>
+    /// <param name="document">Target document.</param>
     public static void CreatedNow(this IDocumentEntity document)
     {
         if (document is IAuditableDocument auditable)
@@ -29,6 +40,10 @@ public static class DocumentEntityExtensions
         }
     }
 
+    /// <summary>
+    /// Sets <see cref="IAuditableDocument.UpdatedAt"/> to the current UTC time when the document is auditable.
+    /// </summary>
+    /// <param name="document">Target document.</param>
     public static void UpdatedNow(this IDocumentEntity document)
     {
         if (document is IAuditableDocument auditable)
@@ -37,6 +52,13 @@ public static class DocumentEntityExtensions
         }
     }
 
+    /// <summary>
+    /// Assigns a generated identifier when <typeparamref name="TDocument"/> implements <see cref="IDocumentEntity{TId}"/> and the current id is empty.
+    /// </summary>
+    /// <typeparam name="TDocument">Document type.</typeparam>
+    /// <param name="document">Target document.</param>
+    /// <param name="guidStrategy">Guid generation mode when the identifier type is <see cref="Guid"/>.</param>
+    /// <exception cref="UnsupportedIdentifierTypeException">The identifier type has no built-in generator.</exception>
     public static void NewId<TDocument>(
         this TDocument document,
         GuidIdGenerationStrategy guidStrategy = GuidIdGenerationStrategy.Random)
@@ -45,12 +67,24 @@ public static class DocumentEntityExtensions
         DocumentIdAccessorCache.Get<TDocument>().EnsureNewId(document, guidStrategy);
     }
 
+    /// <summary>
+    /// Returns whether the document's identifier is considered empty for its typed <c>Id</c>.
+    /// </summary>
+    /// <typeparam name="TDocument">Document type implementing <see cref="IDocumentEntity{TId}"/>.</typeparam>
+    /// <param name="document">Target document.</param>
+    /// <returns><see langword="true"/> when the identifier is empty; otherwise <see langword="false"/>.</returns>
     public static bool IsIdEmpty<TDocument>(this TDocument document)
         where TDocument : class, IDocumentEntity
     {
         return DocumentIdAccessorCache.Get<TDocument>().IsEmpty(document);
     }
 
+    /// <summary>
+    /// Throws <see cref="DocumentIdentifierIsEmptyException"/> when <see cref="IsIdEmpty{TDocument}"/> is <see langword="true"/>.
+    /// </summary>
+    /// <typeparam name="TDocument">Document type.</typeparam>
+    /// <param name="document">Target document.</param>
+    /// <exception cref="DocumentIdentifierIsEmptyException">The identifier is empty.</exception>
     public static void CheckId<TDocument>(this TDocument document)
         where TDocument : class, IDocumentEntity
     {
@@ -60,6 +94,14 @@ public static class DocumentEntityExtensions
         }
     }
 
+    /// <summary>
+    /// Indicates whether the document should be treated as a create rather than an update.
+    /// </summary>
+    /// <param name="document">Target document.</param>
+    /// <returns>
+    /// For <see cref="IHasConcurrencyToken"/> documents, <see langword="true"/> when <see cref="IHasConcurrencyToken.ETag"/> equals <see cref="Constants.EmptyETag"/>.
+    /// Otherwise <see langword="true"/> (callers should use identifier emptiness separately).
+    /// </returns>
     public static bool IsNew(this IDocumentEntity document)
     {
         if (document is IHasConcurrencyToken concurrencyToken)

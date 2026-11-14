@@ -1,9 +1,7 @@
 using Dilcore.MongoDB.Abstractions.Json;
-using Dilcore.MongoDB.Json;
 using Dilcore.MongoDB.SystemTextJson;
 using FluentResults;
 using MongoDB.Bson;
-using System.Text.Json;
 
 namespace Dilcore.MongoDB.Json.IntegrationTests;
 
