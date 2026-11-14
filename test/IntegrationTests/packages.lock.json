@@ -66,6 +66,12 @@
           "EmptyFiles": "4.4.0"
         }
       },
+      "SonarAnalyzer.CSharp": {
+        "type": "Direct",
+        "requested": "[10.36.0.15337, )",
+        "resolved": "10.36.0.15337",
+        "contentHash": "jGLAZUjheSURfe0T/dJYGUrMOrLt1fxaInpChq75YJvrywsxFoUKK/EM6PSfTjkt4pbaq2ywIQjgQzhrmmj5Ow=="
+      },
       "StyleCop.Analyzers": {
         "type": "Direct",
         "requested": "[1.3.180, )",

@@ -15,6 +15,7 @@ public class PackageUsageTests
     {
         "Microsoft.CodeAnalysis.PublicApiAnalyzers",
         "NUnit.Analyzers",
+        "SonarAnalyzer.CSharp",
         "StyleCop.Analyzers",
         "Microsoft.NET.Test.Sdk",
         "NUnit3TestAdapter",
@@ -79,21 +80,19 @@ public class PackageUsageTests
         var propsFiles = Directory.GetFiles(root, "Directory.Build.props", SearchOption.AllDirectories);
         var buildProps = propsFiles.Where(path => !path.Contains(ObjDirectorySegment, StringComparison.Ordinal));
 
-        foreach (var props in buildProps)
-        {
-            var propsDocument = XDocument.Load(props);
-            var propsPackages = RepoLocator.GetPackageReferences(propsDocument);
-            packages.UnionWith(propsPackages);
-        }
+        var buildPropsPackages = buildProps
+            .Select(props => XDocument.Load(props))
+            .SelectMany(document => RepoLocator.GetPackageReferences(document));
+
+        packages.UnionWith(buildPropsPackages);
 
         var projects = GetProjectFiles(root);
 
-        foreach (var project in projects)
-        {
-            var projectDocument = XDocument.Load(project);
-            var projectPackages = RepoLocator.GetPackageReferences(projectDocument);
-            packages.UnionWith(projectPackages);
-        }
+        var projectPackages = projects
+            .Select(project => XDocument.Load(project))
+            .SelectMany(document => RepoLocator.GetPackageReferences(document));
+
+        packages.UnionWith(projectPackages);
 
         return packages;
     }

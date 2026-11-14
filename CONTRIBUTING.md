@@ -103,7 +103,7 @@ Coding agents follow [csharp-code-style](.cursor/rules/csharp-code-style.mdc) an
 [csharp-testing-di](.cursor/rules/csharp-testing-di.mdc). Run `dotnet format` after each
 implementation stage. C# files do not end with a newline. Member order is constants,
 static fields, instance fields, constructors, properties, events, then methods.
-`StyleCop.Analyzers` is enabled only for `SA1402`: one top-level type per file. Tests set that rule to none. Other StyleCop rules stay off; member order remains a review rule. `IDE0005` is an error, so an unused `using` fails the build. `NU1510` is an error for a direct package the .NET 10 SDK already supplies. A `PackageVersion` with no `PackageReference` fails the architecture tests.
+`StyleCop.Analyzers` is enabled only for `SA1402`: one top-level type per file. Tests set that rule to none. Other StyleCop rules stay off; member order remains a review rule. `SonarAnalyzer.CSharp` is enabled only for `S3267`: a loop that maps its iteration variable uses LINQ. Other Sonar rules stay off in `SonarAnalyzer.globalconfig`. `IDE0005` is an error, so an unused `using` fails the build. `NU1510` is an error for a direct package the .NET 10 SDK already supplies. A `PackageVersion` with no `PackageReference` fails the architecture tests.
 
 ## Agent tool workflow
 

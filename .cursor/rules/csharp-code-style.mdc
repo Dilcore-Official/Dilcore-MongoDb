@@ -25,6 +25,7 @@ Formatting source of truth is [`.editorconfig`](.editorconfig). After each imple
 - One method, one purpose. Split mixed work into named helpers.
 - The name states the outcome (`ResolveDatabaseName`, `StampAudit`, `MapDuplicateKey`). Avoid `Handle`, `Process`, `DoWork`.
 - A `foreach` source that is a method call or a LINQ chain is assigned to a named local on the lines above the loop.
+- A loop whose first statement maps the loop variable to another value uses `.Select(...)` or `SelectMany` on the source instead. `S3267` is an error. This matches CodeQL `cs/linq/missed-select`.
 - A method argument is a variable, literal, `nameof`, `default`, property, or `new`. It is not a method invocation. Lambdas are allowed as arguments, and calls inside a lambda are allowed.
 - Keep a LINQ chain deferred when the sequence is enumerated once. Call `ToList`, `ToArray`, `ToHashSet`, or `ToDictionary` only when the next step needs a concrete collection, indexing, or a second pass. `CA1851` (multiple enumeration of `IEnumerable`) is an error.
 - Separate setup, the query, and the result with a blank line. Do not leave a method as one solid block of statements.

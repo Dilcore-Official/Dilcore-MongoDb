@@ -19,13 +19,14 @@ trim_trailing_whitespace = false
 indent_size = 4
 insert_final_newline = false
 
-# Call-site shape. No Roslyn diagnostic covers these; the cursor rule enforces them.
+# Call-site shape. The cursor rule enforces these. S3267 covers the map-then-use loop.
 # A foreach source that is a method call or a LINQ chain is a named local above the loop.
 # A method argument is a variable, literal, nameof, default, property, or new — not a method invocation.
 # Lambdas may be arguments, and calls inside a lambda are allowed.
 # Keep LINQ deferred. Materialize only for a concrete collection, indexing, or a second pass.
 # Separate setup, query, and result with a blank line.
 # A method has at most one nested block. Deeper if/loop bodies move to their own method.
+# A loop whose first statement maps the iteration variable uses Select or SelectMany.
 
 # New lines and wrapping
 csharp_new_line_before_open_brace = all
@@ -145,6 +146,12 @@ dotnet_diagnostic.CA1068.severity = error
 dotnet_diagnostic.CA2016.severity = error
 dotnet_diagnostic.CA1851.severity = error
 dotnet_diagnostic.CS1591.severity = none
+
+# SonarAnalyzer.CSharp is referenced only for S3267 (a loop that maps its
+# iteration variable should use LINQ). Category severity does not apply here:
+# every Sonar category name contains spaces, and the SDK ignores those keys.
+# SonarAnalyzer.globalconfig sets the other rule ids to none.
+dotnet_diagnostic.S3267.severity = error
 
 # Public API docs are required only in shipped libraries.
 [src/**.cs]
