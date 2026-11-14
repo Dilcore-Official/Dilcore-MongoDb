@@ -10,6 +10,7 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
 
 ### Added
 
+- Package `Copyright` metadata that matches the `LICENSE` copyright line; `test/PackageTests` asserts it.
 - Test suites for packed package contents and for an external caller that restores
   `Dilcore.MongoDB` from those packages and builds a container with `ValidateScopes`
   and `ValidateOnBuild`. Shared MongoDB fixture startup lives in `test/TestSupport`.
@@ -31,6 +32,7 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
 
 ### Changed
 
+- `LICENSE` copyright holder is Arsen Tymchuk (MIT text unchanged).
 - The blind patch-bump publish to GitHub Packages on every `src/**` push is replaced by the gated NuGet.org workflow above.
 - The placeholder `Version` in `src/Directory.Build.props` is `2.0.0-preview.0` (local builds only).
 - `IProvisioningStep.ExecuteAsync` takes `CancellationToken cancellationToken = default`.

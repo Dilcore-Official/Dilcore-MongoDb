@@ -95,9 +95,12 @@ public class PackageMetadataTests
         var repository = nuspec.Descendants().Single(element => element.Name.LocalName == "repository");
         var icon = ReadValue(nuspec, "icon");
         var readme = ReadValue(nuspec, "readme");
+        var licenseLines = File.ReadAllLines(Path.Join(RepoLocator.FindRepoRoot(), "LICENSE"));
+        var copyrightLine = licenseLines.Single(line => line.StartsWith("Copyright (c)", StringComparison.Ordinal));
 
         ((string?)license.Attribute("type")).ShouldBe("expression");
         license.Value.Trim().ShouldBe("MIT");
+        ReadValue(nuspec, "copyright").ShouldBe(copyrightLine);
         ((string?)repository.Attribute("type")).ShouldBe("git");
         ((string?)repository.Attribute("url")).ShouldBe(RepositoryUrl);
         ReadValue(nuspec, "projectUrl").ShouldBe(RepositoryUrl);

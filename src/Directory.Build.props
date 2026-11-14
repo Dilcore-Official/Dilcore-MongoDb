@@ -7,6 +7,7 @@
     <Version>2.0.0-preview.0</Version>
     <Authors>Dilcore</Authors>
     <Company>Dilcore</Company>
+    <Copyright>Copyright (c) 2026 Arsen Tymchuk</Copyright>
     <RepositoryUrl>https://github.com/Dilcore-Official/Dilcore-MongoDb</RepositoryUrl>
     <PackageProjectUrl>https://github.com/Dilcore-Official/Dilcore-MongoDb</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
