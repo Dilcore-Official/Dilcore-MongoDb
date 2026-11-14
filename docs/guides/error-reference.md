@@ -1,0 +1,136 @@
+# Typed error reference
+
+Look up every typed error the repositories and transaction runner return, why it happens and what to do about it. Package: `Dilcore.MongoDB.Abstractions` (installed with `Dilcore.MongoDB`).
+
+## Setup
+
+```csharp
+using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Policies;
+using Dilcore.MongoDB.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+
+public sealed class Invoice : IDocumentEntity<Guid>, IHasConcurrencyToken
+{
+    public Guid Id { get; set; }
+    public long ETag { get; set; }      // managed by the repository
+    public string Memo { get; set; } = "";
+}
+
+services.AddMongoDb(mongo => mongo
+    .AddCluster("primary", c => c.UseConnectionString(connectionString))
+    .AddDatabase("billing", db =>
+    {
+        db.OnCluster("primary");
+        db.AddDocumentBinding<Invoice>("invoices", d => d
+            .WithCollectionName("invoices")
+            .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
+    }));
+```
+
+## Use
+
+Every typed error derives from `MongoOperationError` and has a stable `Code`, also available as a `const` named `ErrorCode` on each type. Switch on the code to decide what to do:
+
+```csharp
+using Dilcore.MongoDB.Abstractions.Results;
+using FluentResults;
+
+public static class ErrorAdvice
+{
+    public static string For(IError error)
+    {
+        if (error is not MongoOperationError typed)
+            return "unexpected: log it and return a generic failure";
+
+        return typed.Code switch
+        {
+            DocumentNotFoundError.ErrorCode => "not found: do not retry",
+            ConcurrencyConflictError.ErrorCode => "stale copy: reload, reapply, retry once",
+            DuplicateKeyError.ErrorCode => "already exists: do not retry",
+            TransientWriteError.ErrorCode => "temporary: retry with backoff",
+            WriteConcernFailureError.ErrorCode => "unconfirmed: the write may have been applied",
+            DocumentTooLargeError.ErrorCode => "too big: shrink the document, do not retry",
+            JsonConversionError.ErrorCode => "bad JSON: reject the input",
+            CrossClusterOperationError.ErrorCode => "programming error: one transaction, one cluster",
+            TransactionBudgetExceededError.ErrorCode => "too much work in one transaction: split it",
+            BulkWritePartialFailureError.ErrorCode => "some items failed: inspect Items",
+            _ => "unknown code: treat as unexpected"
+        };
+    }
+}
+```
+
+All types live in `Dilcore.MongoDB.Abstractions.Results`. The message is the driver or library text. A duplicate key message can include the conflicting key value, so do not return it to clients.
+
+## Handle failures
+
+### `DocumentNotFoundError` (`document_not_found`)
+
+- **Why:** a get, replace, patch, update, delete or restore matched no visible document. A soft-deleted document is not visible to ordinary reads. A bulk delete that removed nothing and a projection read with no match also return it.
+- **Do:** return 404 or treat the absence as a normal branch. Retrying does not help.
+
+### `ConcurrencyConflictError` (`concurrency_conflict`)
+
+- **Why:** the document type uses `IHasConcurrencyToken` and the `ETag` you sent is not the stored one, because someone else wrote first. For a delete by id and ETag, a missing document can also surface as a conflict.
+- **Do:** reload the document, reapply your change and retry once, or return 409. See [Guard updates with an ETag](optimistic-concurrency.md).
+
+### `DuplicateKeyError` (`duplicate_key`)
+
+- **Why:** a write violated a unique index or the `_id` key (driver codes 11000 and 11001). It is returned for single writes and for a bulk write where the only failure is a duplicate.
+- **Do:** return 409, or read the existing document. Retrying the same write fails again.
+
+### `TransientWriteError` (`transient_write`)
+
+- **Why:** the driver labelled the failure as temporary: a primary election or failover, a network interruption, a transaction conflict with another transaction, or an unknown transaction commit result.
+- **Do:** retry with a short backoff and a limit. Retry a failed transaction as a whole. Make the write idempotent first when a duplicate would be harmful.
+
+### `WriteConcernFailureError` (`write_concern_failure`)
+
+- **Why:** the server could not confirm the write at the configured write concern, for example because not enough replica set members acknowledged before the timeout. The write may still have been applied on the primary.
+- **Do:** do not blindly retry non-idempotent writes. Read back to check, then decide. Check the replica set health and the write concern timeout.
+
+### `DocumentTooLargeError` (`document_too_large`)
+
+- **Why:** a BSON document is over the 16 MiB MongoDB limit, or a JSON payload is over `MaxUtf8Bytes` in [JSON conversion options](json-conversion-options.md).
+- **Do:** store large content elsewhere (GridFS or object storage) and keep a reference. Retrying does not help.
+
+### `JsonConversionError` (`json_conversion`)
+
+- **Why:** a JSON adapter could not convert a value: malformed JSON, duplicate property names, or a value outside the configured options.
+- **Do:** reject the input with 400. The message names the cause.
+
+### `CrossClusterOperationError` (`cross_cluster_operation`)
+
+- **Why:** inside `WithTransactionAsync` a repository was resolved for a different cluster than the one the transaction runs on. MongoDB transactions cannot span clusters.
+- **Do:** fix the code. Keep every write of a transaction on one cluster. See [Transactions](transactions.md).
+
+### `TransactionBudgetExceededError` (`transaction_budget_exceeded`)
+
+- **Why:** the client-side budget in `MongoTransactionOptions` ran out: elapsed time, operation count or estimated bytes. It is raised by this library before MongoDB would reject the transaction, and the byte total is an estimate.
+- **Do:** split the work into smaller transactions, or raise the budget deliberately.
+
+### `BulkWritePartialFailureError` (`bulk_write_partial_failure`)
+
+- **Why:** a bulk write had item failures. `Items` lists the items MongoDB rejected, each with its zero-based `Index`, `Succeeded` flag and `ErrorMessage`. With ordered writes the batch stops at the first failure. With unordered writes the other items still apply.
+- **Do:** read `Items`, retry or report the failed indexes. See [Write many documents at once](bulk-writes.md).
+
+### Errors that are not typed
+
+An unknown database key, a missing namespace prefix, an invalid option or any driver failure the library does not classify comes back as a plain FluentResults `Error` with the original message. Treat these as configuration or unexpected failures: log them and do not retry.
+
+## Pitfalls
+
+- A `Result` can hold more than one error. Check with `HasError<T>()` rather than `Errors[0]`.
+- Do not parse `Message`. Branch on the type or on `Code`.
+- `WriteConcernFailureError` does not mean the write failed. Check before you retry.
+- Retrying `DuplicateKeyError`, `DocumentNotFoundError` or `DocumentTooLargeError` can never succeed.
+- Do not log the full document with `Errors` when it holds personal data.
+
+## See also
+
+- [Handle typed errors](handle-errors.md)
+- [Guard updates with an ETag](optimistic-concurrency.md)
+- [Write many documents at once](bulk-writes.md)
+- [Commit several writes together in a transaction](transactions.md)
+- Runnable example: [ErrorReferenceExampleTests](../../test/Repositories.IntegrationTests/Examples/ErrorReferenceExampleTests.cs)

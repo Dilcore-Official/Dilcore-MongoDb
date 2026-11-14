@@ -94,12 +94,8 @@ It is a standard [Agent Skills](https://agentskills.io) folder, so you can also 
 
 | Topic | Doc |
 |-------|-----|
-| Repositories, paging, typed errors | [docs/guides/repositories.md](docs/guides/repositories.md) |
-| Document policies and identifiers | [docs/guides/document-policies.md](docs/guides/document-policies.md) |
-| Namespace resolution and tenancy | [docs/guides/namespace-resolution.md](docs/guides/namespace-resolution.md) |
-| Provisioning, indexes, TTL, custom steps | [docs/guides/provisioning.md](docs/guides/provisioning.md) |
-| Transactions and budgets | [docs/guides/transactions.md](docs/guides/transactions.md) |
-| JSON adapters | [docs/guides/json-adapters.md](docs/guides/json-adapters.md) |
+| All task guides (setup, repositories, tenancy, provisioning, transactions, JSON) | [docs/guides/README.md](docs/guides/README.md) |
+| Choose a package | [docs/product/package-selection.md](docs/product/package-selection.md) |
 | Driver escape hatches | [docs/product/driver-escape-hatches.md](docs/product/driver-escape-hatches.md) |
 | BSON conventions and rollout | [ADR 0003](docs/adr/0003-serialization-conventions.md) |
 | Production MongoDB posture (TLS, secrets, least privilege) | [docs/security/production-mongodb.md](docs/security/production-mongodb.md) |

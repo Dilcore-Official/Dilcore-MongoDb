@@ -131,12 +131,8 @@ It is a standard [Agent Skills](https://agentskills.io) folder: [`skills/using-d
 
 | Topic | Guide |
 |-------|-------|
-| Repositories, paging, typed errors | [repositories](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/repositories.md) |
-| Document policies and identifiers | [document policies](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/document-policies.md) |
-| Namespace resolution and tenancy | [namespace resolution](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/namespace-resolution.md) |
-| Provisioning, indexes, TTL | [provisioning](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/provisioning.md) |
-| Transactions and budgets | [transactions](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/transactions.md) |
-| JSON adapters | [JSON adapters](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-adapters.md) |
+| All task guides (setup, repositories, tenancy, provisioning, transactions, JSON) | [guides index](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/README.md) |
+| Choose a package | [package selection](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/product/package-selection.md) |
 | Driver escape hatches | [driver escape hatches](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/product/driver-escape-hatches.md) |
 | BSON conventions | [ADR 0003](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/adr/0003-serialization-conventions.md) |
 | Production MongoDB posture | [production MongoDB](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/security/production-mongodb.md) |

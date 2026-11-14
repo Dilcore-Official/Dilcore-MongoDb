@@ -73,7 +73,7 @@ Source: root [`README.md`](../../README.md). Full rewrite owned by [#39](https:/
 | “Thread Safety: Thread-safe operations…” | **Resolved** | Claim removed from README | None |
 | Getting Started package versions | **Resolved** | README now says “Pin versions in `Directory.Packages.props`… do not copy numbers from this README” | None |
 | `IDocumentDatabasePrefixResolver` | **Resolved in README API samples** | Current docs use `INamespacePrefixResolver` | Keep using namespace types |
-| Incomplete repository surface | **Resolved in README / guides** | README no longer dumps incomplete interfaces; [repositories.md](../guides/repositories.md) lists the current surface | Keep PublicAPI baselines as the contract |
+| Incomplete repository surface | **Resolved in README / guides** | README no longer dumps incomplete interfaces; [crud-with-repositories.md](../guides/crud-with-repositories.md) lists the current surface | Keep PublicAPI baselines as the contract |
 | `WithDatabaseName` in configuration samples | **Resolved** | README samples now use `AddDatabase` + namespace pipeline throughout | None |
 | README ships as package readme | **Open** | Stale docs ship inside every `.nupkg` until dedicated package readme | Keep until M8; then replace |
 

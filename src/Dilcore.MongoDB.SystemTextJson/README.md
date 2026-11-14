@@ -73,7 +73,7 @@ All packages are released together with the same version.
 
 ## Guide
 
-[JSON adapters guide](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-adapters.md): conversion options, number handling and persistence.
+Guides: [System.Text.Json documents](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-system-text-json.md) and [conversion options](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-conversion-options.md).
 
 ## Links
 

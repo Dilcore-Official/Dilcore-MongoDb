@@ -252,7 +252,7 @@ Milestone: [M8 Docs, Context7 & Repository AI](https://github.com/Dilcore-Offici
 | [#39](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/39) | README + structured `docs/` overhaul with tested snippets | P0 |
 | [#40](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/40) | `context7.json` + `context7-refresh.yml` for `/dilcore-official/dilcore-mongodb` | P0 |
 | [#41](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/41) | Hierarchical `AGENTS.md` (root, src, test, samples, per-project) | P0 |
-| [#42](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/42) | Consumer skill `skills/using-dilcore-mongodb/` (Agent Skills format; `.cursor/skills/` links to it) | P0 |
+| [#42](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/42) | Consumer skill `skills/using-dilcore-mongodb/` (Agent Skills format, used by consumer projects) | P0 |
 
 **Exit criteria:** Context7 indexes consumer docs only (excludes `AGENTS.md` / skills); skill and AGENTS responsibilities stay separate; representative Context7 queries succeed after refresh.
 

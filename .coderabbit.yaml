@@ -59,6 +59,7 @@ reviews:
         - Never log connection strings, credentials, or resume tokens.
         - Do not register conventions or indexes during ordinary collection resolution.
         - Prefer existing FluentResults patterns; keep driver types visible (no LCD query abstraction).
+        - A usage-affecting change must update the matching consumer guide, its Examples/ test and skills/using-dilcore-mongodb in the same PR (.cursor/rules/docs-and-skill-sync.mdc). Flag it when they did not move together.
     - path: "test/**/*.cs"
       instructions: |
         - Assertions must use Shouldly, not FluentAssertions. Follow .cursor/rules/csharp-testing-di.mdc.
@@ -76,8 +77,18 @@ reviews:
     - path: "docs/**/*.md"
       instructions: |
         Distinguish historical vs current vs planned claims. Do not copy volatile versions;
-        link Directory.Packages.props, workflows, or PublicAPI files. Flag broken relative
-        links and Dilcore.DocumentDb.* described as current.
+        link Directory.Packages.props or workflows. Flag broken relative links and
+        Dilcore.DocumentDb.* described as current.
+        Consumer pages (docs/guides, package-selection, driver-escape-hatches, production-mongodb)
+        follow the template in .cursor/rules/docs-and-skill-sync.mdc: purpose sentence with the
+        package name, Setup, Use, Handle failures, Pitfalls, See also. They contain no milestone
+        wording, no PublicAPI links, and no mention of Context7 or the skill. Every csharp block is
+        proven by an Examples/ test.
+    - path: "skills/**"
+      instructions: |
+        The skill is used outside this repository and stays tool-neutral. Links are absolute GitHub
+        URLs or files inside the skill folder; never repo-relative paths. Rules, decision tables and
+        examples must match src/ and docs/guides. Keep references/docs-index.md in step with the page list.
     - path: "{AGENTS.md,CONTRIBUTING.md,README.md,ROADMAP.md}"
       instructions: |
         Keep MongoDB-toolkit positioning. AGENTS.md is maintainer What/Why, not a command
@@ -106,6 +117,7 @@ knowledge_base:
       - ".editorconfig"
       - files: ".cursor/rules/csharp-code-style.mdc"
         applyTo: "**/*.cs"
+      - ".cursor/rules/docs-and-skill-sync.mdc"
       - files: ".cursor/rules/csharp-testing-di.mdc"
         applyTo: "test/**/*.cs"
       - files: "SonarAnalyzer.globalconfig"

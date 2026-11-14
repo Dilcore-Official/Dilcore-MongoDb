@@ -16,7 +16,7 @@ Dilcore MongoDB is an opinionated **application toolkit on top of `MongoDB.Drive
 
 1. **Find the installed version.** Look for `Dilcore.MongoDB*` in the `.csproj` or `Directory.Packages.props`. Version 2 is in preview (`2.0.0-preview.N`), so the API can change. If the code you are about to write uses a member you cannot confirm, check the docs for that version (see [references/docs-index.md](references/docs-index.md)) instead of guessing.
 2. **Check what is actually shipped.** Streaming repositories beyond `GetAsyncEnumerable`, OpenTelemetry instrumentation and vector search are planned, not in the packages. Do not write code against `Dilcore.MongoDB.OpenTelemetry` or `Dilcore.MongoDB.VectorData`.
-3. **Prefer docs over memory.** Driver 2.x and 3.x signatures differ. Verify `MongoDB.Driver` calls with the documentation tool you have (for example Context7 for `/mongodb/mongo-csharp-driver`) rather than from memory.
+3. **Prefer docs over memory.** Driver 2.x and 3.x signatures differ. Verify `MongoDB.Driver` calls against the MongoDB C# driver documentation, or against a documentation tool you have (for example Context7 for `/mongodb/mongo-csharp-driver`, if available), rather than from memory.
 
 ## Decide: toolkit or plain driver
 
@@ -41,29 +41,29 @@ Install previews with `dotnet add package Dilcore.MongoDB --prerelease`. All pac
 
 | Task | Feature | Guide |
 |------|---------|-------|
-| Register clusters, databases, document types | `AddMongoDb` + `AddDocumentBinding<T>` | [README](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/src/Dilcore.MongoDB/README.md) |
-| CRUD, paging, bulk, projections | `IGenericRepository<T>`, bulk and projection repositories | repositories |
-| ETag, audit stamps, soft delete, Guid ids | Policy interfaces + binding options | document-policies |
-| Per-tenant or per-environment database names | `INamespacePrefixResolver` | namespace-resolution |
-| Indexes, TTL, collections | `IMongoDbProvisioner` | provisioning |
-| Several writes that must commit together | `IMongoDbTransactionRunner` | transactions |
-| Documents without a CLR type | `IJsonDocumentStore` | json-adapters |
-| Anything the toolkit does not wrap | Keyed `IMongoClient`, `IMongoDatabase`, `IMongoDbCollectionFactory` | driver-escape-hatches |
+| Register clusters, databases, document types | `AddMongoDb` + `AddDocumentBinding<T>` | [register clusters and databases](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/register-clusters-and-databases.md) |
+| CRUD, paging, bulk, projections | `IGenericRepository<T>`, bulk and projection repositories | [crud](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/crud-with-repositories.md), [paging](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/keyset-paging.md), [bulk](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/bulk-writes.md), [projections](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/projections.md), [errors](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/handle-errors.md) |
+| ETag, audit stamps, soft delete, Guid ids | Policy interfaces + binding options | [documents](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/define-documents.md), [ETag](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/optimistic-concurrency.md), [soft delete](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/soft-delete.md) |
+| Per-tenant or per-environment database names | `INamespacePrefixResolver` | [tenants](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/multi-tenant-databases.md), [prefixes](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/namespace-prefixes.md) |
+| Indexes, TTL, collections | `IMongoDbProvisioner` | [indexes and TTL](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/provision-indexes-and-ttl.md), [custom steps](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/custom-provisioning-steps.md) |
+| Several writes that must commit together | `IMongoDbTransactionRunner` | [transactions](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/transactions.md) |
+| Documents without a CLR type | `IJsonDocumentStore` | [System.Text.Json](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-system-text-json.md), [Newtonsoft.Json](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-newtonsoft.md), [conversion options](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-conversion-options.md) |
+| Anything the toolkit does not wrap | Keyed `IMongoClient`, `IMongoDatabase`, `IMongoDbCollectionFactory` | [driver escape hatches](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/product/driver-escape-hatches.md) |
 
-The guide names are files in `docs/guides/` and `docs/product/`; full links are in [references/docs-index.md](references/docs-index.md). Worked, commented examples for the most common combinations are in [references/examples.md](references/examples.md).
+Every guide has the same sections (Setup, Use, Handle failures, Pitfalls, See also). The full list of pages is in [references/docs-index.md](references/docs-index.md). Worked, commented examples for the most common combinations are in [references/examples.md](references/examples.md).
 
 ## Rules that prevent real bugs
 
 **Setup and DI**
 - Call `AddMongoDb` once. Use one entry point for clusters, databases and bindings. The toolkit creates one singleton `IMongoClient` per unique cluster settings, so do not create `MongoClient` instances yourself.
-- Never hard-code a connection string. Read it from configuration or a secret store. Production posture (TLS, least privilege): the production MongoDB guide.
+- Never hard-code a connection string. Read it from configuration or a secret store. Production posture (TLS, least privilege): [production MongoDB guide](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/security/production-mongodb.md).
 - `IGenericRepository<T>` can be injected directly only when `T` has **one** binding. With several bindings of the same type, resolve by key through `IRepositoryResolver.GetRepository<T>(bindingKey)`.
 - BSON conventions are process-wide and set once in `AddMongoDb`. Do not register conflicting conventions elsewhere, and do not change them on existing data without reading ADR 0003.
 - Enable bulk or projection repositories per binding (`WithBulkRepository`, `WithProjectionRepository`) before injecting them.
 
 **Results and errors**
 - Repository methods return `FluentResults` `Result<T>`. Check `IsFailed` or `HasError<TError>()`. Do not call `.Value` on a result you have not checked.
-- Map expected failures by type: `DocumentNotFoundError`, `ConcurrencyConflictError`, `DuplicateKeyError`, `TransientWriteError`, `TransactionBudgetExceededError` and the rest (table in the repositories guide). Do not catch `MongoException` for these cases.
+- Map expected failures by type: `DocumentNotFoundError`, `ConcurrencyConflictError`, `DuplicateKeyError`, `TransientWriteError`, `TransactionBudgetExceededError` and the rest (mapping in the [typed errors guide](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/handle-errors.md), cause and action per error in the [error reference](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/error-reference.md)). Do not catch `MongoException` for these cases.
 - Always pass the `CancellationToken` through to every repository and runner call.
 
 **Documents and policies**

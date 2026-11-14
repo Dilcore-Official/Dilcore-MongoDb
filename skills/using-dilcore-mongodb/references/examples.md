@@ -1,13 +1,14 @@
 # Worked examples
 
-The most likely combinations, each with comments that explain **why** a line is there. The shapes follow the samples and guides in the repository (`samples/`, `docs/guides/`), so check the guide for the exact members when the package version differs.
+The most likely combinations, each with comments that explain **why** a line is there. The shapes follow the task guides listed in [docs-index.md](docs-index.md), so check the guide for the exact members when the package version differs.
 
 Namespaces used below:
 
 ```csharp
-using Dilcore.MongoDB.Abstractions;                // IDocumentEntity<T>, policy interfaces, GuidIdGenerationStrategy
+using Dilcore.MongoDB.Abstractions;                // IDocumentEntity<T>, GuidIdGenerationStrategy, IMongoDbCollectionFactory
 using Dilcore.MongoDB.Abstractions.Keys;           // MongoClusterKey, MongoDatabaseKey, MongoDocumentBindingKey
 using Dilcore.MongoDB.Abstractions.Namespace;      // INamespacePrefixResolver, NamespaceResolutionRequest
+using Dilcore.MongoDB.Abstractions.Policies;        // IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
 using Dilcore.MongoDB.Abstractions.Options;        // KeysetPageRequest<T>, MongoBulkWriteOptions
 using Dilcore.MongoDB.Abstractions.Provisioning;   // IMongoDbProvisioner
 using Dilcore.MongoDB.Abstractions.Repositories;   // IGenericRepository<T>, IRepositoryResolver
@@ -32,6 +33,7 @@ public sealed class Order : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDe
     public DateTime CreatedAt { get; set; }   // audit stamps, managed by the repository
     public DateTime UpdatedAt { get; set; }
     public string Sku { get; set; } = "";
+    public DateTime ExpiresAt { get; set; }   // used by the TTL index in example 3
 }
 
 // Registration: once, at startup. The connection string comes from configuration, never from code.
@@ -265,12 +267,13 @@ public sealed class PayloadService(ISystemTextJsonDocumentStoreFactory stores)
         if (inserted.IsFailed)
             return inserted.ToResult();
 
+        // The result is Canonical Extended JSON unless you pass relaxed options (see below).
         return await store.GetJsonElementByIdAsync("payloads", inserted.Value["_id"]);
     }
 }
 ```
 
-For BSON type fidelity (`ObjectId`, `long`, `decimal`, dates) pass `JsonBsonConversionOptions` with `OutputMode = JsonBsonOutputMode.CanonicalExtendedJson`. For Newtonsoft use `AddNewtonsoftJsonDocuments()`, `InsertAsync("payloads", JObject.Parse(json))` and `GetJObjectByIdAsync`.
+Output defaults to Canonical Extended JSON, which keeps BSON types (`ObjectId`, `long`, `decimal`, dates) but writes numbers as `{"$numberInt": "3"}`. Pass `JsonBsonConversionOptions` with `OutputMode = JsonBsonOutputMode.RelaxedExtendedJson` to read plain JSON back. For Newtonsoft use `AddNewtonsoftJsonDocuments()`, `InsertAsync("payloads", JObject.Parse(json))` and `GetJObjectByIdAsync`.
 
 ## 9. Bulk writes and partial failure
 

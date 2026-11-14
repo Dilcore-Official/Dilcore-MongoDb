@@ -253,11 +253,14 @@ One-time owner setup (not automated):
 **Consumer skill.** [`skills/using-dilcore-mongodb`](skills/using-dilcore-mongodb) follows the open Agent Skills
 format (`SKILL.md` with `name` and `description` frontmatter, plus `references/`), so any compatible agent can load
 it. It holds the decision guide (toolkit or plain driver, which package, which feature), the rules that prevent real
-bugs, and commented examples of the most common combinations. It links to the guides in `docs/` instead of
-repeating the API reference. `.cursor/skills/using-dilcore-mongodb` is a symlink to it for Cursor.
+bugs, and commented examples of the most common combinations. It is written for consumer projects and is not loaded
+in this repository. Its links are absolute GitHub URLs, so it works when copied elsewhere.
 
-When you change a guide or a public API in a way that affects usage, update the skill in the same pull request. Keep
-every example consistent with `docs/guides/` and the samples.
+Documentation, example tests and the skill are kept in sync as a required rule:
+[`.cursor/rules/docs-and-skill-sync.mdc`](.cursor/rules/docs-and-skill-sync.mdc) says what to update, and
+`test/ArchitectureTests/DocumentationConsistencyTests.cs` fails the build when a guide breaks the page template, is
+missing from an index, has no example test, or the skill uses a repo-relative link. Every code example in `docs/` is
+run by an integration test in `test/*/Examples/` (`ExampleIntegrationTests` gives each test a clean MongoDB).
 
 ## Dependency updates
 
