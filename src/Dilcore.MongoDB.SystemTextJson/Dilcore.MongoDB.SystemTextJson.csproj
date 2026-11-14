@@ -4,6 +4,7 @@
         <RootNamespace>Dilcore.MongoDB.SystemTextJson</RootNamespace>
         <PackageId>Dilcore.MongoDB.SystemTextJson</PackageId>
         <PackageDescription>System.Text.Json adapters for Dilcore.MongoDB with Extended JSON type fidelity and the same database/collection resolvers as typed documents</PackageDescription>
+        <PackageTags>mongodb system-text-json json extended-json dotnet</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>

@@ -4,6 +4,7 @@
         <RootNamespace>Dilcore.MongoDB</RootNamespace>
         <PackageId>Dilcore.MongoDB</PackageId>
         <PackageDescription>Opinionated MongoDB application toolkit: validated multi-cluster DI, namespace resolution, repositories, document policies, and direct MongoDB.Driver escape hatches</PackageDescription>
+        <PackageTags>mongodb dependency-injection multi-tenant namespace-resolution repository document-policies mongodb-driver dotnet</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>

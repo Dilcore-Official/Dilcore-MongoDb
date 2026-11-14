@@ -35,9 +35,7 @@ Related: naming ADR [#4](https://github.com/Dilcore-Official/Dilcore-MongoDb/iss
 | Bug fixes, docs, non-functional packaging | Patch |
 | Preview builds (target scheme) | `2.0.0-alpha.N`, then `2.0.0-rc.N` before GA `2.0.0` |
 
-**Target** source of truth after [#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30): git tags + NuGet.org (OIDC).
-
-**Current (interim):** `.github/workflows/nuget-publish.yml` auto-patches from the latest `v*` tag and pushes to GitHub Packages (`nuget.pkg.github.com/Dilcore-Official`). `src/Directory.Build.props` still has a placeholder `Version`; pack version comes from the workflow. Do not copy current tag numbers into this policy.
+**Current** source of truth ([#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30)): git tags on `main` and NuGet.org. `.github/workflows/nuget-publish.yml` publishes on a `vMAJOR.MINOR.PATCH[-prerelease]` tag through OIDC trusted publishing; the tag is the package version. Pushes to `main` do not publish. `src/Directory.Build.props` keeps a placeholder `Version` for local builds. Release steps: [CONTRIBUTING.md](../../CONTRIBUTING.md#releasing).
 
 ## v1 → v2 migration policy
 
@@ -71,4 +69,4 @@ Applies to **post-v2** removals only:
 - **Supported driver:** pin in `Directory.Packages.props`
 - **Supported servers:** MongoDB’s published matrix for that pin
 - **Product identity:** Dilcore MongoDB toolkit (not Amazon DocumentDB)
-- **Publish today:** GitHub Packages via `nuget-publish.yml` until NuGet.org OIDC (#30)
+- **Publish:** NuGet.org via tag-driven OIDC trusted publishing in `nuget-publish.yml` (#30)

@@ -19,6 +19,14 @@ triage, and roadmap prioritization.
 - Community feedback is welcome through Issues and Discussions; consensus is
   preferred, but the maintainer has final say when trade-offs are required.
 
+## Releases
+
+The maintainer owns releases. A release is a version tag on `main`; the publish workflow tests the commit,
+publishes to NuGet.org through OIDC trusted publishing after approval of the `nuget` GitHub environment, and
+creates the GitHub Release. Steps and one-time setup are in
+[CONTRIBUTING.md](CONTRIBUTING.md#releasing). Package descriptions and tags follow
+[docs/product/package-descriptions.md](docs/product/package-descriptions.md).
+
 ## Contributions
 
 Contributions are welcome under the [MIT License](LICENSE). See
