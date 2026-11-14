@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Dilcore</title>
+  <polygon points="128,13 227.6,70.5 227.6,185.5 128,243 28.4,185.5 28.4,70.5" fill="#0F3B2E"/>
+  <g transform="translate(128 128) scale(0.82) translate(-128 -128) translate(-8 0)">
+    <path d="M92 68H128L180 98V158L128 188H92Z" fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linejoin="miter" stroke-miterlimit="10"/>
+    <circle cx="134" cy="128" r="15" fill="#3CCB7F"/>
+  </g>
+</svg>
