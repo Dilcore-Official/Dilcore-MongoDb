@@ -1,11 +1,42 @@
 name: 📦 Publish NuGet Packages
 
+# Release pipeline for all libraries. Every run computes the next version from the git tags, tests the commit,
+# and publishes to NuGet.org with OIDC trusted publishing. The version is never edited by hand.
+#
+# Automatic: a merge into main that changes library code (see the paths below) publishes a preview.
+# Manual (workflow_dispatch): choose preview or stable, or tick dry_run to test the NuGet.org connection.
+#
+#   preview = true  (default)  2.0.0-preview.N   N is the highest existing v2.0.0-preview.* tag plus one
+#   preview = false            2.X.Y             the patch after the highest stable v2.* tag, or 2.0.0 if none
+#
+# All libraries are packed in the same run with the same version, so they are always released together.
+# On main a publishing run creates the vX.Y.Z tag and a GitHub Release. dry_run = true tests the whole path
+# (tests, pack, environment approval, OIDC login) and stops before the tag, the push and the release; it works
+# from any branch. From another branch without dry_run the workflow only packs and uploads an artifact.
+# One-time setup (nuget.org policy, GitHub environment, NUGET_USER secret): CONTRIBUTING.md, "Releasing".
+
 on:
   push:
     branches: [main]
+    # Only files that change what the libraries do or contain. Docs, tests, samples and workflows do not publish.
     paths:
       - 'src/**'
+      - '!src/**/*.md'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'nuget.config'
+      - 'assets/icon.png'
   workflow_dispatch:
+    inputs:
+      preview:
+        description: Publish a preview (2.0.0-preview.N). Untick for a stable 2.X.Y release.
+        type: boolean
+        default: true
+      dry_run:
+        description: Dry run. Test the NuGet.org connection (OIDC login) but do not tag, push or release.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -13,17 +44,21 @@ permissions:
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
   DOTNET_NOLOGO: true
-  NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Major version of every package. Change it only for a new major line.
+  MAJOR_VERSION: "2"
+
+# One release at a time, so two runs never compute the same version.
+concurrency:
+  group: nuget-publish
+  cancel-in-progress: false
 
 jobs:
-  publish:
-    name: 🚀 Pack & Publish
+  verify:
+    name: ✅ Version, verify and test
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    # contents: write is required to push the release git tag created by this job.
-    permissions:
-      contents: write
-      packages: write
+    timeout-minutes: 45
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: 📥 Checkout
@@ -31,55 +66,155 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🔢 Calculate Version
+      - name: 🔢 Compute next version
         id: version
+        env:
+          # A push to main always publishes a preview. Manual runs follow the input.
+          PREVIEW: ${{ github.event_name == 'push' || inputs.preview }}
         run: |
-          # Get the latest tag or default to 1.0.0
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          LATEST_VERSION=${LATEST_TAG#v}
-          
-          # Parse major.minor.patch
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST_VERSION"
-          
-          # Increment patch version
-          PATCH=$((PATCH + 1))
-          
-          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
-          echo "version=${NEW_VERSION}" >> "${GITHUB_OUTPUT}"
-          echo "📦 New version: ${NEW_VERSION}"
+          set -euo pipefail
+          git fetch --tags --force --quiet
+          if [[ "${PREVIEW}" == "true" ]]; then
+            last="$(git tag --list "v${MAJOR_VERSION}.0.0-preview.*" | sed -E 's/^.*-preview\.//' | grep -E '^[0-9]+$' | sort -n | tail -1 || true)"
+            version="${MAJOR_VERSION}.0.0-preview.$(( ${last:-0} + 1 ))"
+          else
+            last="$(git tag --list "v${MAJOR_VERSION}.*" | grep -E "^v${MAJOR_VERSION}\.[0-9]+\.[0-9]+$" | sed 's/^v//' | sort -V | tail -1 || true)"
+            if [[ -z "${last}" ]]; then
+              version="${MAJOR_VERSION}.0.0"
+            else
+              IFS='.' read -r major minor patch <<< "${last}"
+              version="${major}.${minor}.$(( patch + 1 ))"
+            fi
+          fi
+          if git rev-parse --verify --quiet "refs/tags/v${version}" > /dev/null; then
+            echo "::error::Tag v${version} already exists."
+            exit 1
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "📦 Next version: ${version}" | tee -a "${GITHUB_STEP_SUMMARY}"
 
       - name: 🛠️ Setup .NET
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           global-json-file: global.json
 
+      - name: 🐳 Docker preflight
+        run: |
+          docker version
+          docker info
+
       - name: 📦 Restore dependencies
         run: dotnet restore Dilcore.MongoDB.sln --locked-mode
 
+      - name: 🎨 Verify formatting
+        run: dotnet format Dilcore.MongoDB.sln --verify-no-changes --no-restore
+
       - name: 🔨 Build
-        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release
+        run: dotnet build Dilcore.MongoDB.sln --no-restore --configuration Release -warnaserror -p:ContinuousIntegrationBuild=true
 
-      - name: 📦 Pack packages
+      - name: 🧪 Test (unit, architecture, package, consumer smoke, integration)
+        uses: ./.github/actions/dotnet-test
+        with:
+          artifact-name: release-trx
+
+  pack-only:
+    name: 🧪 Pack only (not on main)
+    if: github.ref != 'refs/heads/main' && !inputs.dry_run
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: 📦 Pack
+        uses: ./.github/actions/pack-nuget
+        with:
+          version: ${{ needs.verify.outputs.version }}
+
+      - name: 📤 Upload packages
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: packages
+          path: artifacts/*
+          if-no-files-found: error
+
+  release:
+    name: 🚀 Publish to NuGet.org
+    if: github.ref == 'refs/heads/main' || inputs.dry_run
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The environment name must match the trusted publishing policy on nuget.org.
+    environment: nuget
+    permissions:
+      contents: write   # version tag and GitHub Release
+      id-token: write   # OIDC token for NuGet/login
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: 📦 Pack
+        uses: ./.github/actions/pack-nuget
+        with:
+          version: ${{ needs.verify.outputs.version }}
+
+      # The tag is pushed before the publish, so a failed publish never reuses its version number.
+      - name: 🏷️ Create version tag
+        if: ${{ !inputs.dry_run }}
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
         run: |
-          dotnet pack src/Dilcore.MongoDB.Abstractions/Dilcore.MongoDB.Abstractions.csproj \
-            --no-build --configuration Release --output ./nupkgs \
-            -p:Version=${{ steps.version.outputs.version }}
-          dotnet pack src/Dilcore.MongoDB/Dilcore.MongoDB.csproj \
-            --no-build --configuration Release --output ./nupkgs \
-            -p:Version=${{ steps.version.outputs.version }}
-          dotnet pack src/Dilcore.MongoDB.SystemTextJson/Dilcore.MongoDB.SystemTextJson.csproj \
-            --no-build --configuration Release --output ./nupkgs \
-            -p:Version=${{ steps.version.outputs.version }}
-          dotnet pack src/Dilcore.MongoDB.NewtonsoftJson/Dilcore.MongoDB.NewtonsoftJson.csproj \
-            --no-build --configuration Release --output ./nupkgs \
-            -p:Version=${{ steps.version.outputs.version }}
+          set -euo pipefail
+          git tag "v${VERSION}" "${GITHUB_SHA}"
+          git push origin "refs/tags/v${VERSION}"
 
-      - name: 🚀 Push to GitHub Packages
-        run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/Dilcore-Official/index.json" --skip-duplicate
+      # Request the short-lived key right before the push. It is valid for about an hour.
+      - name: 🔑 NuGet login (OIDC)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
 
-      - name: 🏷️ Create Git Tag
+      - name: ✅ Dry run result
+        if: ${{ inputs.dry_run }}
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          KEY_ISSUED: ${{ steps.login.outputs.NUGET_API_KEY != '' }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
-          git push origin "v${{ steps.version.outputs.version }}"
+          echo "### 🧪 Dry run ${VERSION}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "OIDC login to NuGet.org succeeded (key issued: ${KEY_ISSUED}). Nothing was tagged, pushed or released." >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: 📤 Upload packages (dry run)
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: packages
+          path: artifacts/*
+          if-no-files-found: error
+
+      # Pushing the .nupkg files also pushes the matching .snupkg symbol packages from the same folder.
+      - name: 🚀 Push to NuGet.org
+        if: ${{ !inputs.dry_run }}
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: >
+          dotnet nuget push "artifacts/*.nupkg"
+          --api-key "${NUGET_API_KEY}"
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+      - name: 🏷️ Create GitHub Release
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          flags=(--generate-notes --verify-tag --title "v${VERSION}")
+          if [[ "${VERSION}" == *-* ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "v${VERSION}" artifacts/* "${flags[@]}"

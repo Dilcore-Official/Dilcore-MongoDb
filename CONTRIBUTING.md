@@ -147,6 +147,80 @@ Other tools:
 
 CODEOWNERS requests review from [@aytymchuk](https://github.com/aytymchuk).
 
+## Releasing
+
+Packages are published to NuGet.org by
+[`.github/workflows/nuget-publish.yml`](.github/workflows/nuget-publish.yml) with OIDC
+[trusted publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing). No
+NuGet API key is stored in the repository.
+
+**Triggers.** A merge into `main` that changes library code publishes a **preview** automatically. Library
+code means `src/**` (except Markdown files), `Directory.Build.props`, `Directory.Packages.props`,
+`global.json`, `nuget.config` and `assets/icon.png`. Changes to docs, tests, samples or workflows do not publish.
+A person can also run the workflow by hand to publish a stable version or to do a dry run.
+
+**All libraries ship together.** Every run packs all four packages with one version, so
+`Dilcore.MongoDB.Abstractions`, `Dilcore.MongoDB`, `Dilcore.MongoDB.SystemTextJson` and
+`Dilcore.MongoDB.NewtonsoftJson` always share a version number. A run fails if it does not produce all four.
+
+**Versioning.** Versions follow [SemVer](https://semver.org/). The major version is `2` and lives in
+`MAJOR_VERSION` in the workflow. Nobody edits a version by hand: each run computes the next one from the git
+tags, and a publishing run creates the matching `vX.Y.Z` tag.
+
+| Run | Version | Next number |
+|-----|---------|-------------|
+| `preview` ticked (default) | `2.0.0-preview.N` | highest existing `v2.0.0-preview.*` tag plus one, starting at `1` |
+| `preview` unticked | `2.X.Y` | patch after the highest stable `v2.*` tag, or `2.0.0` if there is none |
+
+The pre-release number uses a dot (`preview.10`), so NuGet orders `preview.2` before `preview.10`. A hyphen
+(`preview-10`) would compare as text and put it before `preview-2`. Stable runs only bump the patch number;
+change the minor number with a manual tag (`git tag v2.1.0 && git push origin v2.1.0`), and the next stable run continues
+from it.
+
+**One-time setup (repository owner)**
+
+1. nuget.org → user menu → **Trusted Publishing** → create a policy: package owner = the nuget.org
+   account or organization that owns the packages, repository owner `Dilcore-Official`, repository
+   `Dilcore-MongoDb`, workflow file `nuget-publish.yml`, environment `nuget`.
+   Glob patterns and packages (one per line): `Dilcore.MongoDB` and `Dilcore.MongoDB.*`. Pre-release builds
+   use the same package IDs, so they need no extra pattern.
+2. GitHub → Settings → Environments → create `nuget` (required reviewers gate each publish, including the automatic previews after a merge; leave the list empty
+   if previews should go out without approval).
+3. GitHub → Settings → Secrets and variables → Actions → secret `NUGET_USER` = the nuget.org profile name
+   (not an email address).
+4. Optional: reserve the `Dilcore.MongoDB` prefix on nuget.org.
+
+**Publish a release**
+
+1. Merge the release changes to `main`. Move `PublicAPI.Unshipped.txt` entries to `PublicAPI.Shipped.txt`
+   and update [CHANGELOG.md](CHANGELOG.md).
+2. A merge that changes library code starts the workflow by itself and publishes the next preview. For a stable
+   version, run it by hand: Actions → Publish NuGet Packages → **Run workflow** on `main` with `preview` unticked.
+3. The run computes the next version, restores in locked mode, checks formatting, builds with warnings as
+   errors, and runs the whole test suite (including the packed-consumer smoke test and the package metadata
+   tests). After the `nuget` environment is approved it packs with that version, pushes the version tag,
+   pushes the `.nupkg` and `.snupkg` files to NuGet.org, and creates the GitHub Release (marked
+   pre-release for preview versions). The tag is pushed before the publish, so a failed publish never
+   reuses a version number.
+4. **Dry run:** tick `dry_run` (default off). The run computes the next version, tests, packs, waits for the
+   `nuget` environment approval, and logs in to NuGet.org with OIDC, which proves the trusted publishing policy,
+   `NUGET_USER` and the environment name are right. It then stops: no tag, no push, no release, and the packages
+   are only uploaded as an artifact. It works from any branch, so run it from the PR branch before merging.
+   Without `dry_run`, a run from a branch other than `main` only packs and uploads the artifact.
+
+A published version cannot be deleted from NuGet.org, only unlisted. After the first release, set
+`PackageValidationBaselineVersion` in `src/Directory.Build.props` so package validation compares the public
+surface with the last published version.
+
+**Package metadata.** `PackageDescription` and `PackageTags` in each `.csproj` must match
+[docs/product/package-descriptions.md](docs/product/package-descriptions.md); `test/PackageTests` fails
+otherwise. Descriptions say MongoDB and never use DocumentDB branding.
+
+**Signing and provenance (assessed).** NuGet.org signs every package with its repository signature on upload.
+Author signing is not used: it needs a code-signing certificate and adds a key to protect. Provenance comes from
+the OIDC policy (only this repository, workflow and environment can publish), deterministic builds, Source Link,
+and symbol packages. Build attestations can be added later if consumers ask for them.
+
 ## Dependency updates
 
 - Dependabot opens weekly PRs for **NuGet** (`Directory.Packages.props` and

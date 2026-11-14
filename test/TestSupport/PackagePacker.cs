@@ -56,7 +56,7 @@ public static class PackagePacker
 
     private static void DeletePackages(string cache)
     {
-        var packages = Directory.GetFiles(cache, "*.nupkg");
+        var packages = Directory.GetFiles(cache, "*.nupkg").Concat(Directory.GetFiles(cache, "*.snupkg")).ToArray();
         foreach (var package in packages)
         {
             File.Delete(package);
@@ -65,7 +65,8 @@ public static class PackagePacker
 
     private static void CopyCachedPackages(string destination)
     {
-        var packages = Directory.GetFiles(CacheDirectory(), "*.nupkg");
+        var cache = CacheDirectory();
+        var packages = Directory.GetFiles(cache, "*.nupkg").Concat(Directory.GetFiles(cache, "*.snupkg")).ToArray();
         foreach (var package in packages)
         {
             var name = Path.GetFileName(package);

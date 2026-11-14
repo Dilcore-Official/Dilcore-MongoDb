@@ -4,6 +4,7 @@
         <RootNamespace>Dilcore.MongoDB.Abstractions</RootNamespace>
         <PackageId>Dilcore.MongoDB.Abstractions</PackageId>
         <PackageDescription>Contracts, entity and policy abstractions, and MongoDB-facing interfaces for Dilcore.MongoDB without DI host wiring</PackageDescription>
+        <PackageTags>mongodb abstractions contracts repository document-policies dotnet</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>

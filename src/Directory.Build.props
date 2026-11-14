@@ -3,15 +3,33 @@
 
   <PropertyGroup>
     <IsPackable>true</IsPackable>
-    <Version>1.0.0</Version>
+    <!-- Local-build placeholder. The publish workflow computes the real version and passes -p:Version. -->
+    <Version>2.0.0-preview.0</Version>
     <Authors>Dilcore</Authors>
     <Company>Dilcore</Company>
     <RepositoryUrl>https://github.com/Dilcore-Official/Dilcore-MongoDb</RepositoryUrl>
     <PackageProjectUrl>https://github.com/Dilcore-Official/Dilcore-MongoDb</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AnalysisMode>Recommended</AnalysisMode>
+  </PropertyGroup>
+
+  <!-- Source Link: the .NET SDK embeds the GitHub provider. Symbols ship as .snupkg next to each .nupkg. -->
+  <PropertyGroup>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <!-- Package validation fails pack on API or compatibility breaks. Set PackageValidationBaselineVersion after the first NuGet.org release. -->
+  <PropertyGroup>
+    <EnablePackageValidation>true</EnablePackageValidation>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,5 +41,6 @@
 
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)../README.md" Pack="true" PackagePath="/" />
+    <None Include="$(MSBuildThisFileDirectory)../assets/icon.png" Pack="true" PackagePath="/" />
   </ItemGroup>
 </Project>
