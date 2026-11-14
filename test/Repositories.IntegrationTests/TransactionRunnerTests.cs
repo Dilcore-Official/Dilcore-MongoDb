@@ -29,8 +29,12 @@ public partial class TransactionRunnerTests
     [Test]
     public async Task Transaction_CommitsAcrossTwoCollections()
     {
+        // Arrange
         var (runner, _) = CreateHost();
-        var result = await runner.WithTransactionAsync(new MongoClusterKey("primary"), async (tx, ct) =>
+        var cluster = new MongoClusterKey("primary");
+
+        // Act
+        var result = await runner.WithTransactionAsync(cluster, async (tx, ct) =>
         {
             var orders = tx.Repositories.GetRepository<Order>("orders");
             var payments = tx.Repositories.GetRepository<Payment>("payments");
@@ -38,37 +42,59 @@ public partial class TransactionRunnerTests
             (await payments.StoreAsync(new Payment { Name = "p1" }, ct)).ShouldBeSuccess();
             return Result.Ok(true);
         });
-        result.ShouldBeSuccess();
+        Result<bool>? any = null;
+        if (result.IsSuccess)
+        {
+            var (_, provider) = CreateHost();
+            using var scope = provider.CreateScope();
+            var orders = scope.ServiceProvider.GetRequiredKeyedService<IGenericRepository<Order>>("orders");
+            any = await orders.HasAnyAsync(Builders<Order>.Filter.Empty);
+        }
 
-        var (_, provider) = CreateHost();
-        using var scope = provider.CreateScope();
-        var orders = scope.ServiceProvider.GetRequiredKeyedService<IGenericRepository<Order>>("orders");
-        (await orders.HasAnyAsync(Builders<Order>.Filter.Empty)).Value.ShouldBeTrue();
+        // Assert
+        result.ShouldBeSuccess();
+        any!.Value.ShouldBeTrue();
     }
 
     [Test]
     public async Task Transaction_UserFailure_Aborts()
     {
+        // Arrange
         var (runner, provider) = CreateHost("abort-db");
-        var result = await runner.ExecuteAsync(new MongoClusterKey("primary"), async (tx, ct) =>
+        var cluster = new MongoClusterKey("primary");
+
+        // Act
+        var result = await runner.ExecuteAsync(cluster, async (tx, ct) =>
         {
             var orders = tx.Repositories.GetRepository<Order>("orders");
             (await orders.StoreAsync(new Order { Name = "o-abort" }, ct)).ShouldBeSuccess();
             return Result.Fail<bool>("business rule");
         });
-        result.ShouldBeFailure();
+        Result<bool>? any = null;
+        if (result.IsFailed)
+        {
+            using var scope = provider.CreateScope();
+            var orders = scope.ServiceProvider.GetRequiredKeyedService<IGenericRepository<Order>>("orders");
+            var filter = Builders<Order>.Filter.Eq(x => x.Name, "o-abort");
+            any = await orders.HasAnyAsync(filter);
+        }
 
-        using var scope = provider.CreateScope();
-        var orders = scope.ServiceProvider.GetRequiredKeyedService<IGenericRepository<Order>>("orders");
-        (await orders.HasAnyAsync(Builders<Order>.Filter.Eq(x => x.Name, "o-abort"))).Value.ShouldBeFalse();
+        // Assert
+        result.ShouldBeFailure();
+        any!.Value.ShouldBeFalse();
     }
 
     [Test]
     public async Task Transaction_Budget_FailsBeforeNextOperation()
     {
+        // Arrange
         var (runner, _) = CreateHost("budget-db");
+        var cluster = new MongoClusterKey("primary");
+        var options = new MongoTransactionOptions { MaxOperations = 1 };
+
+        // Act
         var result = await runner.ExecuteAsync(
-            new MongoClusterKey("primary"),
+            cluster,
             async (tx, ct) =>
             {
                 var orders = tx.Repositories.GetRepository<Order>("orders");
@@ -78,7 +104,9 @@ public partial class TransactionRunnerTests
                 second.ShouldHaveError<TransactionBudgetExceededError>();
                 return second.ToResult();
             },
-            new MongoTransactionOptions { MaxOperations = 1 });
+            options);
+
+        // Assert
         result.ShouldBeFailure();
         result.ShouldHaveError<TransactionBudgetExceededError>();
     }

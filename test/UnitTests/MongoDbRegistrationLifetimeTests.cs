@@ -21,8 +21,10 @@ public class MongoDbRegistrationLifetimeTests
     [Test]
     public void AddMongoDb_RegistersSingletons_OncePerRootProvider()
     {
+        // Arrange
         using var provider = BuildProvider();
 
+        // Act & Assert
         AssertSingleton<MongoRegistrationGraph>(provider);
         AssertSingleton<IBsonJsonConverter>(provider);
         AssertKeyedSingleton<IMongoClient>(provider, "primary");
@@ -31,8 +33,10 @@ public class MongoDbRegistrationLifetimeTests
     [Test]
     public void AddMongoDb_RegistersScopedServices_PerScope()
     {
+        // Arrange
         using var provider = BuildProvider();
 
+        // Act & Assert
         AssertScoped<INamespaceResolver>(provider);
         AssertScoped<IMongoDatabaseResolver>(provider);
         AssertScoped<IMongoDbCollectionFactory>(provider);
@@ -48,14 +52,17 @@ public class MongoDbRegistrationLifetimeTests
     [Test]
     public void AddMongoDb_RegistersNamespaceContributors_AsScopedEnumerable()
     {
+        // Arrange
         using var provider = BuildProvider();
         using var scope1 = provider.CreateScope();
         using var scope2 = provider.CreateScope();
 
+        // Act
         var first = scope1.ServiceProvider.GetServices<INamespaceSegmentContributor>().ToArray();
         var again = scope1.ServiceProvider.GetServices<INamespaceSegmentContributor>().ToArray();
         var second = scope2.ServiceProvider.GetServices<INamespaceSegmentContributor>().ToArray();
 
+        // Assert
         first.Length.ShouldBe(2);
         first.Select(c => c.GetType()).ShouldBe(again.Select(c => c.GetType()));
         first[0].ShouldBeSameAs(again[0]);

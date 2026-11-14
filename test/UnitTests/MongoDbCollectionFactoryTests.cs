@@ -18,10 +18,13 @@ public class MongoDbCollectionFactoryTests
     [Test]
     public async Task GetCollectionAsync_UnknownBindingKey_Fails()
     {
+        // Arrange
         var factory = CreateFactory(graph: CreateGraph(typeof(OrderDoc)));
 
+        // Act
         var result = await factory.GetCollectionAsync<OrderDoc>(new MongoDocumentBindingKey("missing"));
 
+        // Assert
         result.ShouldBeFailure();
         result.Errors[0].Message.ShouldContain("Unknown document binding key");
         result.Errors[0].Message.ShouldContain("missing");
@@ -30,10 +33,13 @@ public class MongoDbCollectionFactoryTests
     [Test]
     public async Task GetCollectionAsync_BindingTypeMismatch_Fails()
     {
+        // Arrange
         var factory = CreateFactory(graph: CreateGraph(typeof(OrderDoc)));
 
+        // Act
         var result = await factory.GetCollectionAsync<OtherDoc>(BindingKey);
 
+        // Assert
         result.ShouldBeFailure();
         result.Errors[0].Message.ShouldContain("registered for 'OrderDoc'");
         result.Errors[0].Message.ShouldContain("not 'OtherDoc'");
@@ -42,12 +48,15 @@ public class MongoDbCollectionFactoryTests
     [Test]
     public async Task GetCollectionAsync_DatabaseResolverFailed_PropagatesFailure()
     {
+        // Arrange
         var factory = CreateFactory(
             graph: CreateGraph(typeof(OrderDoc)),
             databaseResolver: new StubDatabaseResolver(Result.Fail<IMongoDatabase>("database unavailable")));
 
+        // Act
         var result = await factory.GetCollectionAsync<OrderDoc>(BindingKey);
 
+        // Assert
         result.ShouldBeFailure();
         result.Errors[0].Message.ShouldContain("database unavailable");
     }
@@ -55,12 +64,15 @@ public class MongoDbCollectionFactoryTests
     [Test]
     public async Task GetCollectionAsync_NamespaceResolverFailed_PropagatesFailure()
     {
+        // Arrange
         var factory = CreateFactory(
             graph: CreateGraph(typeof(OrderDoc)),
             namespaceResolver: new StubNamespaceResolver(Result.Fail<string>("prefix missing")));
 
+        // Act
         var result = await factory.GetCollectionAsync<OrderDoc>(BindingKey);
 
+        // Assert
         result.ShouldBeFailure();
         result.Errors[0].Message.ShouldContain("prefix missing");
     }
@@ -68,12 +80,15 @@ public class MongoDbCollectionFactoryTests
     [Test]
     public async Task GetCollectionAsync_BsonPath_DatabaseResolverFailed_PropagatesFailure()
     {
+        // Arrange
         var factory = CreateFactory(
             graph: CreateGraph(typeof(OrderDoc)),
             databaseResolver: new StubDatabaseResolver(Result.Fail<IMongoDatabase>("db down")));
 
+        // Act
         var result = await factory.GetCollectionAsync(DatabaseKey, "raw");
 
+        // Assert
         result.ShouldBeFailure();
         result.Errors[0].Message.ShouldContain("db down");
     }
@@ -81,12 +96,15 @@ public class MongoDbCollectionFactoryTests
     [Test]
     public async Task GetCollectionAsync_BsonPath_NamespaceResolverFailed_PropagatesFailure()
     {
+        // Arrange
         var factory = CreateFactory(
             graph: CreateGraph(typeof(OrderDoc)),
             namespaceResolver: new StubNamespaceResolver(Result.Fail<string>("bad collection name")));
 
+        // Act
         var result = await factory.GetCollectionAsync(DatabaseKey, "raw");
 
+        // Assert
         result.ShouldBeFailure();
         result.Errors[0].Message.ShouldContain("bad collection name");
     }

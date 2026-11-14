@@ -18,6 +18,7 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
     [Test]
     public async Task CustomBsonDocumentRepository_WhenMethodsCalled_ShouldBeSuccess()
     {
+        // Arrange
         var services = new ServiceCollection();
         var connectionString = MongoDbContainer.GetConnectionString();
 
@@ -41,9 +42,12 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
 
         var id = Guid.NewGuid().ToString();
         var document = new BsonDocument { [DocumentElementNames.Id] = id, ["name"] = "test" };
-
         await repository.CreateAsync(document);
+
+        // Act
         var result = await repository.GetAsync(id);
+
+        // Assert
         result.ShouldBeSuccess();
         result.Value!["name"].AsString.ShouldBe("test");
     }
@@ -51,6 +55,7 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
     [Test]
     public async Task CustomBsonDocumentRepository_WithCollectionPrefix_ShouldUsePhysicalName()
     {
+        // Arrange
         var services = new ServiceCollection();
         var connectionString = MongoDbContainer.GetConnectionString();
         const string prefix = "prefix";
@@ -75,8 +80,11 @@ public class BsonDocumentRepositoryTests : BaseIntegrationTests
         var repository = scope.ServiceProvider.GetRequiredService<IBsonDocRepository>();
 
         var id = Guid.NewGuid().ToString();
+
+        // Act
         await repository.CreateAsync(new BsonDocument { [DocumentElementNames.Id] = id, ["name"] = "test" });
 
+        // Assert
         var client = scope.ServiceProvider.GetRequiredKeyedService<IMongoClient>("primary");
         var collection = client.GetDatabase(DatabaseName).GetCollection<BsonDocument>($"{prefix}_{CollectionName}");
         var fromDb = await collection.Find(Builders<BsonDocument>.Filter.Eq(DocumentElementNames.Id, id)).FirstOrDefaultAsync();

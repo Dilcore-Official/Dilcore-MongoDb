@@ -36,7 +36,7 @@ jobs:
       - name: 🧪 Architecture + unit tests
         uses: ./.github/actions/dotnet-test
         with:
-          filter: FullyQualifiedName~ArchitectureTests|FullyQualifiedName~UnitTests
+          filter: FullyQualifiedName~ArchitectureTests|FullyQualifiedName~UnitTests|FullyQualifiedName~PackageTests|FullyQualifiedName~ConsumerTests
           artifact-name: architecture-trx
 
   di-acceptance:

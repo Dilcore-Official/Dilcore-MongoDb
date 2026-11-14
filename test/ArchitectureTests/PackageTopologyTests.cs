@@ -1,5 +1,3 @@
-using Dilcore.MongoDB.ArchitectureTests.Helpers;
-
 namespace Dilcore.MongoDB.ArchitectureTests;
 
 public class PackageTopologyTests
@@ -7,10 +5,14 @@ public class PackageTopologyTests
     [Test]
     public void Src_HasFourPackableProjects()
     {
+        // Arrange
         var projects = RepoLocator.GetSrcProjectFiles();
-        projects.Count.ShouldBe(4);
 
+        // Act
         var names = projects.Select(Path.GetFileNameWithoutExtension).OrderBy(x => x).ToArray();
+
+        // Assert
+        projects.Count.ShouldBe(4);
         names.ShouldBe([
             "Dilcore.MongoDB",
             "Dilcore.MongoDB.Abstractions",
@@ -22,7 +24,11 @@ public class PackageTopologyTests
     [Test]
     public void Src_Projects_DoNotUseDocumentDbNames()
     {
-        foreach (var project in RepoLocator.GetSrcProjectFiles())
+        // Arrange
+        var projects = RepoLocator.GetSrcProjectFiles();
+
+        // Act & Assert
+        foreach (var project in projects)
         {
             Path.GetFileName(project).ShouldNotContain("DocumentDb");
             Directory.GetParent(project)!.Name.ShouldNotContain("DocumentDb");

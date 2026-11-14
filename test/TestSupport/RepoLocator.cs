@@ -1,6 +1,6 @@
 using System.Xml.Linq;
 
-namespace Dilcore.MongoDB.ArchitectureTests.Helpers;
+namespace Dilcore.MongoDB.TestSupport;
 
 public static class RepoLocator
 {

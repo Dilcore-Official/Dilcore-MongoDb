@@ -45,13 +45,17 @@ public class GenericBulkRepositoryTests : BaseIntegrationTests
     [Test]
     public async Task GenericBulkRepository_BulkInsert()
     {
+        // Arrange
         var entities = Fixture.Build<TestEntity1>()
             .With(x => x.IsDeleted, false)
             .Without(x => x.ETag)
             .CreateMany(20)
             .ToList();
 
+        // Act
         var createResult = await _bulkRepository.BulkStoreAsync(entities.ToArray());
+
+        // Assert
         createResult.ShouldBeSuccess();
 
         var ids = entities.Select(x => x.Id);
@@ -63,16 +67,22 @@ public class GenericBulkRepositoryTests : BaseIntegrationTests
     [Test]
     public async Task GenericBulkRepository_BulkDelete()
     {
+        // Arrange
         var entities = Fixture.Build<TestEntity1>()
             .With(x => x.IsDeleted, false)
             .Without(x => x.ETag)
             .CreateMany(5)
             .ToList();
 
-        (await _bulkRepository.BulkStoreAsync(entities.ToArray())).ShouldBeSuccess();
-
+        var stored = await _bulkRepository.BulkStoreAsync(entities.ToArray());
         var ids = entities.Select(x => x.Id).ToHashSet();
-        (await _bulkRepository.BulkDeleteAsync(x => ids.Contains(x.Id))).ShouldBeSuccess();
+
+        // Act
+        var deleted = await _bulkRepository.BulkDeleteAsync(x => ids.Contains(x.Id));
+
+        // Assert
+        stored.ShouldBeSuccess();
+        deleted.ShouldBeSuccess();
 
         var remaining = await _repository.GetListAsync(x => ids.Contains(x.Id));
         remaining.ShouldBeSuccess();

@@ -16,14 +16,20 @@ public class JsonDocumentStoreLifetimeTests
     [Test]
     public void AddSystemTextJsonDocuments_RegistersFactory_AsScoped()
     {
+        // Arrange
         using var provider = BuildProvider(services => services.AddSystemTextJsonDocuments());
+
+        // Act & Assert
         AssertScoped<ISystemTextJsonDocumentStoreFactory>(provider);
     }
 
     [Test]
     public void AddNewtonsoftJsonDocuments_RegistersFactory_AsScoped()
     {
+        // Arrange
         using var provider = BuildProvider(services => services.AddNewtonsoftJsonDocuments());
+
+        // Act & Assert
         AssertScoped<INewtonsoftJsonDocumentStoreFactory>(provider);
     }
 

@@ -21,6 +21,7 @@ public class SerializationConventionTests : BaseIntegrationTests
     [Test]
     public async Task EnumRepresentation_Int32_StoresEnumAsInt()
     {
+        // Arrange
         var services = new ServiceCollection();
         var connectionString = MongoDbContainer.GetConnectionString();
 
@@ -38,11 +39,15 @@ public class SerializationConventionTests : BaseIntegrationTests
         using var scope = provider.CreateScope();
         var repository = scope.ServiceProvider
             .GetRequiredService<IGenericRepository<EnumConventionDocument>>();
-
-        var store = await repository.StoreAsync(new EnumConventionDocument
+        var document = new EnumConventionDocument
         {
             Status = EnumConventionStatus.Ready
-        });
+        };
+
+        // Act
+        var store = await repository.StoreAsync(document);
+
+        // Assert
         store.ShouldBeSuccess();
 
         var client = scope.ServiceProvider.GetRequiredKeyedService<IMongoClient>("primary");

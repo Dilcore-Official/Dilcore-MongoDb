@@ -10,6 +10,10 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
 
 ### Added
 
+- Test suites for packed package contents and for an external caller that restores
+  `Dilcore.MongoDB` from those packages and builds a container with `ValidateScopes`
+  and `ValidateOnBuild`. Shared MongoDB fixture startup lives in `test/TestSupport`.
+  NUnit tests use Arrange / Act / Assert comments. Shouldly stays the assertion library.
 - Build quality gates: `global.json` (SDK 10.0 feature band), package lock files,
   public API analyzer baselines, XML documentation on the public surface, and
   Release warnings-as-errors. CI restores with `--locked-mode`, verifies

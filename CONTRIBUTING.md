@@ -54,10 +54,14 @@ rewriting the tree:
 dotnet format Dilcore.MongoDB.sln --verify-no-changes
 ```
 
-Use **Shouldly** for assertions (not FluentAssertions). Architecture tests enforce the
+Use **Shouldly** for assertions (not FluentAssertions). Every `[Test]` uses
+`// Arrange`, `// Act`, and `// Assert` comments, as specified in
+[csharp-testing-di](.cursor/rules/csharp-testing-di.mdc) and [test/AGENTS.md](test/AGENTS.md).
+Architecture tests enforce the
 two-core-package plus optional JSON topology and dependency boundaries without Docker. DI acceptance tests
 build the container with `ValidateScopes` / `ValidateOnBuild` via
-`AcceptanceServiceProviderFactory` in `test/TestSupport`. CI runs Architecture Tests, DI Acceptance,
+`AcceptanceServiceProviderFactory` in `test/TestSupport`. Package-content and packed-consumer
+tests run in the Architecture Tests job (no Docker). CI runs Architecture Tests, DI Acceptance,
 an Integration Matrix job (`TestCategory=M3Matrix`, Docker preflight), and the full Build & Test job.
 Those jobs, and the MongoDB version workflows, call
 [`.github/actions/dotnet-test`](.github/actions/dotnet-test/action.yml). That action runs

@@ -14,35 +14,46 @@ public partial class TransactionRunnerTests
     [CancelAfter(120_000)]
     public async Task Transaction_LargeSingleDocument_CommitsAndReadsBack()
     {
+        // Arrange
         var (runner, provider) = CreateHost("large-one-db");
         var payload = new string('x', 10 * 1024 * 1024);
+        var cluster = new MongoClusterKey("primary");
 
-        var result = await runner.WithTransactionAsync<Guid>(new MongoClusterKey("primary"), async (tx, ct) =>
+        // Act
+        var result = await runner.WithTransactionAsync<Guid>(cluster, async (tx, ct) =>
         {
             var orders = tx.Repositories.GetRepository<Order>("orders");
             var stored = await orders.StoreAsync(new Order { Name = "large", Payload = payload }, ct);
             stored.ShouldBeSuccess();
             return Result.Ok(stored.Value.Id);
         });
+        Result<Order>? loaded = null;
+        if (result.IsSuccess)
+        {
+            using var scope = provider.CreateScope();
+            var orders = scope.ServiceProvider.GetRequiredKeyedService<IGenericRepository<Order>>("orders");
+            var filter = Builders<Order>.Filter.Eq(x => x.Name, "large");
+            loaded = await orders.GetAsync(filter);
+        }
 
+        // Assert
         result.ShouldBeSuccess();
         result.Value.ShouldNotBe(Guid.Empty);
-
-        using var scope = provider.CreateScope();
-        var orders = scope.ServiceProvider.GetRequiredKeyedService<IGenericRepository<Order>>("orders");
-        var loaded = await orders.GetAsync(Builders<Order>.Filter.Eq(x => x.Name, "large"));
-        loaded.ShouldBeSuccess();
-        loaded.Value.Payload!.Length.ShouldBe(payload.Length);
+        loaded!.ShouldBeSuccess();
+        loaded!.Value.Payload!.Length.ShouldBe(payload.Length);
     }
 
     [Test]
     [CancelAfter(180_000)]
     public async Task Transaction_ManyDocumentsAcrossTwoCollections_CommitsAtomically()
     {
+        // Arrange
         var (runner, provider) = CreateHost("many-db");
         const int perCollection = 250;
+        var cluster = new MongoClusterKey("primary");
 
-        var result = await runner.ExecuteAsync(new MongoClusterKey("primary"), async (tx, ct) =>
+        // Act
+        var result = await runner.ExecuteAsync(cluster, async (tx, ct) =>
         {
             var orders = tx.Repositories.GetRepository<Order>("orders");
             var payments = tx.Repositories.GetRepository<Payment>("payments");
@@ -54,17 +65,29 @@ public partial class TransactionRunnerTests
 
             return Result.Ok(true);
         });
+        long? orderCount = null;
+        long? paymentCount = null;
+        if (result.IsSuccess)
+        {
+            orderCount = await CountAsync<Order>(provider, "orders");
+            paymentCount = await CountAsync<Payment>(provider, "payments");
+        }
 
+        // Assert
         result.ShouldBeSuccess();
-        (await CountAsync<Order>(provider, "orders")).ShouldBe(perCollection);
-        (await CountAsync<Payment>(provider, "payments")).ShouldBe(perCollection);
+        orderCount.ShouldBe(perCollection);
+        paymentCount.ShouldBe(perCollection);
     }
 
     [Test]
     public async Task Transaction_FailureAfterWritesOnBothCollections_RollsBothBack()
     {
+        // Arrange
         var (runner, provider) = CreateHost("rollback-both-db");
-        var result = await runner.ExecuteAsync(new MongoClusterKey("primary"), async (tx, ct) =>
+        var cluster = new MongoClusterKey("primary");
+
+        // Act
+        var result = await runner.ExecuteAsync(cluster, async (tx, ct) =>
         {
             var orders = tx.Repositories.GetRepository<Order>("orders");
             var payments = tx.Repositories.GetRepository<Payment>("payments");
@@ -72,19 +95,32 @@ public partial class TransactionRunnerTests
             (await payments.StoreAsync(new Payment { Name = "p" }, ct)).ShouldBeSuccess();
             return Result.Fail<bool>("business rule");
         });
+        long? orderCount = null;
+        long? paymentCount = null;
+        if (result.IsFailed)
+        {
+            orderCount = await CountAsync<Order>(provider, "orders");
+            paymentCount = await CountAsync<Payment>(provider, "payments");
+        }
 
+        // Assert
         result.ShouldBeFailure();
-        (await CountAsync<Order>(provider, "orders")).ShouldBe(0);
-        (await CountAsync<Payment>(provider, "payments")).ShouldBe(0);
+        orderCount.ShouldBe(0);
+        paymentCount.ShouldBe(0);
     }
 
     [Test]
     [CancelAfter(180_000)]
     public async Task Transaction_BulkStoreThenAbort_PersistsNothing()
     {
+        // Arrange
         var (runner, provider) = CreateHost("bulk-abort-db");
+        var cluster = new MongoClusterKey("primary");
+        var options = new MongoTransactionOptions { MaxOperations = 2_000 };
+
+        // Act
         var result = await runner.ExecuteAsync(
-            new MongoClusterKey("primary"),
+            cluster,
             async (tx, ct) =>
             {
                 var bulk = tx.Repositories.GetBulkRepository<Order>("orders");
@@ -94,91 +130,134 @@ public partial class TransactionRunnerTests
                 (await bulk.BulkStoreAsync(docs, ct)).ShouldBeSuccess();
                 return Result.Fail<bool>("abort");
             },
-            new MongoTransactionOptions { MaxOperations = 2_000 });
+            options);
+        long? count = null;
+        if (result.IsFailed)
+        {
+            count = await CountAsync<Order>(provider, "orders");
+        }
 
+        // Assert
         result.ShouldBeFailure();
-        (await CountAsync<Order>(provider, "orders")).ShouldBe(0);
+        count.ShouldBe(0);
     }
 
     [Test]
     [CancelAfter(180_000)]
     public async Task Transaction_DocumentAboveBsonLimit_ReturnsDocumentTooLargeAndAborts()
     {
+        // Arrange
         var (runner, provider) = CreateHost("too-large-db");
+        var cluster = new MongoClusterKey("primary");
+        var options = new MongoTransactionOptions { MaxEstimatedBytes = 32 * 1024 * 1024 };
+        var payload = new string('x', (16 * 1024 * 1024) + 200_000);
+
+        // Act
         var result = await runner.ExecuteAsync(
-            new MongoClusterKey("primary"),
+            cluster,
             async (tx, ct) =>
             {
                 var orders = tx.Repositories.GetRepository<Order>("orders");
                 var stored = await orders.StoreAsync(
-                    new Order { Name = "huge", Payload = new string('x', (16 * 1024 * 1024) + 200_000) },
+                    new Order { Name = "huge", Payload = payload },
                     ct);
                 stored.ShouldBeFailure();
                 stored.ShouldHaveError<DocumentTooLargeError>();
                 return stored.ToResult();
             },
-            new MongoTransactionOptions { MaxEstimatedBytes = 32 * 1024 * 1024 });
+            options);
+        long? count = null;
+        if (result.IsFailed)
+        {
+            count = await CountAsync<Order>(provider, "orders");
+        }
 
+        // Assert
         result.ShouldBeFailure();
         result.ShouldHaveError<DocumentTooLargeError>();
-        (await CountAsync<Order>(provider, "orders")).ShouldBe(0);
+        count.ShouldBe(0);
     }
 
     [Test]
     [CancelAfter(180_000)]
     public async Task Transaction_ManyDocumentsOverSixteenMegabytes_CommitsWhenClientBudgetAllows()
     {
+        // Arrange
         var (runner, provider) = CreateHost("over-sixteen-db");
         const int count = 18;
+        var cluster = new MongoClusterKey("primary");
+        var options = new MongoTransactionOptions { MaxEstimatedBytes = 32 * 1024 * 1024, MaxOperations = 100 };
+
+        // Act
         var result = await runner.ExecuteAsync(
-            new MongoClusterKey("primary"),
+            cluster,
             async (tx, ct) =>
             {
                 var orders = tx.Repositories.GetRepository<Order>("orders");
                 for (var i = 0; i < count; i++)
                 {
-                    (await orders.StoreAsync(
-                        new Order { Name = "m" + i, Payload = new string('x', 1024 * 1024) },
-                        ct)).ShouldBeSuccess();
+                    var order = new Order { Name = "m" + i, Payload = new string('x', 1024 * 1024) };
+                    (await orders.StoreAsync(order, ct)).ShouldBeSuccess();
                 }
 
                 return Result.Ok(true);
             },
-            new MongoTransactionOptions { MaxEstimatedBytes = 32 * 1024 * 1024, MaxOperations = 100 });
+            options);
+        long? storedCount = null;
+        if (result.IsSuccess)
+        {
+            storedCount = await CountAsync<Order>(provider, "orders");
+        }
 
+        // Assert
         result.ShouldBeSuccess();
-        (await CountAsync<Order>(provider, "orders")).ShouldBe(count);
+        storedCount.ShouldBe(count);
     }
 
     [Test]
     public async Task Transaction_ByteBudget_RejectsOversizedSingleWrite()
     {
+        // Arrange
         var (runner, provider) = CreateHost("byte-cap-db");
+        var cluster = new MongoClusterKey("primary");
+        var options = new MongoTransactionOptions { MaxEstimatedBytes = 1024 * 1024 };
+        var payload = new string('x', 2 * 1024 * 1024);
+
+        // Act
         var result = await runner.ExecuteAsync(
-            new MongoClusterKey("primary"),
+            cluster,
             async (tx, ct) =>
             {
                 var orders = tx.Repositories.GetRepository<Order>("orders");
-                var stored = await orders.StoreAsync(
-                    new Order { Name = "big", Payload = new string('x', 2 * 1024 * 1024) },
-                    ct);
+                var stored = await orders.StoreAsync(new Order { Name = "big", Payload = payload }, ct);
                 stored.ShouldBeFailure();
                 stored.ShouldHaveError<TransactionBudgetExceededError>();
                 return stored.ToResult();
             },
-            new MongoTransactionOptions { MaxEstimatedBytes = 1024 * 1024 });
+            options);
+        long? count = null;
+        if (result.IsFailed)
+        {
+            count = await CountAsync<Order>(provider, "orders");
+        }
 
+        // Assert
         result.ShouldBeFailure();
         result.ShouldHaveError<TransactionBudgetExceededError>();
-        (await CountAsync<Order>(provider, "orders")).ShouldBe(0);
+        count.ShouldBe(0);
     }
 
     [Test]
     public async Task Transaction_ByteBudget_RejectsBulkWhoseModelsExceedTheCap()
     {
+        // Arrange
         var (runner, provider) = CreateHost("bulk-bytes-db");
+        var cluster = new MongoClusterKey("primary");
+        var options = new MongoTransactionOptions { MaxEstimatedBytes = 500_000, MaxOperations = 20 };
+
+        // Act
         var result = await runner.ExecuteAsync(
-            new MongoClusterKey("primary"),
+            cluster,
             async (tx, ct) =>
             {
                 var bulk = tx.Repositories.GetBulkRepository<Order>("orders");
@@ -190,19 +269,30 @@ public partial class TransactionRunnerTests
                 stored.ShouldHaveError<TransactionBudgetExceededError>();
                 return stored.ToResult();
             },
-            new MongoTransactionOptions { MaxEstimatedBytes = 500_000, MaxOperations = 20 });
+            options);
+        long? count = null;
+        if (result.IsFailed)
+        {
+            count = await CountAsync<Order>(provider, "orders");
+        }
 
+        // Assert
         result.ShouldBeFailure();
         result.ShouldHaveError<TransactionBudgetExceededError>();
-        (await CountAsync<Order>(provider, "orders")).ShouldBe(0);
+        count.ShouldBe(0);
     }
 
     [Test]
     public async Task Transaction_OperationBudget_FailsMidBulkAndAborts()
     {
+        // Arrange
         var (runner, provider) = CreateHost("bulk-ops-db");
+        var cluster = new MongoClusterKey("primary");
+        var options = new MongoTransactionOptions { MaxOperations = 3 };
+
+        // Act
         var result = await runner.ExecuteAsync(
-            new MongoClusterKey("primary"),
+            cluster,
             async (tx, ct) =>
             {
                 var bulk = tx.Repositories.GetBulkRepository<Order>("orders");
@@ -212,37 +302,53 @@ public partial class TransactionRunnerTests
                 stored.ShouldHaveError<TransactionBudgetExceededError>();
                 return stored.ToResult();
             },
-            new MongoTransactionOptions { MaxOperations = 3 });
+            options);
+        long? count = null;
+        if (result.IsFailed)
+        {
+            count = await CountAsync<Order>(provider, "orders");
+        }
 
+        // Assert
         result.ShouldBeFailure();
         result.ShouldHaveError<TransactionBudgetExceededError>();
-        (await CountAsync<Order>(provider, "orders")).ShouldBe(0);
+        count.ShouldBe(0);
     }
 
     [Test]
     public async Task Transaction_CallbackException_AbortsAndPropagates()
     {
+        // Arrange
         var (runner, provider) = CreateHost("throw-db");
+        var cluster = new MongoClusterKey("primary");
+
+        // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(async () =>
-            await runner.ExecuteAsync(new MongoClusterKey("primary"), async (tx, ct) =>
+            await runner.ExecuteAsync(cluster, async (tx, ct) =>
             {
                 var orders = tx.Repositories.GetRepository<Order>("orders");
                 (await orders.StoreAsync(new Order { Name = "thrown" }, ct)).ShouldBeSuccess();
                 throw new InvalidOperationException("callback blew up");
             }));
+        var count = await CountAsync<Order>(provider, "orders");
 
+        // Assert
         exception.Message.ShouldBe("callback blew up");
-        (await CountAsync<Order>(provider, "orders")).ShouldBe(0);
+        count.ShouldBe(0);
     }
 
     [Test]
     public async Task Transaction_Cancellation_AbortsWithoutCommit()
     {
+        // Arrange
         var (runner, provider) = CreateHost("cancel-db");
         using var cts = new CancellationTokenSource();
+        var cluster = new MongoClusterKey("primary");
+
+        // Act & Assert
         await Should.ThrowAsync<OperationCanceledException>(async () =>
             await runner.ExecuteAsync(
-                new MongoClusterKey("primary"),
+                cluster,
                 async (tx, ct) =>
                 {
                     var orders = tx.Repositories.GetRepository<Order>("orders");
@@ -252,18 +358,23 @@ public partial class TransactionRunnerTests
                     return Result.Ok(true);
                 },
                 cancellationToken: cts.Token));
+        var count = await CountAsync<Order>(provider, "orders");
 
-        (await CountAsync<Order>(provider, "orders")).ShouldBe(0);
+        // Assert
+        count.ShouldBe(0);
     }
 
     [Test]
     public async Task Transaction_UnknownCluster_ReturnsFailure()
     {
+        // Arrange
         var (runner, _) = CreateHost("unknown-db");
-        var result = await runner.ExecuteAsync(
-            new MongoClusterKey("missing"),
-            (_, _) => Task.FromResult(Result.Ok(true)));
+        var cluster = new MongoClusterKey("missing");
 
+        // Act
+        var result = await runner.ExecuteAsync(cluster, (_, _) => Task.FromResult(Result.Ok(true)));
+
+        // Assert
         result.ShouldBeFailure();
         result.Errors.ShouldContain(error => error.Message.Contains("Unknown cluster", StringComparison.Ordinal));
     }
@@ -271,24 +382,38 @@ public partial class TransactionRunnerTests
     [Test]
     public async Task Transaction_ScopeRepository_DoesNotJoinTheSession()
     {
+        // Arrange
         var (runner, provider) = CreateHost("bypass-db");
-        var result = await runner.ExecuteAsync(new MongoClusterKey("primary"), async (_, ct) =>
+        var cluster = new MongoClusterKey("primary");
+
+        // Act
+        var result = await runner.ExecuteAsync(cluster, async (_, ct) =>
         {
             using var scope = provider.CreateScope();
             var orders = scope.ServiceProvider.GetRequiredKeyedService<IGenericRepository<Order>>("orders");
             (await orders.StoreAsync(new Order { Name = "outside" }, ct)).ShouldBeSuccess();
             return Result.Fail<bool>("abort");
         });
+        long? count = null;
+        if (result.IsFailed)
+        {
+            count = await CountAsync<Order>(provider, "orders");
+        }
 
+        // Assert
         result.ShouldBeFailure();
-        (await CountAsync<Order>(provider, "orders")).ShouldBe(1);
+        count.ShouldBe(1);
     }
 
     [Test]
     public async Task Transaction_OtherCluster_ReturnsCrossClusterError()
     {
+        // Arrange
         var (runner, provider) = CreateHost("cross-db", withSecondCluster: true);
-        var result = await runner.ExecuteAsync(new MongoClusterKey("primary"), async (tx, ct) =>
+        var cluster = new MongoClusterKey("primary");
+
+        // Act
+        var result = await runner.ExecuteAsync(cluster, async (tx, ct) =>
         {
             var orders = tx.Repositories.GetRepository<Order>("orders");
             (await orders.StoreAsync(new Order { Name = "local" }, ct)).ShouldBeSuccess();
@@ -296,19 +421,28 @@ public partial class TransactionRunnerTests
             var stored = await other.StoreAsync(new Order { Name = "remote" }, ct);
             return stored.ToResult();
         });
+        long? count = null;
+        if (result.IsFailed)
+        {
+            count = await CountAsync<Order>(provider, "orders");
+        }
 
+        // Assert
         result.ShouldBeFailure();
         result.ShouldHaveError<CrossClusterOperationError>();
-        (await CountAsync<Order>(provider, "orders")).ShouldBe(0);
+        count.ShouldBe(0);
     }
 
     [Test]
     public async Task Transaction_DuplicateKey_AbortsTheWholeTransaction()
     {
+        // Arrange
         var (runner, provider) = CreateHost("dup-db");
         await EnsureUniqueNameIndex(provider, "dup-db");
+        var cluster = new MongoClusterKey("primary");
 
-        var result = await runner.ExecuteAsync(new MongoClusterKey("primary"), async (tx, ct) =>
+        // Act
+        var result = await runner.ExecuteAsync(cluster, async (tx, ct) =>
         {
             var orders = tx.Repositories.GetRepository<Order>("orders");
             (await orders.StoreAsync(new Order { Name = "same" }, ct)).ShouldBeSuccess();
@@ -317,30 +451,39 @@ public partial class TransactionRunnerTests
             duplicate.ShouldHaveError<DuplicateKeyError>();
             return duplicate.ToResult();
         });
+        long? count = null;
+        if (result.IsFailed)
+        {
+            count = await CountAsync<Order>(provider, "orders");
+        }
 
+        // Assert
         result.ShouldBeFailure();
         result.ShouldHaveError<DuplicateKeyError>();
-        (await CountAsync<Order>(provider, "orders")).ShouldBe(0);
+        count.ShouldBe(0);
     }
 
     [Test]
     [CancelAfter(60_000)]
     public async Task Transaction_WriteConflict_RetriesCallbackAndBothCommit()
     {
+        // Arrange
         var (runner, provider) = CreateHost("conflict-db");
-        Guid id = Guid.Empty;
-        (await runner.ExecuteAsync<Guid>(new MongoClusterKey("primary"), async (tx, ct) =>
+        var cluster = new MongoClusterKey("primary");
+        var seeded = await runner.ExecuteAsync<Guid>(cluster, async (tx, ct) =>
         {
             var orders = tx.Repositories.GetRepository<Order>("orders");
             var stored = await orders.StoreAsync(new Order { Name = "seed" }, ct);
             stored.ShouldBeSuccess();
             return Result.Ok(stored.Value.Id);
-        })).ShouldBeSuccess();
-
-        using (var scope = provider.CreateScope())
+        });
+        Guid id = Guid.Empty;
+        if (seeded.IsSuccess)
         {
+            using var scope = provider.CreateScope();
             var orders = scope.ServiceProvider.GetRequiredKeyedService<IGenericRepository<Order>>("orders");
-            id = (await orders.GetAsync(Builders<Order>.Filter.Eq(x => x.Name, "seed"))).Value.Id;
+            var filter = Builders<Order>.Filter.Eq(x => x.Name, "seed");
+            id = (await orders.GetAsync(filter)).Value.Id;
         }
 
         var attempts = 0;
@@ -349,11 +492,12 @@ public partial class TransactionRunnerTests
 
         async Task<Result<bool>> UpdateName(string name, CancellationToken ct)
         {
-            return await runner.ExecuteAsync(new MongoClusterKey("primary"), async (tx, token) =>
+            return await runner.ExecuteAsync(cluster, async (tx, token) =>
             {
                 Interlocked.Increment(ref attempts);
                 var orders = tx.Repositories.GetRepository<Order>("orders");
-                var current = await orders.GetAsync(Builders<Order>.Filter.Eq(x => x.Id, id), token);
+                var idFilter = Builders<Order>.Filter.Eq(x => x.Id, id);
+                var current = await orders.GetAsync(idFilter, token);
                 current.ShouldBeSuccess();
                 if (Interlocked.Increment(ref reads) == 2)
                 {
@@ -368,49 +512,74 @@ public partial class TransactionRunnerTests
             }, cancellationToken: ct);
         }
 
-        var first = UpdateName("left", CancellationToken.None);
-        var second = UpdateName("right", CancellationToken.None);
-        var results = await Task.WhenAll(first, second);
+        // Act
+        Result<bool>[]? results = null;
+        Result<Order>? final = null;
+        long? count = null;
+        if (seeded.IsSuccess)
+        {
+            var first = UpdateName("left", CancellationToken.None);
+            var second = UpdateName("right", CancellationToken.None);
+            results = await Task.WhenAll(first, second);
+            using var verify = provider.CreateScope();
+            var repo = verify.ServiceProvider.GetRequiredKeyedService<IGenericRepository<Order>>("orders");
+            var idFilter = Builders<Order>.Filter.Eq(x => x.Id, id);
+            final = await repo.GetAsync(idFilter);
+            count = await CountAsync<Order>(provider, "orders");
+        }
 
-        results.ShouldAllBe(result => result.IsSuccess);
+        // Assert
+        seeded.ShouldBeSuccess();
+        results!.ShouldAllBe(result => result.IsSuccess);
         attempts.ShouldBeGreaterThan(2);
-
-        using var verify = provider.CreateScope();
-        var repo = verify.ServiceProvider.GetRequiredKeyedService<IGenericRepository<Order>>("orders");
-        var final = await repo.GetAsync(Builders<Order>.Filter.Eq(x => x.Id, id));
-        final.ShouldBeSuccess();
-        final.Value.Name.ShouldBeOneOf("left", "right");
-        (await CountAsync<Order>(provider, "orders")).ShouldBe(1);
+        final!.ShouldBeSuccess();
+        final!.Value.Name.ShouldBeOneOf("left", "right");
+        count.ShouldBe(1);
     }
 
     [Test]
     public async Task Transaction_TimeLimitWithoutRepositoryCalls_FailsBeforeCommit()
     {
+        // Arrange
         var (runner, provider) = CreateHost("time-db");
+        var cluster = new MongoClusterKey("primary");
+        var options = new MongoTransactionOptions { TimeLimit = TimeSpan.FromMilliseconds(30) };
+
+        // Act
         var result = await runner.ExecuteAsync(
-            new MongoClusterKey("primary"),
+            cluster,
             async (_, ct) =>
             {
                 await Task.Delay(200, ct);
                 return Result.Ok(true);
             },
-            new MongoTransactionOptions { TimeLimit = TimeSpan.FromMilliseconds(30) });
+            options);
+        long? count = null;
+        if (result.IsFailed)
+        {
+            count = await CountAsync<Order>(provider, "orders");
+        }
 
+        // Assert
         result.ShouldBeFailure();
         result.ShouldHaveError<TransactionBudgetExceededError>();
-        (await CountAsync<Order>(provider, "orders")).ShouldBe(0);
+        count.ShouldBe(0);
     }
 
     [Test]
     public async Task Transaction_NestedExecuteAsync_InnerCommitsWhenOuterAborts()
     {
+        // Arrange
         var (runner, provider) = CreateHost("nested-db");
-        var result = await runner.ExecuteAsync(new MongoClusterKey("primary"), async (tx, ct) =>
+        var cluster = new MongoClusterKey("primary");
+
+        // Act
+        var result = await runner.ExecuteAsync(cluster, async (tx, ct) =>
         {
             var orders = tx.Repositories.GetRepository<Order>("orders");
             (await orders.StoreAsync(new Order { Name = "outer" }, ct)).ShouldBeSuccess();
 
-            var inner = await runner.ExecuteAsync(new MongoClusterKey("primary"), async (innerTx, innerCt) =>
+            var inner = await runner.ExecuteAsync(cluster, async (innerTx, innerCt) =>
             {
                 var payments = innerTx.Repositories.GetRepository<Payment>("payments");
                 (await payments.StoreAsync(new Payment { Name = "inner" }, innerCt)).ShouldBeSuccess();
@@ -419,26 +588,40 @@ public partial class TransactionRunnerTests
             inner.ShouldBeSuccess();
             return Result.Fail<bool>("abort outer");
         });
+        long? orderCount = null;
+        long? paymentCount = null;
+        if (result.IsFailed)
+        {
+            orderCount = await CountAsync<Order>(provider, "orders");
+            paymentCount = await CountAsync<Payment>(provider, "payments");
+        }
 
+        // Assert
         result.ShouldBeFailure();
-        (await CountAsync<Order>(provider, "orders")).ShouldBe(0);
-        (await CountAsync<Payment>(provider, "payments")).ShouldBe(1);
+        orderCount.ShouldBe(0);
+        paymentCount.ShouldBe(1);
     }
 
     [Test]
     [CancelAfter(180_000)]
     public async Task Transaction_StandaloneServer_ReturnsFailureInsteadOfThrowing()
     {
+        // Arrange
         await using var standalone = MongoTestImages.CreateStandalone();
         await standalone.StartAsync();
-        var (runner, _) = CreateHost("standalone-db", standalone.GetConnectionString());
+        var connectionString = standalone.GetConnectionString();
+        var (runner, _) = CreateHost("standalone-db", connectionString);
+        var cluster = new MongoClusterKey("primary");
 
-        var result = await runner.ExecuteAsync(new MongoClusterKey("primary"), async (tx, ct) =>
+        // Act
+        var result = await runner.ExecuteAsync(cluster, async (tx, ct) =>
         {
             var orders = tx.Repositories.GetRepository<Order>("orders");
-            return (await orders.StoreAsync(new Order { Name = "alone" }, ct)).ToResult();
+            var stored = await orders.StoreAsync(new Order { Name = "alone" }, ct);
+            return stored.ToResult();
         });
 
+        // Assert
         result.ShouldBeFailure();
     }
 
