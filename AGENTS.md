@@ -102,7 +102,7 @@ If docs and code disagree, **code + tests + PublicAPI baselines** win, then upda
 
 Follow [CONTRIBUTING.md](CONTRIBUTING.md): .NET SDK 10.0.x, Docker for integration/benchmarks, Shouldly, PublicAPI baselines, roadmap script when ROADMAP changes, focused PRs, no secrets. Security reports go through [SECURITY.md](SECURITY.md), never a public issue.
 
-Preserve [`.editorconfig`](.editorconfig) on new C#. Verify changed files with the CONTRIBUTING `dotnet format --verify-no-changes` check. Do not mass-reformat unrelated files. CodeRabbit uses this file plus ADRs as review guidelines; do not fight those invariants in review replies without an ADR.
+Preserve [`.editorconfig`](.editorconfig) on new C#. Verify changed files with the CONTRIBUTING `dotnet format --verify-no-changes` check. Do not mass-reformat unrelated files. CodeRabbit uses this file, the cursor rules, `.editorconfig`, `SonarAnalyzer.globalconfig`, and ADRs as review guidelines; do not fight those invariants in review replies without an ADR.
 
 ## Security and OSS
 
