@@ -1,10 +1,12 @@
 using System.Diagnostics;
+using System.Text;
 
 namespace Dilcore.MongoDB.TestSupport;
 
 /// <summary>
 /// Packs the four library projects into a folder. A file lock keeps parallel test assemblies
-/// from packing the same projects at the same time.
+/// from packing the same projects at the same time, and a temp cache reuses a pack when sources
+/// have not changed.
 /// </summary>
 public static class PackagePacker
 {
@@ -12,6 +14,7 @@ public static class PackagePacker
 
     /// <summary>
     /// Packs every project under <c>src/</c> into <paramref name="destination"/> with the locked restore.
+    /// A later call copies the cached packages when the sources are unchanged.
     /// </summary>
     /// <param name="destination">Directory that receives the <c>.nupkg</c> files. Created when missing.</param>
     public static void Pack(string destination)
@@ -19,7 +22,90 @@ public static class PackagePacker
         Directory.CreateDirectory(destination);
 
         using var packLock = AcquirePackLock();
-        PackSources(destination);
+        EnsureCachedPackages();
+        CopyCachedPackages(destination);
+    }
+
+    private static void EnsureCachedPackages()
+    {
+        var cache = CacheDirectory();
+        Directory.CreateDirectory(cache);
+        var stamp = SourceStamp();
+        var stampPath = Path.Join(cache, "stamp.txt");
+        var packages = Directory.GetFiles(cache, "*.nupkg");
+        var cachedStamp = File.Exists(stampPath) ? File.ReadAllText(stampPath) : string.Empty;
+        if (cachedStamp == stamp && packages.Length == 4)
+        {
+            return;
+        }
+
+        ClearCache(cache, stampPath);
+        PackSources(cache);
+        File.WriteAllText(stampPath, stamp);
+    }
+
+    private static void ClearCache(string cache, string stampPath)
+    {
+        if (File.Exists(stampPath))
+        {
+            File.Delete(stampPath);
+        }
+
+        DeletePackages(cache);
+    }
+
+    private static void DeletePackages(string cache)
+    {
+        var packages = Directory.GetFiles(cache, "*.nupkg");
+        foreach (var package in packages)
+        {
+            File.Delete(package);
+        }
+    }
+
+    private static void CopyCachedPackages(string destination)
+    {
+        var packages = Directory.GetFiles(CacheDirectory(), "*.nupkg");
+        foreach (var package in packages)
+        {
+            var name = Path.GetFileName(package);
+            var target = Path.Join(destination, name);
+            File.Copy(package, target, true);
+        }
+    }
+
+    private static string CacheDirectory()
+        => Path.Join(Path.GetTempPath(), "dilcore-mongodb-nupkg-cache");
+
+    private static string SourceStamp()
+    {
+        var root = RepoLocator.FindRepoRoot();
+        var src = Path.Join(root, "src");
+        var discovered = Directory.GetFiles(src, "*.*", SearchOption.AllDirectories);
+        var readme = Path.Join(root, "README.md");
+        var packageVersions = Path.Join(root, "Directory.Packages.props");
+        var buildProps = Path.Join(root, "src", "Directory.Build.props");
+        var sources = discovered
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                && !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .Append(readme)
+            .Append(packageVersions)
+            .Append(buildProps)
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToArray();
+
+        var builder = new StringBuilder();
+        foreach (var file in sources)
+        {
+            var relative = Path.GetRelativePath(root, file);
+            var ticks = File.GetLastWriteTimeUtc(file).Ticks;
+            builder.Append(relative);
+            builder.Append(':');
+            builder.Append(ticks);
+            builder.Append('\n');
+        }
+
+        return builder.ToString();
     }
 
     private static FileStream AcquirePackLock()

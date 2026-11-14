@@ -28,7 +28,7 @@ DI lifetime tests build the provider with `ValidateScopes` and `ValidateOnBuild`
 
 ## Package and consumer checks
 
-`PackageTests` packs `src/` with a locked restore and opens each `.nupkg`. It expects the README, the `lib/net10.0` assembly, the XML docs file, the declared package dependencies, and no `PublicAPI` baselines or connection strings.
+`PackageTests` packs `src/` with a locked restore and opens each `.nupkg`. A later pack on the same machine reuses that output when the sources are unchanged, so the consumer test does not pack again. It expects the README, the `lib/net10.0` assembly, the XML docs file, the declared package dependencies, and no `PublicAPI` baselines or connection strings.
 
 `ConsumerTests` packs the same way, writes a temporary project that references the package from that folder, and runs `AddMongoDb` with `ValidateScopes` and `ValidateOnBuild`. A placeholder connection string is enough. The test does not start a server.
 
