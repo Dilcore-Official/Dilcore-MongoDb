@@ -11,35 +11,10 @@ using Dilcore.MongoDB.Abstractions.Provisioning;
 using Dilcore.MongoDB.Extensions;
 using FluentResults;
 using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Driver;
 
-public sealed class MetricsCollectionStep : IProvisioningStep
-{
-    public string Name => "metrics-timeseries";
-
-    public async Task<Result<ProvisioningStepResult>> ExecuteAsync(
-        IMongoDatabaseResolver databaseResolver,
-        bool apply,
-        CancellationToken cancellationToken = default)
-    {
-        // The resolver applies the same prefix pipeline as the repositories.
-        var database = await databaseResolver.GetDatabaseAsync(new MongoDatabaseKey("telemetry"), cancellationToken);
-        if (database.IsFailed)
-            return database.ToResult();
-
-        // DryRun (apply == false) must not change anything.
-        return Result.Ok(new ProvisioningStepResult
-        {
-            Name = Name,
-            Action = apply ? "applied" : "would-apply",
-            Details = database.Value.DatabaseNamespace.DatabaseName
-        });
-    }
-}
-
-public sealed class Metric : IDocumentEntity<Guid>
-{
-    public Guid Id { get; set; }
-}
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -51,6 +26,63 @@ services.AddMongoDb(mongo => mongo
 
 // Register after AddMongoDb.
 services.AddSingleton<IProvisioningStep, MetricsCollectionStep>();
+
+public sealed class MetricsCollectionStep : IProvisioningStep
+{
+    private const string TimeSeriesName = "metrics_ts";
+
+    public string Name => "metrics-timeseries";
+
+    public async Task<Result<ProvisioningStepResult>> ExecuteAsync(
+        IMongoDatabaseResolver databaseResolver,
+        bool apply,
+        CancellationToken cancellationToken = default)
+    {
+        // The resolver applies the same prefix pipeline as the repositories.
+        var databaseKey = new MongoDatabaseKey("telemetry");
+        var database = await databaseResolver.GetDatabaseAsync(databaseKey, cancellationToken);
+        if (database.IsFailed)
+        {
+            return database.ToResult();
+        }
+
+        // "metrics" is a bound collection, so built-in provisioning already created it as an ordinary
+        // collection. A time-series step must use a name that no AddDocumentBinding declares.
+        var names = await database.Value.ListCollectionNamesAsync(cancellationToken: cancellationToken);
+        var existing = await names.ToListAsync(cancellationToken);
+        if (existing.Contains(TimeSeriesName))
+        {
+            return Result.Ok(new ProvisioningStepResult
+            {
+                Name = Name,
+                Action = "skip",
+                Details = database.Value.DatabaseNamespace.DatabaseName
+            });
+        }
+
+        // DryRun (apply == false) must not change anything.
+        if (apply)
+        {
+            var options = new CreateCollectionOptions
+            {
+                TimeSeriesOptions = new TimeSeriesOptions("timestamp")
+            };
+            await database.Value.CreateCollectionAsync(TimeSeriesName, options, cancellationToken);
+        }
+
+        return Result.Ok(new ProvisioningStepResult
+        {
+            Name = Name,
+            Action = apply ? "create" : "would-create",
+            Details = database.Value.DatabaseNamespace.DatabaseName
+        });
+    }
+}
+
+public sealed class Metric : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+}
 ```
 
 ## Use
@@ -68,7 +100,7 @@ var report = await provisioner.ApplyAsync(cancellationToken);
 var custom = report.Value.Steps.Single(s => s.Name == "metrics-timeseries");
 ```
 
-Create a time series collection from a step with `database.Value.CreateCollectionAsync(name, new CreateCollectionOptions { TimeSeriesOptions = ... })`, after checking whether it already exists.
+Built-in provisioning creates every bound collection as an ordinary collection before custom steps run. A time-series step must use a name that no `AddDocumentBinding` declares, and it must check whether that collection already exists before creating it with `database.Value.CreateCollectionAsync(name, new CreateCollectionOptions { TimeSeriesOptions = ... })`.
 
 ## Handle failures
 

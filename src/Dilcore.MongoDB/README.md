@@ -73,7 +73,8 @@ using Dilcore.MongoDB.Abstractions.Provisioning;
 
 using var scope = app.Services.CreateScope();
 var provisioner = scope.ServiceProvider.GetRequiredService<IMongoDbProvisioner>();
-await provisioner.ApplyAsync();
+var cancellationToken = CancellationToken.None;
+await provisioner.ApplyAsync(cancellationToken);
 ```
 
 Inject the repository and use it. Failures come back as typed errors:
@@ -86,7 +87,7 @@ using MongoDB.Driver;
 
 public sealed class OrderService(IGenericRepository<Order> orders)
 {
-    public async Task<Result<Order>> CreateAsync(Order order, CancellationToken cancellationToken)
+    public async Task<Result<Order>> CreateAsync(Order order, CancellationToken cancellationToken = default)
     {
         var stored = await orders.StoreAsync(order, cancellationToken);
 
@@ -98,8 +99,12 @@ public sealed class OrderService(IGenericRepository<Order> orders)
         return stored;
     }
 
-    public Task<Result<Order>> FindAsync(Guid id, CancellationToken cancellationToken)
-        => orders.GetAsync(Builders<Order>.Filter.Eq(x => x.Id, id), cancellationToken);
+    public Task<Result<Order>> FindAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<Order>.Filter.Eq(x => x.Id, id);
+
+        return orders.GetAsync(filter, cancellationToken);
+    }
 }
 ```
 

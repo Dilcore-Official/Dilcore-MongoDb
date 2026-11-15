@@ -9,11 +9,8 @@ using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
-public sealed class Order : IDocumentEntity<Guid>
-{
-    public Guid Id { get; set; }
-    public string Sku { get; set; } = "";
-}
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -29,6 +26,12 @@ services.AddMongoDb(mongo => mongo
             .WithCollectionName("orders")
             .WithNamespacePrefix("feature"));
     }));
+
+public sealed class Order : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string Sku { get; set; } = "";
+}
 ```
 
 ## Use
@@ -61,7 +64,7 @@ public sealed class OrderCollections(
     IMongoDatabaseResolver databases)
 {
     // Plain driver calls. No repository policies apply: no soft delete, ETag, audit or id generation.
-    public async Task<long> CountBySkuAsync(string sku, CancellationToken cancellationToken)
+    public async Task<long> CountBySkuAsync(string sku, CancellationToken cancellationToken = default)
     {
         var filter = Builders<Order>.Filter.Eq(x => x.Sku, sku);
 
@@ -69,33 +72,43 @@ public sealed class OrderCollections(
     }
 
     // The typed collection from the factory returns a Result, so a failure is a value.
-    public async Task<Result<IMongoCollection<Order>>> OrdersAsync(CancellationToken cancellationToken)
-        => await collections.GetCollectionAsync<Order>(new MongoDocumentBindingKey("orders"), cancellationToken);
+    public Task<Result<IMongoCollection<Order>>> GetOrdersCollectionAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var bindingKey = new MongoDocumentBindingKey("orders");
+
+        return collections.GetCollectionAsync<Order>(bindingKey, cancellationToken);
+    }
 
     // A collection that has no binding. Any logical name works, the database key picks the database.
-    public async Task<Result> AuditAsync(string message, CancellationToken cancellationToken)
+    public async Task<Result> WriteAuditAsync(string message, CancellationToken cancellationToken = default)
     {
+        var databaseKey = new MongoDatabaseKey("shop");
         var resolved = await collections.GetCollectionAsync(
-            new MongoDatabaseKey("shop"), "audit-log", cancellationToken: cancellationToken);
+            databaseKey, "audit-log", cancellationToken: cancellationToken);
         if (resolved.IsFailed)
+        {
             return resolved.ToResult();
+        }
 
-        await resolved.Value.InsertOneAsync(new BsonDocument("message", message), cancellationToken: cancellationToken);
+        var document = new BsonDocument("message", message);
+        await resolved.Value.InsertOneAsync(document, cancellationToken: cancellationToken);
 
         return Result.Ok();
     }
 
     // The physical name only, for logging or as a $lookup or $merge target.
-    public async Task<string?> PhysicalNameAsync(CancellationToken cancellationToken)
+    public async Task<string?> ResolvePhysicalNameAsync(CancellationToken cancellationToken = default)
     {
+        var databaseKey = new MongoDatabaseKey("shop");
         var name = await collections.ResolveCollectionNameAsync(
-            new MongoDatabaseKey("shop"), "audit-log", cancellationToken: cancellationToken);
+            databaseKey, "audit-log", cancellationToken: cancellationToken);
 
         return name.IsSuccess ? name.Value : null;
     }
 
     // The keyed database for collections you name yourself. Note that the name is NOT prefixed here.
-    public async Task<IReadOnlyList<string>> CollectionNamesAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<string>> GetCollectionNamesAsync(CancellationToken cancellationToken = default)
     {
         var names = await database.ListCollectionNamesAsync(cancellationToken: cancellationToken);
 
@@ -103,16 +116,17 @@ public sealed class OrderCollections(
     }
 
     // The resolver returns a Result instead of throwing.
-    public async Task<string?> DatabaseNameAsync(CancellationToken cancellationToken)
+    public async Task<string?> ResolveDatabaseNameAsync(CancellationToken cancellationToken = default)
     {
-        var resolved = await databases.GetDatabaseAsync(new MongoDatabaseKey("shop"), cancellationToken);
+        var databaseKey = new MongoDatabaseKey("shop");
+        var resolved = await databases.GetDatabaseAsync(databaseKey, cancellationToken);
 
         return resolved.IsSuccess ? resolved.Value.DatabaseNamespace.DatabaseName : null;
     }
 }
 ```
 
-With the registration above, `OrdersAsync` gives `catalog_shop.feature_orders`, the audit collection is `catalog_shop.audit-log`, and `DatabaseNameAsync` returns `catalog_shop`. Under a [tenant prefix resolver](multi-tenant-databases.md) the same calls return the names of the current tenant.
+With the registration above, `GetOrdersCollectionAsync` gives `catalog_shop.feature_orders`, the audit collection is `catalog_shop.audit-log`, and `ResolveDatabaseNameAsync` returns `catalog_shop`. Under a [tenant prefix resolver](multi-tenant-databases.md) the same calls return the names of the current tenant.
 
 Pass a `staticPrefix` as the third argument of the untyped `GetCollectionAsync` and `ResolveCollectionNameAsync` to prefix a collection that has no binding, for example `staticPrefix: "feature"` gives `feature_audit-log`.
 

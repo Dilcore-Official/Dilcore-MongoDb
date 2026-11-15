@@ -10,12 +10,8 @@ using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
-public sealed class Invoice : IDocumentEntity<Guid>, IHasConcurrencyToken
-{
-    public Guid Id { get; set; }
-    public long ETag { get; set; }      // managed by the repository
-    public string Memo { get; set; } = "";
-}
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -26,6 +22,13 @@ services.AddMongoDb(mongo => mongo
             .WithCollectionName("invoices")
             .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
     }));
+
+public sealed class Invoice : IDocumentEntity<Guid>, IHasConcurrencyToken
+{
+    public Guid Id { get; set; }
+    public long ETag { get; set; }      // managed by the repository
+    public string Memo { get; set; } = "";
+}
 ```
 
 ## Use
@@ -38,17 +41,19 @@ using FluentResults;
 
 public static class ErrorAdvice
 {
-    public static string For(IError error)
+    public static string GetAdvice(IError error)
     {
         if (error is not MongoOperationError typed)
+        {
             return "unexpected: log it and return a generic failure";
+        }
 
         return typed.Code switch
         {
             DocumentNotFoundError.ErrorCode => "not found: do not retry",
             ConcurrencyConflictError.ErrorCode => "stale copy: reload, reapply, retry once",
             DuplicateKeyError.ErrorCode => "already exists: do not retry",
-            TransientWriteError.ErrorCode => "temporary: retry with backoff",
+            TransientWriteError.ErrorCode => "outcome unknown: reconcile, or retry an idempotent write",
             WriteConcernFailureError.ErrorCode => "unconfirmed: the write may have been applied",
             DocumentTooLargeError.ErrorCode => "too big: shrink the document, do not retry",
             JsonConversionError.ErrorCode => "bad JSON: reject the input",
@@ -77,13 +82,13 @@ All types live in `Dilcore.MongoDB.Abstractions.Results`. The message is the dri
 
 ### `DuplicateKeyError` (`duplicate_key`)
 
-- **Why:** a write violated a unique index or the `_id` key (driver codes 11000 and 11001). It is returned for single writes and for a bulk write where the only failure is a duplicate.
+- **Why:** a write violated a unique index or the `_id` key (driver codes 11000 and 11001). Single writes return it, and so does the exception mapper for a bulk exception whose only reported failure is one duplicate. `IGenericBulkRepository.BulkStoreRangeAsync` returns `BulkWritePartialFailureError` instead, including when every failed item is a duplicate.
 - **Do:** return 409, or read the existing document. Retrying the same write fails again.
 
 ### `TransientWriteError` (`transient_write`)
 
-- **Why:** the driver labelled the failure as temporary: a primary election or failover, a network interruption, a transaction conflict with another transaction, or an unknown transaction commit result.
-- **Do:** retry with a short backoff and a limit. Retry a failed transaction as a whole. Make the write idempotent first when a duplicate would be harmful.
+- **Why:** the driver labelled the failure as temporary: a primary election or failover, a network interruption, a transaction conflict with another transaction, or an unknown transaction commit result. The write may already have been applied.
+- **Do:** retry only an idempotent operation, or read the current state and reconcile first. An unknown commit result is not proof that the write failed. Retry a failed transaction as a whole only when repeating it is safe.
 
 ### `WriteConcernFailureError` (`write_concern_failure`)
 
@@ -112,8 +117,8 @@ All types live in `Dilcore.MongoDB.Abstractions.Results`. The message is the dri
 
 ### `BulkWritePartialFailureError` (`bulk_write_partial_failure`)
 
-- **Why:** a bulk write had item failures. `Items` lists the items MongoDB rejected, each with its zero-based `Index`, `Succeeded` flag and `ErrorMessage`. With ordered writes the batch stops at the first failure. With unordered writes the other items still apply.
-- **Do:** read `Items`, retry or report the failed indexes. See [Write many documents at once](bulk-writes.md).
+- **Why:** a bulk write had item failures. `Items` has one entry per input document, not only the rejected writes. An entry can be successful (`Succeeded` is true), failed (`Succeeded` is false and `ErrorMessage` says why), or unprocessed (`ErrorMessage` is "The write was not processed."). An ordered failure leaves later items in that batch unprocessed. With unordered writes the other items in the failed batch can still apply, but a failure stops later chunks from running.
+- **Do:** read each entry's `Succeeded` and `ErrorMessage`. Do not assume that later items succeeded. Retry or report the failed indexes. See [Write many documents at once](bulk-writes.md).
 
 ### Errors that are not typed
 

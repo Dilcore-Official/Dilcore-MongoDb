@@ -5,17 +5,22 @@ The most likely combinations, each with comments that explain **why** a line is 
 Namespaces used below:
 
 ```csharp
+using System.Text.Json;                            // JsonElement
 using Dilcore.MongoDB.Abstractions;                // IDocumentEntity<T>, GuidIdGenerationStrategy, IMongoDbCollectionFactory
+using Dilcore.MongoDB.Abstractions.Json;           // JsonBsonConversionOptions, JsonBsonOutputMode
 using Dilcore.MongoDB.Abstractions.Keys;           // MongoClusterKey, MongoDatabaseKey, MongoDocumentBindingKey
 using Dilcore.MongoDB.Abstractions.Namespace;      // INamespacePrefixResolver, NamespaceResolutionRequest
-using Dilcore.MongoDB.Abstractions.Policies;        // IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
 using Dilcore.MongoDB.Abstractions.Options;        // KeysetPageRequest<T>, MongoBulkWriteOptions
+using Dilcore.MongoDB.Abstractions.Policies;       // IHasConcurrencyToken, ISoftDeletable, IAuditableDocument
 using Dilcore.MongoDB.Abstractions.Provisioning;   // IMongoDbProvisioner
 using Dilcore.MongoDB.Abstractions.Repositories;   // IGenericRepository<T>, IRepositoryResolver
 using Dilcore.MongoDB.Abstractions.Results;        // DocumentNotFoundError, DuplicateKeyError, ...
 using Dilcore.MongoDB.Abstractions.Transactions;   // IMongoDbTransactionRunner, MongoTransactionOptions
 using Dilcore.MongoDB.Extensions;                  // AddMongoDb
+using Dilcore.MongoDB.Repositories;                // GetAsync(id), GetListAsync(predicate)
+using Dilcore.MongoDB.SystemTextJson;              // AddSystemTextJsonDocuments, ISystemTextJsonDocumentStoreFactory
 using FluentResults;
+using MongoDB.Bson;                                // BsonDocument
 using MongoDB.Driver;
 ```
 
@@ -51,14 +56,18 @@ services.AddMongoDb(mongo => mongo
 public sealed class OrderService(IGenericRepository<Order> orders)   // injectable directly: Order has one binding
 {
     // StoreAsync inserts when Id is empty and updates when it is set. ETag and audit fields are staged for you.
-    public Task<Result<Order>> CreateAsync(Order order, CancellationToken cancellationToken)
+    public Task<Result<Order>> CreateAsync(Order order, CancellationToken cancellationToken = default)
         => orders.StoreAsync(order, cancellationToken);
 
-    public Task<Result<Order>> FindAsync(Guid id, CancellationToken cancellationToken)
-        => orders.GetAsync(Builders<Order>.Filter.Eq(x => x.Id, id), cancellationToken);
+    public Task<Result<Order>> FindAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<Order>.Filter.Eq(x => x.Id, id);
+
+        return orders.GetAsync(filter, cancellationToken);
+    }
 
     // A stale ETag fails with ConcurrencyConflictError. Do not retry blindly: re-read the document first.
-    public Task<Result<Order>> ReplaceAsync(Order changed, CancellationToken cancellationToken)
+    public Task<Result<Order>> ReplaceAsync(Order changed, CancellationToken cancellationToken = default)
         => orders.ReplaceAsync(changed, cancellationToken);
 }
 ```
@@ -73,19 +82,28 @@ public static class ResultHttp
     public static IResult ToHttp<T>(this Result<T> result)
     {
         if (result.IsSuccess)
+        {
             return Results.Ok(result.Value);
+        }
 
         // Order matters only when one result can carry several errors; check the most specific first.
         if (result.HasError<DocumentNotFoundError>())
+        {
             return Results.NotFound();
+        }
 
         // Stale ETag or a duplicate key are both "the caller's view is out of date" for an API client.
         if (result.HasError<ConcurrencyConflictError>() || result.HasError<DuplicateKeyError>())
+        {
             return Results.Conflict();
+        }
 
-        // Transient write errors are safe to retry. Tell the client so.
+        // The outcome may be unknown, including an unknown commit result that already succeeded.
+        // Retry only an idempotent operation, or reconcile the write before trying again.
         if (result.HasError<TransientWriteError>())
+        {
             return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+        }
 
         // Anything else is unexpected. Log the errors, do not leak them to the client.
         return Results.Problem();
@@ -104,21 +122,28 @@ db.AddDocumentBinding<Order>("orders", d => d
         Builders<Order>.IndexKeys.Ascending(x => x.Sku),
         // Always name the index. Apply compares by name to detect drift and removals.
         new CreateIndexOptions { Name = "orders_sku", Unique = true }))
-    // Adds a named expire-after index on ExpiresAt. Documents are removed by the server after one day.
+    // Adds a named expire-after index on ExpiresAt. One day is added to that timestamp.
+    // The server may delete the document after it becomes eligible.
     .WithCollectionItemsTimeToLive(TimeSpan.FromDays(1), x => x.ExpiresAt));
 
 // In Program.cs, after the host is built and before it starts serving.
-using (var scope = app.Services.CreateScope())
+using var scope = app.Services.CreateScope();
+var provisioner = scope.ServiceProvider.GetRequiredService<IMongoDbProvisioner>();
+
+// Preview first. Apply can remove indexes that are not on the binding, including unique indexes.
+var preview = await provisioner.DryRunAsync();
+if (preview.IsFailed)
 {
-    var provisioner = scope.ServiceProvider.GetRequiredService<IMongoDbProvisioner>();
-
-    // Optional but wise for an existing database: preview what would change.
-    var preview = await provisioner.DryRunAsync();
-
-    var report = await provisioner.ApplyAsync();
-    if (report.IsFailed)
-        throw new InvalidOperationException("MongoDB provisioning failed.");   // fail closed at startup
+    throw new InvalidOperationException("MongoDB provisioning preview failed.");
 }
+
+var wouldRemove = preview.Value.Steps.Any(step => step.Action == "would-remove");
+if (wouldRemove)
+{
+    throw new InvalidOperationException("Review the index removal and approve it before applying.");
+}
+
+// Keep the preview for that review. Do not call ApplyAsync until the removal is explicitly approved.
 ```
 
 ## 4. Several clusters and databases
@@ -143,11 +168,13 @@ services.AddMongoDb(mongo => mongo
 
 public sealed class ArchiveService(IRepositoryResolver repositories)
 {
-    public async Task<Result> ArchiveAsync(Order order, CancellationToken cancellationToken)
+    public async Task<Result> ArchiveAsync(Order order, CancellationToken cancellationToken = default)
     {
         // Resolve by binding key because two bindings share the Order type.
         var archived = repositories.GetRepository<Order>("archived-orders");
+
         var stored = await archived.StoreAsync(order, cancellationToken);
+
         return stored.ToResult();
     }
 }
@@ -167,8 +194,10 @@ public sealed class TenantDatabasePrefixResolver(ITenantAccessor tenants) : INam
         var tenant = await tenants.GetCurrentAsync(cancellationToken);
 
         // Fail closed. Never fall back to "" or a default tenant: that would read and write a shared database.
-        if (tenant is null)
+        if (tenant is null || string.IsNullOrWhiteSpace(tenant.Id))
+        {
             return Result.Fail<string?>("Tenant context is required.");
+        }
 
         return Result.Ok<string?>(tenant.Id);
     }
@@ -194,9 +223,17 @@ Needs a replica set. Repositories come from the transaction context.
 ```csharp
 public sealed class CheckoutService(IMongoDbTransactionRunner runner)
 {
-    public Task<Result<Guid>> PlaceOrderAsync(Order order, CancellationToken cancellationToken)
-        => runner.WithTransactionAsync(
-            new MongoClusterKey("primary"),
+    public Task<Result<Guid>> PlaceOrderAsync(Order order, CancellationToken cancellationToken = default)
+    {
+        var clusterKey = new MongoClusterKey("primary");
+        var options = new MongoTransactionOptions
+        {
+            MaxOperations = 100,                     // client-side budget, tighter than the 1000 default
+            TimeLimit = TimeSpan.FromSeconds(10)
+        };
+
+        return runner.WithTransactionAsync(
+            clusterKey,
             async (tx, ct) =>
             {
                 // Take repositories from the context, not from DI, so the writes join this session.
@@ -205,20 +242,22 @@ public sealed class CheckoutService(IMongoDbTransactionRunner runner)
 
                 var stored = await orders.StoreAsync(order, ct);
                 if (stored.IsFailed)
+                {
                     return stored.ToResult();            // a failed Result aborts the transaction
+                }
 
-                var payment = await payments.StoreAsync(new Payment { OrderId = stored.Value.Id }, ct);
+                var paymentDocument = new Payment { OrderId = stored.Value.Id };
+                var payment = await payments.StoreAsync(paymentDocument, ct);
                 if (payment.IsFailed)
+                {
                     return payment.ToResult();
+                }
 
                 return Result.Ok(stored.Value.Id);
             },
-            new MongoTransactionOptions
-            {
-                MaxOperations = 100,                     // client-side budget, tighter than the 1000 default
-                TimeLimit = TimeSpan.FromSeconds(10)
-            },
+            options,
             cancellationToken);
+    }
 }
 ```
 
@@ -226,19 +265,21 @@ The callback can run again after a transient error. Do not send e-mails or call 
 
 ## 7. Keyset paging
 
-Stable pages that do not skip or repeat rows when sort values collide.
+The `_id` tie-breaker orders equal sort values. Requests do not share a snapshot, so a sort value that changes between pages can still skip or repeat documents. Prefer an immutable sort key.
 
 ```csharp
-public async Task<Result<KeysetPage<Order>>> ListAsync(string? cursor, CancellationToken cancellationToken)
-    => await orders.GetPageAsync(
-        new KeysetPageRequest<Order>
-        {
-            Filter = Builders<Order>.Filter.Empty,
-            Sort = Builders<Order>.Sort.Descending(x => x.CreatedAt),   // the cursor is bound to this sort
-            PageSize = 50,
-            Cursor = cursor                                              // NextCursor of the previous page, or null for the first
-        },
-        cancellationToken);
+public Task<Result<KeysetPage<Order>>> ListAsync(string? cursor, CancellationToken cancellationToken = default)
+{
+    var request = new KeysetPageRequest<Order>
+    {
+        Filter = Builders<Order>.Filter.Empty,
+        Sort = Builders<Order>.Sort.Descending(x => x.CreatedAt),   // the cursor is bound to this sort
+        PageSize = 50,
+        Cursor = cursor                                              // NextCursor of the previous page, or null for the first
+    };
+
+    return orders.GetPageAsync(request, cancellationToken);
+}
 
 // The caller sends page.Value.NextCursor back while page.Value.HasMore is true.
 // A malformed cursor, or a cursor used with another sort, returns a failed Result instead of throwing.
@@ -258,17 +299,22 @@ services.AddSystemTextJsonDocuments();
 
 public sealed class PayloadService(ISystemTextJsonDocumentStoreFactory stores)
 {
-    public async Task<Result<JsonElement>> RoundTripAsync(JsonElement payload, CancellationToken cancellationToken)
+    public async Task<Result<JsonElement>> RoundTripAsync(
+        JsonElement payload,
+        CancellationToken cancellationToken = default)
     {
-        var store = stores.Create(new MongoDatabaseKey("app"));
+        var databaseKey = new MongoDatabaseKey("app");
+        var store = stores.Create(databaseKey);
 
         // The collection is a plain string. No typed binding is needed.
-        var inserted = await store.InsertAsync("payloads", payload);
+        var inserted = await store.InsertAsync("payloads", payload, cancellationToken: cancellationToken);
         if (inserted.IsFailed)
+        {
             return inserted.ToResult();
+        }
 
         // The result is Canonical Extended JSON unless you pass relaxed options (see below).
-        return await store.GetJsonElementByIdAsync("payloads", inserted.Value["_id"]);
+        return await store.GetJsonElementByIdAsync("payloads", inserted.Value["_id"], cancellationToken: cancellationToken);
     }
 }
 ```
@@ -282,9 +328,13 @@ Enable the bulk repository on the binding first.
 ```csharp
 db.AddDocumentBinding<Order>("orders", d => d.WithCollectionName("orders").WithBulkRepository());
 
-public async Task<Result> ImportAsync(IReadOnlyList<Order> batch, IGenericBulkRepository<Order> bulk, CancellationToken cancellationToken)
+public async Task<Result> ImportAsync(
+    IReadOnlyList<Order> batch,
+    IGenericBulkRepository<Order> bulk,
+    CancellationToken cancellationToken = default)
 {
-    var result = await bulk.BulkStoreRangeAsync(batch, new MongoBulkWriteOptions { IsOrdered = false }, cancellationToken);
+    var options = new MongoBulkWriteOptions { IsOrdered = false };
+    var result = await bulk.BulkStoreRangeAsync(batch, options, cancellationToken);
 
     // Some items can succeed while others fail. The error lists every item by its index in the input.
     if (result.HasError<BulkWritePartialFailureError>())
@@ -302,17 +352,27 @@ public async Task<Result> ImportAsync(IReadOnlyList<Order> batch, IGenericBulkRe
 ```csharp
 public sealed class ReportService(IMongoDbCollectionFactory collections)
 {
-    public async Task<IReadOnlyList<BsonDocument>> TopSkusAsync(CancellationToken cancellationToken)
+    public async Task<Result<IReadOnlyList<BsonDocument>>> GetTopSkusAsync(
+        CancellationToken cancellationToken = default)
     {
         // The factory resolves the physical name through the same namespace pipeline (prefixes, tenants) as the repositories.
-        var collection = (await collections.GetCollectionAsync<Order>(new MongoDocumentBindingKey("orders"))).Value;
+        var bindingKey = new MongoDocumentBindingKey("orders");
+        var resolved = await collections.GetCollectionAsync<Order>(bindingKey, cancellationToken);
+        if (resolved.IsFailed)
+        {
+            return resolved.ToResult();
+        }
+
+        var collection = resolved.Value;
 
         // Aggregation stays a driver API. Do not hide it behind your own abstraction.
-        return await collection.Aggregate()
+        var top = await collection.Aggregate()
             .Group(new BsonDocument { { "_id", "$sku" }, { "count", new BsonDocument("$sum", 1) } })
             .SortByDescending(x => x["count"])
             .Limit(10)
             .ToListAsync(cancellationToken);
+
+        return Result.Ok<IReadOnlyList<BsonDocument>>(top);
     }
 }
 ```
@@ -326,16 +386,82 @@ public sealed class AuditWriter(
     [FromKeyedServices("orders")] IMongoCollection<Order> orders,   // key = binding key, scoped
     IMongoDbCollectionFactory collections)
 {
-    public async Task WriteAsync(string message, CancellationToken cancellationToken)
+    public async Task WriteAsync(string message, CancellationToken cancellationToken = default)
     {
         // Untyped collection by logical name. The namespace pipeline still applies.
-        var audit = await collections.GetCollectionAsync(new MongoDatabaseKey("shop"), "audit-log");
+        var databaseKey = new MongoDatabaseKey("shop");
+        var audit = await collections.GetCollectionAsync(databaseKey, "audit-log", cancellationToken: cancellationToken);
         if (audit.IsFailed)
+        {
             return;
+        }
 
-        await audit.Value.InsertOneAsync(new BsonDocument("message", message), cancellationToken: cancellationToken);
+        var document = new BsonDocument("message", message);
+        await audit.Value.InsertOneAsync(document, cancellationToken: cancellationToken);
     }
 }
 ```
 
 A raw collection has no soft-delete filter, ETag check, audit stamp or id generation.
+
+## 11. Expiring documents with TTL
+
+`WithCollectionItemsTimeToLive` only records the index. Call `IMongoDbProvisioner.ApplyAsync` before serving traffic, or nothing expires. The monitor deletes on a background pass, so a read that must hide a document at its deadline filters on that timestamp.
+
+```csharp
+public sealed class UserSession : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string UserName { get; set; } = "";
+    public DateTime? ExpiresAt { get; set; }   // UTC deadline, or null to keep the document
+}
+
+public sealed class AuditEntry : IDocumentEntity<Guid>, IAuditableDocument
+{
+    public Guid Id { get; set; }
+    public DateTime CreatedAt { get; set; }    // stamped in UTC by the repository on insert
+    public DateTime UpdatedAt { get; set; }
+    public string Action { get; set; } = "";
+}
+
+db.AddDocumentBinding<UserSession>("sessions", d => d
+    .WithCollectionName("sessions")
+    .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7)
+    // Zero means "expire at ExpiresAt". A null field is not a BSON Date, so the monitor skips it.
+    .WithCollectionItemsTimeToLive(TimeSpan.Zero, x => x.ExpiresAt));
+
+db.AddDocumentBinding<AuditEntry>("audit-entries", d => d
+    .WithCollectionName("audit_entries")
+    .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7)
+    // Eligible 30 days after CreatedAt. The index is named audit_entries_ttl.
+    .WithCollectionItemsTimeToLive(TimeSpan.FromDays(30), x => x.CreatedAt));
+
+public sealed class SessionService(IGenericRepository<UserSession> sessions)
+{
+    // Slide the deadline, or pin the session by removing the date.
+    public Task<Result<UserSession>> ExtendAsync(
+        Guid id,
+        DateTime expiresAt,
+        CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<UserSession>.Filter.Eq(x => x.Id, id);
+        var update = Builders<UserSession>.Update.Set(x => x.ExpiresAt, expiresAt);
+
+        return sessions.PatchAsync(filter, update, cancellationToken);
+    }
+
+    public Task<Result<UserSession>> PinAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<UserSession>.Filter.Eq(x => x.Id, id);
+        var update = Builders<UserSession>.Update.Unset(x => x.ExpiresAt);
+
+        return sessions.PatchAsync(filter, update, cancellationToken);
+    }
+
+    // Excludes a past deadline immediately. Do not wait for the TTL monitor.
+    public Task<Result<IReadOnlyList<UserSession>>> ListActiveAsync(
+        DateTime utcNow,
+        CancellationToken cancellationToken = default)
+        => sessions.GetListAsync(x => x.ExpiresAt == null || x.ExpiresAt > utcNow, cancellationToken);
+}
+```

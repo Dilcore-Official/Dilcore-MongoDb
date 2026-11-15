@@ -73,7 +73,7 @@ public sealed class Order : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDe
 
 public sealed class OrderService(IGenericRepository<Order> orders)
 {
-    public Task<Result<Order>> CreateAsync(Order order, CancellationToken cancellationToken)
+    public Task<Result<Order>> CreateAsync(Order order, CancellationToken cancellationToken = default)
         => orders.StoreAsync(order, cancellationToken);
 }
 ```

@@ -11,21 +11,8 @@ using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 
-// A Guid document that also stamps created and updated times.
-public sealed class Note : IDocumentEntity<Guid>, IAuditableDocument
-{
-    public Guid Id { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
-    public string Text { get; set; } = "";
-}
-
-// An ObjectId document.
-public sealed class LegacyDoc : IDocumentEntity<ObjectId>
-{
-    public ObjectId Id { get; set; }
-    public string Name { get; set; } = "";
-}
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -41,6 +28,22 @@ services.AddMongoDb(mongo => mongo
         // No id generation call: the driver assigns the ObjectId on insert.
         db.AddDocumentBinding<LegacyDoc>("legacy", d => d.WithCollectionName("legacy"));
     }));
+
+// A Guid document that also stamps created and updated times.
+public sealed class Note : IDocumentEntity<Guid>, IAuditableDocument
+{
+    public Guid Id { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public string Text { get; set; } = "";
+}
+
+// An ObjectId document.
+public sealed class LegacyDoc : IDocumentEntity<ObjectId>
+{
+    public ObjectId Id { get; set; }
+    public string Name { get; set; } = "";
+}
 ```
 
 ## Use
@@ -51,7 +54,7 @@ using FluentResults;
 
 public sealed class NoteService(IGenericRepository<Note> notes)
 {
-    public async Task<Result<Note>> AddAsync(string text, CancellationToken cancellationToken)
+    public async Task<Result<Note>> AddAsync(string text, CancellationToken cancellationToken = default)
     {
         // The Id stays empty: the repository generates a v7 Guid and stamps CreatedAt / UpdatedAt.
         var note = new Note { Text = text };

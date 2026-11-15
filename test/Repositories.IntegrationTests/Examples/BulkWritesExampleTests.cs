@@ -20,25 +20,26 @@ public class BulkWritesExampleTests : ExampleIntegrationTests
 
     public sealed class ReadingImporter(IGenericBulkRepository<Reading> bulk)
     {
-        public async Task<Result> ImportAsync(IReadOnlyList<Reading> batch, CancellationToken cancellationToken)
+        public IReadOnlyList<int> FailedIndexes { get; private set; } = [];
+
+        public async Task<Result> ImportAsync(
+            IReadOnlyList<Reading> batch,
+            CancellationToken cancellationToken = default)
         {
             var options = new MongoBulkWriteOptions { IsOrdered = false };
 
             var result = await bulk.BulkStoreRangeAsync(batch, options, cancellationToken);
 
             var partial = result.Errors.OfType<BulkWritePartialFailureError>().FirstOrDefault();
-            if (partial is not null)
-            {
-                var failed = partial.Items.Where(i => !i.Succeeded).Select(i => i.Index);
-                FailedIndexes = failed.ToList();
-            }
+            var failed = partial is null
+                ? []
+                : partial.Items.Where(i => !i.Succeeded).Select(i => i.Index);
+            FailedIndexes = failed.ToList();
 
             return result.ToResult();
         }
 
-        public IReadOnlyList<int> FailedIndexes { get; private set; } = [];
-
-        public Task<Result> RemoveSensorAsync(string sensor, CancellationToken cancellationToken)
+        public Task<Result> RemoveSensorAsync(string sensor, CancellationToken cancellationToken = default)
             => bulk.BulkDeleteAsync(x => x.Sensor == sensor, cancellationToken);
     }
 
@@ -94,9 +95,10 @@ public class BulkWritesExampleTests : ExampleIntegrationTests
         await collection.Indexes.CreateOneAsync(new CreateIndexModel<Reading>(
             Builders<Reading>.IndexKeys.Ascending(x => x.Sensor),
             new CreateIndexOptions { Unique = true, Name = "sensor_unique" }));
+        await collection.InsertOneAsync(new Reading { Id = Guid.NewGuid(), Sensor = "a" });
         var batch = new List<Reading>
         {
-            new() { Sensor = "a" },
+            new() { Sensor = "x" },
             new() { Sensor = "a" },
             new() { Sensor = "b" }
         };
@@ -108,5 +110,30 @@ public class BulkWritesExampleTests : ExampleIntegrationTests
         result.ShouldBeFailure();
         result.HasError<BulkWritePartialFailureError>().ShouldBeTrue();
         importer.FailedIndexes.ShouldBe([1]);
+    }
+
+    [Test]
+    public async Task FailedIndexes_AreClearedByTheNextSuccessfulImport()
+    {
+        // Arrange
+        await using var provider = BuildProvider();
+        using var scope = provider.CreateScope();
+        var importer = ActivatorUtilities.CreateInstance<ReadingImporter>(scope.ServiceProvider);
+        var collections = scope.ServiceProvider.GetRequiredService<IMongoDbCollectionFactory>();
+        var resolved = await collections.GetCollectionAsync<Reading>(
+            new Abstractions.Keys.MongoDocumentBindingKey("readings"));
+        var collection = resolved.Value;
+        await collection.Indexes.CreateOneAsync(new CreateIndexModel<Reading>(
+            Builders<Reading>.IndexKeys.Ascending(x => x.Sensor),
+            new CreateIndexOptions { Unique = true, Name = "sensor_unique" }));
+        await collection.InsertOneAsync(new Reading { Id = Guid.NewGuid(), Sensor = "a" });
+        await importer.ImportAsync([new Reading { Sensor = "a" }], CancellationToken.None);
+
+        // Act
+        var succeeded = await importer.ImportAsync([new Reading { Sensor = "c" }], CancellationToken.None);
+
+        // Assert
+        succeeded.ShouldBeSuccess();
+        importer.FailedIndexes.ShouldBeEmpty();
     }
 }

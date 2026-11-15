@@ -14,13 +14,17 @@ public class SystemTextJsonExampleTests : ExampleIntegrationTests
 {
     public sealed class PayloadService(ISystemTextJsonDocumentStoreFactory stores)
     {
-        public async Task<Result<JsonElement>> RoundTripAsync(JsonElement payload, CancellationToken cancellationToken)
+        public async Task<Result<JsonElement>> RoundTripAsync(
+            JsonElement payload,
+            CancellationToken cancellationToken = default)
         {
             var store = stores.Create(new MongoDatabaseKey("app"));
 
             var inserted = await store.InsertAsync("payloads", payload, cancellationToken: cancellationToken);
             if (inserted.IsFailed)
+            {
                 return inserted.ToResult();
+            }
 
             // Reads return Canonical Extended JSON by default (numbers become {"$numberInt": "3"}).
             // Ask for relaxed output to get plain JSON back.

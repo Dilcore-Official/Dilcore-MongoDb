@@ -22,17 +22,27 @@ public class ProjectionsExampleTests : ExampleIntegrationTests
 
     public sealed class DirectoryService(IGenericProjectionRepository<Employee> employees)
     {
-        public Task<Result<IReadOnlyList<EmployeeSummary>>> ListAsync(string department, CancellationToken cancellationToken)
-            => employees.GetListAsync(
-                Builders<Employee>.Filter.Eq(x => x.Department, department),
-                x => new EmployeeSummary(x.Name, x.Department),
-                cancellationToken);
+        public Task<Result<IReadOnlyList<EmployeeSummary>>> ListAsync(
+            string department,
+            CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<Employee>.Filter.Eq(x => x.Department, department);
 
-        public Task<Result<EmployeeSummary>> FindAsync(Guid id, CancellationToken cancellationToken)
-            => employees.GetAsync(
-                Builders<Employee>.Filter.Eq(x => x.Id, id),
+            return employees.GetListAsync(
+                filter,
                 x => new EmployeeSummary(x.Name, x.Department),
                 cancellationToken);
+        }
+
+        public Task<Result<EmployeeSummary>> FindAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<Employee>.Filter.Eq(x => x.Id, id);
+
+            return employees.GetAsync(
+                filter,
+                x => new EmployeeSummary(x.Name, x.Department),
+                cancellationToken);
+        }
     }
 
     private ServiceProvider BuildProvider()

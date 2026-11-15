@@ -9,11 +9,8 @@ using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
-public sealed class Order : IDocumentEntity<Guid>
-{
-    public Guid Id { get; set; }
-    public string Sku { get; set; } = "";
-}
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -24,6 +21,12 @@ services.AddMongoDb(mongo => mongo
             .WithCollectionName("orders")
             .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
     }));
+
+public sealed class Order : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string Sku { get; set; } = "";
+}
 ```
 
 ## Use
@@ -39,19 +42,28 @@ public static class ResultStatus
     public static int ToStatusCode<T>(this Result<T> result)
     {
         if (result.IsSuccess)
+        {
             return 200;
+        }
 
         // Check the most specific error first when one result can carry several.
         if (result.HasError<DocumentNotFoundError>())
+        {
             return 404;
+        }
 
         // A stale ETag and a duplicate key both mean "the caller's view is out of date".
         if (result.HasError<ConcurrencyConflictError>() || result.HasError<DuplicateKeyError>())
+        {
             return 409;
+        }
 
-        // Transient write errors are safe to retry. Tell the client so.
+        // The write may already have been applied (including UnknownTransactionCommitResult).
+        // Tell the client to reconcile, or to retry only with an idempotency key.
         if (result.HasError<TransientWriteError>())
+        {
             return 503;
+        }
 
         // Anything else is unexpected. Log result.Errors, do not leak them to the client.
         return 500;

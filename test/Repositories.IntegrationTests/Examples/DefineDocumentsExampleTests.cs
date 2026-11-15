@@ -27,7 +27,7 @@ public class DefineDocumentsExampleTests : ExampleIntegrationTests
 
     public sealed class NoteService(IGenericRepository<Note> notes)
     {
-        public async Task<Result<Note>> AddAsync(string text, CancellationToken cancellationToken)
+        public async Task<Result<Note>> AddAsync(string text, CancellationToken cancellationToken = default)
         {
             var note = new Note { Text = text };
 

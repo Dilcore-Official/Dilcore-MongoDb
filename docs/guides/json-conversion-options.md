@@ -8,6 +8,9 @@ Choose how JSON maps to BSON types with `JsonBsonConversionOptions` and `IBsonJs
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
+
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
     .AddDatabase("app", db => db.OnCluster("primary")));
@@ -37,7 +40,9 @@ public sealed class JsonRoundTrip(IBsonJsonConverter converter)
 
         var parsed = converter.Parse(json, options);
         if (parsed.IsFailed)
+        {
             return parsed.ToResult();
+        }
 
         return converter.ToJson(parsed.Value, options);
     }

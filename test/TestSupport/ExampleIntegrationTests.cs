@@ -19,6 +19,11 @@ public abstract class ExampleIntegrationTests : BaseIntegrationTests
     [SetUp]
     public async Task ResetDatabasesAsync()
     {
-        await MongoDbContainer.ExecScriptAsync(DropApplicationDatabases);
+        var reset = await MongoDbContainer.ExecScriptAsync(DropApplicationDatabases);
+        if (reset.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"Failed to reset MongoDB test databases (exit code {reset.ExitCode}): {reset.Stderr}");
+        }
     }
 }

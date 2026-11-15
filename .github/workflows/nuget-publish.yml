@@ -10,9 +10,11 @@ name: 📦 Publish NuGet Packages
 #   preview = false            2.X.Y             the patch after the highest stable v2.* tag, or 2.0.0 if none
 #
 # All libraries are packed in the same run with the same version, so they are always released together.
-# On main a publishing run pushes the packages and, only after that succeeded, tags the commit vX.Y.Z and creates
-# a GitHub Release. dry_run = true tests the whole path (tests, pack, environment approval, OIDC login) and stops
-# before the push, the tag and the release; it works from any branch. From another branch without dry_run the workflow only packs and uploads an artifact.
+# On main a publishing run reserves vX.Y.Z-reserved on this commit, pushes the packages, and only after that
+# succeeded creates the final vX.Y.Z tag and the GitHub Release. A retry continues only when that reservation
+# already points at this commit. dry_run = true tests the whole path (tests, pack, environment approval, OIDC login)
+# and stops before the reservation, the push, the tag and the release; it works from any branch. From another
+# branch without dry_run the workflow only packs and uploads an artifact.
 # One-time setup (nuget.org policy, GitHub environment, NUGET_USER secret): CONTRIBUTING.md, "Releasing".
 
 on:
@@ -74,11 +76,54 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --tags --force --quiet
+          preview_final_re="^v${MAJOR_VERSION}\\.0\\.0-preview\\.[0-9]+$"
+          preview_reserved_re="^v${MAJOR_VERSION}\\.0\\.0-preview\\.[0-9]+-reserved$"
+          stable_final_re="^v${MAJOR_VERSION}\\.[0-9]+\\.[0-9]+$"
+          stable_reserved_re="^v${MAJOR_VERSION}\\.[0-9]+\\.[0-9]+-reserved$"
           if [[ "${PREVIEW}" == "true" ]]; then
-            last="$(git tag --list "v${MAJOR_VERSION}.0.0-preview.*" | sed -E 's/^.*-preview\.//' | grep -E '^[0-9]+$' | sort -n | tail -1 || true)"
+            reserved_re="${preview_reserved_re}"
+          else
+            reserved_re="${stable_reserved_re}"
+          fi
+
+          # A re-run of the same commit keeps the version it already reserved.
+          reuse=""
+          while IFS= read -r tag; do
+            [[ -z "${tag}" ]] && continue
+            if [[ "$(git rev-parse "${tag}^{commit}")" != "${GITHUB_SHA}" ]]; then
+              continue
+            fi
+            candidate="${tag#v}"
+            candidate="${candidate%-reserved}"
+            if git rev-parse --verify --quiet "refs/tags/v${candidate}" > /dev/null \
+              && [[ "$(git rev-parse "v${candidate}^{commit}")" != "${GITHUB_SHA}" ]]; then
+              echo "::error::Tag v${candidate} already exists on another commit."
+              exit 1
+            fi
+            if [[ -n "${reuse}" && "${reuse}" != "${candidate}" ]]; then
+              echo "::error::Commit ${GITHUB_SHA} reserves both ${reuse} and ${candidate}."
+              exit 1
+            fi
+            reuse="${candidate}"
+          done < <(git tag --list | grep -E "${reserved_re}" || true)
+
+          if [[ -n "${reuse}" ]]; then
+            version="${reuse}"
+          elif [[ "${PREVIEW}" == "true" ]]; then
+            last="$(
+              {
+                git tag --list | grep -E "${preview_final_re}" | sed -E 's/^.*-preview\.//' || true
+                git tag --list | grep -E "${preview_reserved_re}" | sed -E 's/^.*-preview\.([0-9]+)-reserved$/\1/' || true
+              } | grep -E '^[0-9]+$' | sort -n | tail -1 || true
+            )"
             version="${MAJOR_VERSION}.0.0-preview.$(( ${last:-0} + 1 ))"
           else
-            last="$(git tag --list "v${MAJOR_VERSION}.*" | grep -E "^v${MAJOR_VERSION}\.[0-9]+\.[0-9]+$" | sed 's/^v//' | sort -V | tail -1 || true)"
+            last="$(
+              {
+                git tag --list | grep -E "${stable_final_re}" | sed 's/^v//' || true
+                git tag --list | grep -E "${stable_reserved_re}" | sed -E 's/^v//; s/-reserved$//' || true
+              } | grep -E '^[0-9]+' | sort -V | tail -1 || true
+            )"
             if [[ -z "${last}" ]]; then
               version="${MAJOR_VERSION}.0.0"
             else
@@ -86,7 +131,7 @@ jobs:
               version="${major}.${minor}.$(( patch + 1 ))"
             fi
           fi
-          if git rev-parse --verify --quiet "refs/tags/v${version}" > /dev/null; then
+          if [[ -z "${reuse}" ]] && git rev-parse --verify --quiet "refs/tags/v${version}" > /dev/null; then
             echo "::error::Tag v${version} already exists."
             exit 1
           fi
@@ -161,9 +206,40 @@ jobs:
         with:
           version: ${{ needs.verify.outputs.version }}
 
+      # Reserve the version on this commit before anything is pushed. A later run may continue only when
+      # vX.Y.Z-reserved already points at GITHUB_SHA. The final vX.Y.Z tag is created after the push.
+      - name: 🔒 Reserve version
+        id: reserve
+        if: ${{ !inputs.dry_run }}
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          final_sha="$(git ls-remote origin "refs/tags/v${VERSION}" | awk 'NR==1 { print $1 }')"
+          if [[ -n "${final_sha}" && "${final_sha}" != "${GITHUB_SHA}" ]]; then
+            echo "::error::Tag v${VERSION} already points at ${final_sha}, not ${GITHUB_SHA}."
+            exit 1
+          fi
+          if [[ "${final_sha}" == "${GITHUB_SHA}" ]]; then
+            echo "already_released=true" >> "${GITHUB_OUTPUT}"
+            echo "v${VERSION} is already published from this commit." | tee -a "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+
+          reserved_sha="$(git ls-remote origin "refs/tags/v${VERSION}-reserved" | awk 'NR==1 { print $1 }')"
+          if [[ -z "${reserved_sha}" ]]; then
+            git tag "v${VERSION}-reserved" "${GITHUB_SHA}"
+            git push origin "refs/tags/v${VERSION}-reserved"
+          elif [[ "${reserved_sha}" != "${GITHUB_SHA}" ]]; then
+            echo "::error::Version ${VERSION} is reserved by ${reserved_sha}, not ${GITHUB_SHA}."
+            exit 1
+          fi
+          echo "already_released=false" >> "${GITHUB_OUTPUT}"
+
       # Request the short-lived key right before the push. It is valid for about an hour.
       - name: 🔑 NuGet login (OIDC)
         id: login
+        if: ${{ inputs.dry_run || steps.reserve.outputs.already_released != 'true' }}
         uses: NuGet/login@v1
         with:
           user: ${{ secrets.NUGET_USER }}
@@ -187,7 +263,7 @@ jobs:
 
       # Pushing the .nupkg files also pushes the matching .snupkg symbol packages from the same folder.
       - name: 🚀 Push to NuGet.org
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && steps.reserve.outputs.already_released != 'true' }}
         env:
           NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
         run: >
@@ -196,18 +272,25 @@ jobs:
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate
 
-      # The tag marks the commit that produced the published version, so the commit history shows which commit is
-      # which version. It is created only after the push succeeded: a failed run leaves no tag and the next run
-      # reuses the same version number. If this step fails after a successful push, re-run the failed jobs of the
-      # same run: the push is skipped as a duplicate and the tag is created on the same commit.
+      # The final tag is created only after the push succeeded. A retry is a no-op when the tag already
+      # points at this commit, and it fails when another commit owns the tag. The reservation is removed
+      # once the final tag exists.
       - name: 🏷️ Tag the published commit
         if: ${{ !inputs.dry_run }}
         env:
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
           set -euo pipefail
-          git tag "v${VERSION}" "${GITHUB_SHA}"
-          git push origin "refs/tags/v${VERSION}"
+          final_sha="$(git ls-remote origin "refs/tags/v${VERSION}" | awk 'NR==1 { print $1 }')"
+          if [[ -n "${final_sha}" && "${final_sha}" != "${GITHUB_SHA}" ]]; then
+            echo "::error::Tag v${VERSION} already points at ${final_sha}, not ${GITHUB_SHA}."
+            exit 1
+          fi
+          if [[ "${final_sha}" != "${GITHUB_SHA}" ]]; then
+            git tag "v${VERSION}" "${GITHUB_SHA}"
+            git push origin "refs/tags/v${VERSION}"
+          fi
+          git push origin ":refs/tags/v${VERSION}-reserved" || true
 
       - name: 🏷️ Create GitHub Release
         if: ${{ !inputs.dry_run }}
@@ -216,6 +299,10 @@ jobs:
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
           set -euo pipefail
+          if gh release view "v${VERSION}" > /dev/null 2>&1; then
+            echo "Release v${VERSION} already exists."
+            exit 0
+          fi
           flags=(--generate-notes --verify-tag --title "v${VERSION}")
           if [[ "${VERSION}" == *-* ]]; then
             flags+=(--prerelease)

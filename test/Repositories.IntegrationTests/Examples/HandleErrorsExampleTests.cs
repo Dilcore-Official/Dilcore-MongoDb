@@ -73,16 +73,24 @@ public static class ResultStatus
     public static int ToStatusCode<T>(this Result<T> result)
     {
         if (result.IsSuccess)
+        {
             return 200;
+        }
 
         if (result.HasError<DocumentNotFoundError>())
+        {
             return 404;
+        }
 
         if (result.HasError<ConcurrencyConflictError>() || result.HasError<DuplicateKeyError>())
+        {
             return 409;
+        }
 
         if (result.HasError<TransientWriteError>())
+        {
             return 503;
+        }
 
         return 500;
     }

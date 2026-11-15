@@ -25,5 +25,6 @@ Every consumer page has, in this order: a title, one sentence with the purpose a
 
 - Consumer pages stand alone. They do not mention milestones (`M3`, `M4`), `PublicAPI` files, Context7 or the skill. Planned work is labelled "planned" and links to the ROADMAP.
 - Types, namespaces and signatures are checked against `src/` (with Serena), never written from memory. Usings name the declaring namespace.
+- Every `csharp` block in a consumer page, a package or root README, and the skill follows `.cursor/rules/csharp-code-style.mdc` and `.editorconfig`: usings first, registration before type declarations in a setup block, Allman braces, `CancellationToken cancellationToken = default`, and no `Builders` filter or update call passed straight into a method.
 - The skill is used outside this repository. It links only to absolute GitHub URLs or to files inside the skill folder, and it stays tool-neutral (Context7 is optional).
 - Example tests use NUnit and Shouldly with Arrange / Act / Assert comments, and copy the page's registration and types verbatim. They derive from `ExampleIntegrationTests` (or start a replica set when the page needs transactions).

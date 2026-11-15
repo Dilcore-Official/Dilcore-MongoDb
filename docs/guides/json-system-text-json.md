@@ -9,6 +9,9 @@ using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.SystemTextJson;
 using Microsoft.Extensions.DependencyInjection;
 
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
+
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
     .AddDatabase("app", db => db.OnCluster("primary")));
@@ -28,14 +31,18 @@ using FluentResults;
 
 public sealed class PayloadService(ISystemTextJsonDocumentStoreFactory stores)
 {
-    public async Task<Result<JsonElement>> RoundTripAsync(JsonElement payload, CancellationToken cancellationToken)
+    public async Task<Result<JsonElement>> RoundTripAsync(
+        JsonElement payload,
+        CancellationToken cancellationToken = default)
     {
         var store = stores.Create(new MongoDatabaseKey("app"));
 
         // The collection is a plain string. No typed binding is needed.
         var inserted = await store.InsertAsync("payloads", payload, cancellationToken: cancellationToken);
         if (inserted.IsFailed)
+        {
             return inserted.ToResult();
+        }
 
         // Reads return Canonical Extended JSON by default (numbers become {"$numberInt": "3"}).
         // Ask for relaxed output to get plain JSON back.

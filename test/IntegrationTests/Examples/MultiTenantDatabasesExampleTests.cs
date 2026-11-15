@@ -12,7 +12,7 @@ public class MultiTenantDatabasesExampleTests : ExampleIntegrationTests
 {
     public interface ITenantAccessor
     {
-        Task<string?> GetCurrentTenantIdAsync(CancellationToken cancellationToken);
+        Task<string?> GetCurrentTenantIdAsync(CancellationToken cancellationToken = default);
     }
 
     public sealed class TestTenantAccessor : ITenantAccessor
@@ -30,8 +30,10 @@ public class MultiTenantDatabasesExampleTests : ExampleIntegrationTests
         {
             var tenantId = await tenants.GetCurrentTenantIdAsync(cancellationToken);
 
-            if (tenantId is null)
+            if (string.IsNullOrWhiteSpace(tenantId))
+            {
                 return Result.Fail<string?>("Tenant context is required.");
+            }
 
             return Result.Ok<string?>(tenantId);
         }
@@ -45,8 +47,11 @@ public class MultiTenantDatabasesExampleTests : ExampleIntegrationTests
 
     public sealed class OrderService(IGenericRepository<Order> orders)
     {
-        public Task<Result<Order>> CreateAsync(Order order, CancellationToken cancellationToken)
+        public Task<Result<Order>> CreateAsync(Order order, CancellationToken cancellationToken = default)
             => orders.StoreAsync(order, cancellationToken);
+
+        public Task<Result<IReadOnlyList<Order>>> ListAsync(CancellationToken cancellationToken = default)
+            => orders.GetListAsync(cancellationToken);
     }
 
     private ServiceProvider BuildProvider()
@@ -84,13 +89,26 @@ public class MultiTenantDatabasesExampleTests : ExampleIntegrationTests
         // Arrange
         await using var provider = BuildProvider();
 
+        var tenants = new[] { "tenantA", "tenantB" };
+
         // Act
-        foreach (var tenant in new[] { "tenantA", "tenantB" })
+        foreach (var tenant in tenants)
         {
             using var scope = provider.CreateScope();
             scope.ServiceProvider.GetRequiredService<TestTenantAccessor>().TenantId = tenant;
             var service = ActivatorUtilities.CreateInstance<OrderService>(scope.ServiceProvider);
             (await service.CreateAsync(new Order { Sku = tenant }, CancellationToken.None)).ShouldBeSuccess();
+        }
+
+        var skusByTenant = new Dictionary<string, IReadOnlyList<string>>();
+        foreach (var tenant in tenants)
+        {
+            using var scope = provider.CreateScope();
+            scope.ServiceProvider.GetRequiredService<TestTenantAccessor>().TenantId = tenant;
+            var service = ActivatorUtilities.CreateInstance<OrderService>(scope.ServiceProvider);
+            var listed = await service.ListAsync(CancellationToken.None);
+            listed.ShouldBeSuccess();
+            skusByTenant[tenant] = listed.Value.Select(order => order.Sku).ToList();
         }
 
         var databases = await DatabaseNamesAsync();
@@ -99,14 +117,19 @@ public class MultiTenantDatabasesExampleTests : ExampleIntegrationTests
         databases.ShouldContain("tenantA_shop");
         databases.ShouldContain("tenantB_shop");
         databases.ShouldNotContain("shop");
+        skusByTenant["tenantA"].ShouldBe(["tenantA"]);
+        skusByTenant["tenantB"].ShouldBe(["tenantB"]);
     }
 
-    [Test]
-    public async Task NoTenant_FailsClosedWithoutTouchingAnyDatabase()
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase("   ")]
+    public async Task InvalidTenant_FailsClosedWithoutTouchingAnyDatabase(string? tenantId)
     {
         // Arrange
         await using var provider = BuildProvider();
         using var scope = provider.CreateScope();
+        scope.ServiceProvider.GetRequiredService<TestTenantAccessor>().TenantId = tenantId;
         var service = ActivatorUtilities.CreateInstance<OrderService>(scope.ServiceProvider);
 
         // Act

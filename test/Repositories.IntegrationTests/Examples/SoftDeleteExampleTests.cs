@@ -20,14 +20,26 @@ public class SoftDeleteExampleTests : ExampleIntegrationTests
 
     public sealed class CustomerService(IGenericRepository<Customer> customers)
     {
-        public Task<Result<bool>> DeleteAsync(Guid id, CancellationToken cancellationToken)
-            => customers.DeleteAsync(Builders<Customer>.Filter.Eq(x => x.Id, id), cancellationToken);
+        public Task<Result<bool>> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<Customer>.Filter.Eq(x => x.Id, id);
 
-        public Task<Result<bool>> RestoreAsync(Guid id, CancellationToken cancellationToken)
-            => customers.RestoreAsync(Builders<Customer>.Filter.Eq(x => x.Id, id), cancellationToken);
+            return customers.DeleteAsync(filter, cancellationToken);
+        }
 
-        public Task<Result<long>> PurgeAsync(Guid id, CancellationToken cancellationToken)
-            => customers.PurgeAsync(Builders<Customer>.Filter.Eq(x => x.Id, id), cancellationToken);
+        public Task<Result<bool>> RestoreAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<Customer>.Filter.Eq(x => x.Id, id);
+
+            return customers.RestoreAsync(filter, cancellationToken);
+        }
+
+        public Task<Result<long>> PurgeAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<Customer>.Filter.Eq(x => x.Id, id);
+
+            return customers.PurgeAsync(filter, cancellationToken);
+        }
     }
 
     private ServiceProvider BuildProvider()

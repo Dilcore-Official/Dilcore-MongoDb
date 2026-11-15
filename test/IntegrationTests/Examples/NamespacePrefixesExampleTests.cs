@@ -17,10 +17,10 @@ public class NamespacePrefixesExampleTests : ExampleIntegrationTests
 
     public sealed class NameInspector(IMongoDbCollectionFactory collections)
     {
-        public async Task<string?> CollectionNameAsync(CancellationToken cancellationToken)
+        public async Task<string?> ResolveCollectionNameAsync(CancellationToken cancellationToken = default)
         {
-            var collection = await collections.GetCollectionAsync<User>(
-                new MongoDocumentBindingKey("users"), cancellationToken);
+            var bindingKey = new MongoDocumentBindingKey("users");
+            var collection = await collections.GetCollectionAsync<User>(bindingKey, cancellationToken);
 
             return collection.IsSuccess
                 ? $"{collection.Value.Database.DatabaseNamespace.DatabaseName}.{collection.Value.CollectionNamespace.CollectionName}"
@@ -35,7 +35,11 @@ public class NamespacePrefixesExampleTests : ExampleIntegrationTests
         public Task<Result<string?>> ContributeAsync(
             NamespaceResolutionRequest request,
             CancellationToken cancellationToken = default)
-            => Task.FromResult(Result.Ok<string?>("staging"));
+        {
+            var segment = Result.Ok<string?>("staging");
+
+            return Task.FromResult(segment);
+        }
     }
 
     private ServiceProvider BuildProvider(bool withContributor = false)
@@ -72,7 +76,7 @@ public class NamespacePrefixesExampleTests : ExampleIntegrationTests
         var inspector = ActivatorUtilities.CreateInstance<NameInspector>(scope.ServiceProvider);
 
         // Act
-        var name = await inspector.CollectionNameAsync(CancellationToken.None);
+        var name = await inspector.ResolveCollectionNameAsync(CancellationToken.None);
 
         // Assert
         name.ShouldBe("catalog_UserDB.feature_users");
@@ -87,7 +91,7 @@ public class NamespacePrefixesExampleTests : ExampleIntegrationTests
         var inspector = ActivatorUtilities.CreateInstance<NameInspector>(scope.ServiceProvider);
 
         // Act
-        var name = await inspector.CollectionNameAsync(CancellationToken.None);
+        var name = await inspector.ResolveCollectionNameAsync(CancellationToken.None);
 
         // Assert
         name.ShouldBe("staging_catalog_UserDB.staging_feature_users");
@@ -143,6 +147,10 @@ public class NamespacePrefixesExampleTests : ExampleIntegrationTests
         public Task<Result<string?>> ContributeAsync(
             NamespaceResolutionRequest request,
             CancellationToken cancellationToken = default)
-            => Task.FromResult(Result.Fail<string?>("no segment"));
+        {
+            var failure = Result.Fail<string?>("no segment");
+
+            return Task.FromResult(failure);
+        }
     }
 }

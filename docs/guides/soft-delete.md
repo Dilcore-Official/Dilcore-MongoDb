@@ -10,12 +10,8 @@ using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
-public sealed class Customer : IDocumentEntity<Guid>, ISoftDeletable
-{
-    public Guid Id { get; set; }
-    public bool IsDeleted { get; set; }   // managed by the repository
-    public string Name { get; set; } = "";
-}
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -29,6 +25,13 @@ services.AddMongoDb(mongo => mongo
             .WithSoftDelete()
             .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
     }));
+
+public sealed class Customer : IDocumentEntity<Guid>, ISoftDeletable
+{
+    public Guid Id { get; set; }
+    public bool IsDeleted { get; set; }   // managed by the repository
+    public string Name { get; set; } = "";
+}
 ```
 
 ## Use
@@ -41,16 +44,28 @@ using MongoDB.Driver;
 public sealed class CustomerService(IGenericRepository<Customer> customers)
 {
     // Marks the document deleted. Reads, counts and HasAny no longer see it.
-    public Task<Result<bool>> DeleteAsync(Guid id, CancellationToken cancellationToken)
-        => customers.DeleteAsync(Builders<Customer>.Filter.Eq(x => x.Id, id), cancellationToken);
+    public Task<Result<bool>> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<Customer>.Filter.Eq(x => x.Id, id);
+
+        return customers.DeleteAsync(filter, cancellationToken);
+    }
 
     // Clears the flag.
-    public Task<Result<bool>> RestoreAsync(Guid id, CancellationToken cancellationToken)
-        => customers.RestoreAsync(Builders<Customer>.Filter.Eq(x => x.Id, id), cancellationToken);
+    public Task<Result<bool>> RestoreAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<Customer>.Filter.Eq(x => x.Id, id);
+
+        return customers.RestoreAsync(filter, cancellationToken);
+    }
 
     // Permanent. Deletes every match, including documents that are not soft-deleted.
-    public Task<Result<long>> PurgeAsync(Guid id, CancellationToken cancellationToken)
-        => customers.PurgeAsync(Builders<Customer>.Filter.Eq(x => x.Id, id), cancellationToken);
+    public Task<Result<long>> PurgeAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<Customer>.Filter.Eq(x => x.Id, id);
+
+        return customers.PurgeAsync(filter, cancellationToken);
+    }
 }
 ```
 

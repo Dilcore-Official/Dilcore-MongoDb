@@ -41,6 +41,24 @@ public class ProductionMongoDbExampleTests : ExampleIntegrationTests
     }
 
     [Test]
+    public void SetupBlock_DeclaresInputsBeforeTheOrderType()
+    {
+        // Arrange
+        var page = File.ReadAllText(Path.Join(RepoLocator.FindRepoRoot(), "docs", "security", "production-mongodb.md"));
+        var setup = page.Split("## Use")[0];
+
+        // Act
+        var connection = setup.IndexOf("var connectionString", StringComparison.Ordinal);
+        var services = setup.IndexOf("var services", StringComparison.Ordinal);
+        var order = setup.IndexOf("public sealed class Order", StringComparison.Ordinal);
+
+        // Assert
+        connection.ShouldBeGreaterThanOrEqualTo(0);
+        services.ShouldBeGreaterThan(connection);
+        order.ShouldBeGreaterThan(services);
+    }
+
+    [Test]
     public void ConnectionStringAndExistingClient_CannotBeCombined()
     {
         // Arrange

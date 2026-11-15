@@ -26,7 +26,9 @@ public class JsonConversionOptionsExampleTests : ExampleIntegrationTests
 
             var parsed = converter.Parse(json, options);
             if (parsed.IsFailed)
+            {
                 return parsed.ToResult();
+            }
 
             return converter.ToJson(parsed.Value, options);
         }

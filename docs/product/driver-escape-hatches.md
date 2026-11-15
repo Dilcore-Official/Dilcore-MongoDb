@@ -1,6 +1,6 @@
 # Reach the MongoDB driver directly
 
-Use `MongoDB.Driver` types when the repository helpers are not enough, without bypassing the namespace pipeline. Package: `Dilcore.MongoDB`.
+Use `MongoDB.Driver` types when the repository helpers are not enough. Resolve the database or collection through the toolkit so tenant and static prefixes still apply. Package: `Dilcore.MongoDB`.
 
 ## Setup
 
@@ -9,11 +9,8 @@ using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
-public sealed class Order : IDocumentEntity<Guid>
-{
-    public Guid Id { get; set; }
-    public string Sku { get; set; } = "";
-}
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -22,6 +19,12 @@ services.AddMongoDb(mongo => mongo
         db.OnCluster("primary");
         db.AddDocumentBinding<Order>("orders", d => d.WithCollectionName("orders"));
     }));
+
+public sealed class Order : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string Sku { get; set; } = "";
+}
 ```
 
 ## Use
@@ -29,31 +32,41 @@ services.AddMongoDb(mongo => mongo
 ```csharp
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Keys;
+using FluentResults;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
 public sealed class ReportService(IMongoDbCollectionFactory collections, IServiceProvider provider)
 {
-    public async Task<IReadOnlyList<BsonDocument>> TopSkusAsync(CancellationToken cancellationToken)
+    public async Task<Result<IReadOnlyList<BsonDocument>>> GetTopSkusAsync(
+        CancellationToken cancellationToken = default)
     {
         // The factory resolves the physical name through the same namespace pipeline
         // (prefixes, tenants) as the repositories.
-        var resolved = await collections.GetCollectionAsync<Order>(new MongoDocumentBindingKey("orders"), cancellationToken);
+        var bindingKey = new MongoDocumentBindingKey("orders");
+        var resolved = await collections.GetCollectionAsync<Order>(bindingKey, cancellationToken);
+        if (resolved.IsFailed)
+        {
+            return resolved.ToResult();
+        }
+
         var collection = resolved.Value;
 
         // Aggregation stays a driver API. Stored field names follow the BSON conventions
         // (camelCase by default), so Sku is stored as "sku".
         // Do not hide it behind your own abstraction.
-        return await collection.Aggregate()
+        var top = await collection.Aggregate()
             .Group(new BsonDocument { { "_id", "$sku" }, { "count", new BsonDocument("$sum", 1) } })
             .SortByDescending(x => x["count"])
             .Limit(10)
             .ToListAsync(cancellationToken);
+
+        return Result.Ok<IReadOnlyList<BsonDocument>>(top);
     }
 
     // The singleton client of a cluster, keyed by the cluster name.
-    public IMongoClient Client() => provider.GetRequiredKeyedService<IMongoClient>("primary");
+    public IMongoClient GetClient() => provider.GetRequiredKeyedService<IMongoClient>("primary");
 }
 ```
 
@@ -83,7 +96,8 @@ Write concern, read concern, read preference, retries, timeouts and compression 
 `GetCollectionAsync` returns a `Result`. Check it before using `Value`:
 
 ```csharp
-var resolved = await collections.GetCollectionAsync<Order>(new MongoDocumentBindingKey("orders"), cancellationToken);
+var bindingKey = new MongoDocumentBindingKey("orders");
+var resolved = await collections.GetCollectionAsync<Order>(bindingKey, cancellationToken);
 if (resolved.IsFailed)
 {
     // An unknown binding, a missing tenant prefix or an invalid physical name. Plain FluentResults errors.
@@ -94,9 +108,9 @@ Driver calls on the collection throw driver exceptions (`MongoException` and sub
 
 ## Pitfalls
 
-- Reach the driver through the keyed client, the keyed database or `IMongoDbCollectionFactory`. Do not create your own `MongoClient`, and the same namespace pipeline then applies.
+- The keyed `IMongoClient` is a raw driver client. It does not apply namespace resolution, so `GetDatabase` on it bypasses tenant and static prefixes. Resolve the database or collection through `IMongoDatabaseResolver`, the keyed `IMongoDatabase`, the keyed `IMongoCollection<T>`, or `IMongoDbCollectionFactory` before you call the driver. Do not create your own `MongoClient`.
 - Dispose cursors and sessions you open.
-- Inside a transaction callback, do not start a second session. Cross-cluster work is rejected as `CrossClusterOperationError`.
+- Inside a transaction callback, do not start a second session. `CrossClusterOperationError` applies to repository operations resolved from the transaction context. Pass `IMongoDbTransactionContext.Session` to raw driver writes, and do not use a raw client for work on another cluster.
 - Do not wrap driver features in your own provider-neutral abstraction.
 
 ## See also

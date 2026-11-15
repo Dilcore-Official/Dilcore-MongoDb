@@ -15,7 +15,7 @@ public class NewtonsoftJsonExampleTests : ExampleIntegrationTests
 {
     public sealed class PayloadService(INewtonsoftJsonDocumentStoreFactory stores)
     {
-        public async Task<Result<JObject>> RoundTripAsync(string json, CancellationToken cancellationToken)
+        public async Task<Result<JObject>> RoundTripAsync(string json, CancellationToken cancellationToken = default)
         {
             var store = stores.Create(new MongoDatabaseKey("app"));
 
@@ -24,11 +24,21 @@ public class NewtonsoftJsonExampleTests : ExampleIntegrationTests
                 DateParseHandling = DateParseHandling.None,
                 FloatParseHandling = FloatParseHandling.Decimal
             };
-            var payload = JObject.Load(reader);
+            JObject payload;
+            try
+            {
+                payload = JObject.Load(reader);
+            }
+            catch (JsonReaderException exception)
+            {
+                return Result.Fail<JObject>(new JsonConversionError(exception.Message));
+            }
 
             var inserted = await store.InsertAsync("payloads", payload, cancellationToken: cancellationToken);
             if (inserted.IsFailed)
+            {
                 return inserted.ToResult();
+            }
 
             // Reads return Canonical Extended JSON by default. Ask for relaxed output to get plain JSON back.
             var relaxed = new JsonBsonConversionOptions { OutputMode = JsonBsonOutputMode.RelaxedExtendedJson };
@@ -103,6 +113,21 @@ public class NewtonsoftJsonExampleTests : ExampleIntegrationTests
         // Assert
         inserted.ShouldBeFailure();
         inserted.Errors.ShouldContain(e => e.Message.Contains("TypeNameHandling"));
+    }
+
+    [Test]
+    public async Task RoundTrip_MalformedJson_ReturnsJsonConversionError()
+    {
+        // Arrange
+        await using var provider = BuildProvider();
+        using var scope = provider.CreateScope();
+        var service = ActivatorUtilities.CreateInstance<PayloadService>(scope.ServiceProvider);
+
+        // Act
+        var result = await service.RoundTripAsync("{ nope", CancellationToken.None);
+
+        // Assert
+        result.HasError<JsonConversionError>().ShouldBeTrue();
     }
 
     [Test]

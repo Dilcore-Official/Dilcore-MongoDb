@@ -18,16 +18,31 @@ public class ProvisionIndexesAndTtlExampleTests : ExampleIntegrationTests
 
     public static class Provisioning
     {
-        public static async Task ProvisionAsync(IServiceProvider services, CancellationToken cancellationToken)
+        public static async Task ProvisionAsync(
+            IServiceProvider services,
+            bool allowIndexRemoval,
+            CancellationToken cancellationToken = default)
         {
             using var scope = services.CreateScope();
             var provisioner = scope.ServiceProvider.GetRequiredService<IMongoDbProvisioner>();
 
             var preview = await provisioner.DryRunAsync(cancellationToken);
+            if (preview.IsFailed)
+            {
+                throw new InvalidOperationException("MongoDB provisioning preview failed.");
+            }
+
+            var wouldRemove = preview.Value.Steps.Any(step => step.Action == "would-remove");
+            if (wouldRemove && !allowIndexRemoval)
+            {
+                throw new InvalidOperationException("Review the index removal before applying.");
+            }
 
             var report = await provisioner.ApplyAsync(cancellationToken);
             if (report.IsFailed)
+            {
                 throw new InvalidOperationException("MongoDB provisioning failed.");
+            }
         }
     }
 
@@ -47,7 +62,7 @@ public class ProvisionIndexesAndTtlExampleTests : ExampleIntegrationTests
                         Builders<Session>.IndexKeys.Ascending(x => x.UserName),
                         new CreateIndexOptions { Name = "sessions_user", Unique = true }))
 
-                    .WithCollectionItemsTimeToLive(TimeSpan.FromHours(1), x => x.ExpiresAt));
+                    .WithCollectionItemsTimeToLive(TimeSpan.Zero, x => x.ExpiresAt));
             }));
 
         return AcceptanceServiceProviderFactory.Create(services);
@@ -73,7 +88,7 @@ public class ProvisionIndexesAndTtlExampleTests : ExampleIntegrationTests
         // Act
         var preview = await provisioner.DryRunAsync();
         var indexesAfterPreview = await ServerIndexesAsync();
-        await Provisioning.ProvisionAsync(provider, CancellationToken.None);
+        await Provisioning.ProvisionAsync(provider, allowIndexRemoval: false, CancellationToken.None);
         var indexesAfterApply = await ServerIndexesAsync();
         var reapply = await provisioner.ApplyAsync();
 
@@ -82,7 +97,7 @@ public class ProvisionIndexesAndTtlExampleTests : ExampleIntegrationTests
         preview.Value.Steps.ShouldContain(s => s.Action == "would-create");
         indexesAfterPreview.ShouldBeEmpty();
         indexesAfterApply.Select(i => i["name"].AsString).ShouldBe(["_id_", "sessions_user", "sessions_ttl"], ignoreOrder: true);
-        indexesAfterApply.Single(i => i["name"] == "sessions_ttl")["expireAfterSeconds"].ToInt32().ShouldBe(3600);
+        indexesAfterApply.Single(i => i["name"] == "sessions_ttl")["expireAfterSeconds"].ToInt32().ShouldBe(0);
         reapply.Value.Steps.ShouldNotContain(s => s.Action == "create");
     }
 
@@ -100,12 +115,27 @@ public class ProvisionIndexesAndTtlExampleTests : ExampleIntegrationTests
 
         // Act
         var dryRun = await provisioner.DryRunAsync();
-        await provisioner.ApplyAsync();
+        await Provisioning.ProvisionAsync(provider, allowIndexRemoval: true, CancellationToken.None);
         var indexes = await ServerIndexesAsync();
 
         // Assert
         dryRun.Value.Steps.ShouldContain(s => s.Action == "would-remove");
         indexes.ShouldNotContain(i => i["name"] == "stray");
+    }
+
+    [Test]
+    public async Task Apply_WithoutApproval_StopsWhenPreviewWouldRemoveAnIndex()
+    {
+        // Arrange
+        await using var provider = BuildProvider();
+        using var client = new MongoClient(connectionString);
+        var collection = client.GetDatabase("auth").GetCollection<BsonDocument>("sessions");
+        await collection.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
+            Builders<BsonDocument>.IndexKeys.Ascending("other"), new CreateIndexOptions { Name = "stray" }));
+
+        // Act & Assert
+        var act = () => Provisioning.ProvisionAsync(provider, allowIndexRemoval: false, CancellationToken.None);
+        await Should.ThrowAsync<InvalidOperationException>(act);
     }
 
     [Test]
@@ -117,10 +147,8 @@ public class ProvisionIndexesAndTtlExampleTests : ExampleIntegrationTests
         var collection = client.GetDatabase("auth").GetCollection<BsonDocument>("sessions");
         await collection.InsertManyAsync([new BsonDocument("UserName", "a"), new BsonDocument("UserName", "a")]);
 
-        // Act
-        var act = () => Provisioning.ProvisionAsync(provider, CancellationToken.None);
-
-        // Assert
+        // Act & Assert
+        var act = () => Provisioning.ProvisionAsync(provider, allowIndexRemoval: false, CancellationToken.None);
         await Should.ThrowAsync<InvalidOperationException>(act);
     }
 }

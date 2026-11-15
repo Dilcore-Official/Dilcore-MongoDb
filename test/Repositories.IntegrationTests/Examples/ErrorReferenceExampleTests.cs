@@ -115,7 +115,7 @@ public class ErrorReferenceExampleTests : ExampleIntegrationTests
         IError error = new FakeError(code);
 
         // Act
-        var advice = ErrorAdvice.For(error);
+        var advice = ErrorAdvice.GetAdvice(error);
 
         // Assert
         advice.ShouldNotStartWith("unknown code");
@@ -149,28 +149,30 @@ public class ErrorReferenceExampleTests : ExampleIntegrationTests
     {
         public override string Code { get; } = code;
     }
-}
 
-public static class ErrorAdvice
-{
-    public static string For(IError error)
+    public static class ErrorAdvice
     {
-        if (error is not MongoOperationError typed)
-            return "unexpected: log it and return a generic failure";
-
-        return typed.Code switch
+        public static string GetAdvice(IError error)
         {
-            DocumentNotFoundError.ErrorCode => "not found: do not retry",
-            ConcurrencyConflictError.ErrorCode => "stale copy: reload, reapply, retry once",
-            DuplicateKeyError.ErrorCode => "already exists: do not retry",
-            TransientWriteError.ErrorCode => "temporary: retry with backoff",
-            WriteConcernFailureError.ErrorCode => "unconfirmed: the write may have been applied",
-            DocumentTooLargeError.ErrorCode => "too big: shrink the document, do not retry",
-            JsonConversionError.ErrorCode => "bad JSON: reject the input",
-            CrossClusterOperationError.ErrorCode => "programming error: one transaction, one cluster",
-            TransactionBudgetExceededError.ErrorCode => "too much work in one transaction: split it",
-            BulkWritePartialFailureError.ErrorCode => "some items failed: inspect Items",
-            _ => "unknown code: treat as unexpected"
-        };
+            if (error is not MongoOperationError typed)
+            {
+                return "unexpected: log it and return a generic failure";
+            }
+
+            return typed.Code switch
+            {
+                DocumentNotFoundError.ErrorCode => "not found: do not retry",
+                ConcurrencyConflictError.ErrorCode => "stale copy: reload, reapply, retry once",
+                DuplicateKeyError.ErrorCode => "already exists: do not retry",
+                TransientWriteError.ErrorCode => "outcome unknown: reconcile, or retry an idempotent write",
+                WriteConcernFailureError.ErrorCode => "unconfirmed: the write may have been applied",
+                DocumentTooLargeError.ErrorCode => "too big: shrink the document, do not retry",
+                JsonConversionError.ErrorCode => "bad JSON: reject the input",
+                CrossClusterOperationError.ErrorCode => "programming error: one transaction, one cluster",
+                TransactionBudgetExceededError.ErrorCode => "too much work in one transaction: split it",
+                BulkWritePartialFailureError.ErrorCode => "some items failed: inspect Items",
+                _ => "unknown code: treat as unexpected"
+            };
+        }
     }
 }

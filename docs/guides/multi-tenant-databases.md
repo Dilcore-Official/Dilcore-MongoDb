@@ -13,33 +13,8 @@ using Dilcore.MongoDB.Extensions;
 using FluentResults;
 using Microsoft.Extensions.DependencyInjection;
 
-// Your app's service. It knows the current tenant, for example from the request.
-public interface ITenantAccessor
-{
-    Task<string?> GetCurrentTenantIdAsync(CancellationToken cancellationToken);
-}
-
-public sealed class TenantDatabasePrefixResolver(ITenantAccessor tenants) : INamespacePrefixResolver
-{
-    public async Task<Result<string?>> ResolveAsync(
-        NamespaceResolutionRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        var tenantId = await tenants.GetCurrentTenantIdAsync(cancellationToken);
-
-        // Fail closed. Never fall back to "" or a default tenant: that would use a shared database.
-        if (tenantId is null)
-            return Result.Fail<string?>("Tenant context is required.");
-
-        return Result.Ok<string?>(tenantId);
-    }
-}
-
-public sealed class Order : IDocumentEntity<Guid>
-{
-    public Guid Id { get; set; }
-    public string Sku { get; set; } = "";
-}
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -53,17 +28,48 @@ services.AddMongoDb(mongo => mongo
             .WithCollectionName("orders")
             .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
     }));
+
+// Your app's service. It knows the current tenant, for example from the request.
+public interface ITenantAccessor
+{
+    Task<string?> GetCurrentTenantIdAsync(CancellationToken cancellationToken = default);
+}
+
+public sealed class TenantDatabasePrefixResolver(ITenantAccessor tenants) : INamespacePrefixResolver
+{
+    public async Task<Result<string?>> ResolveAsync(
+        NamespaceResolutionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var tenantId = await tenants.GetCurrentTenantIdAsync(cancellationToken);
+
+        // Fail closed. Never fall back to "" or a default tenant: that would use a shared database.
+        if (string.IsNullOrWhiteSpace(tenantId))
+        {
+            return Result.Fail<string?>("Tenant context is required.");
+        }
+
+        return Result.Ok<string?>(tenantId);
+    }
+}
+
+public sealed class Order : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string Sku { get; set; } = "";
+}
 ```
 
 ## Use
 
 ```csharp
 using Dilcore.MongoDB.Abstractions.Repositories;
+using FluentResults;
 
 public sealed class OrderService(IGenericRepository<Order> orders)
 {
     // For tenant "tenantA" this writes to database "tenantA_shop".
-    public Task<Result<Order>> CreateAsync(Order order, CancellationToken cancellationToken)
+    public Task<Result<Order>> CreateAsync(Order order, CancellationToken cancellationToken = default)
         => orders.StoreAsync(order, cancellationToken);
 }
 ```

@@ -31,9 +31,17 @@ public class TransactionsExampleTests
 
     public sealed class CheckoutService(IMongoDbTransactionRunner runner)
     {
-        public Task<Result<Guid>> PlaceOrderAsync(Order order, CancellationToken cancellationToken)
-            => runner.WithTransactionAsync(
-                new MongoClusterKey("primary"),
+        public Task<Result<Guid>> PlaceOrderAsync(Order order, CancellationToken cancellationToken = default)
+        {
+            var clusterKey = new MongoClusterKey("primary");
+            var options = new MongoTransactionOptions
+            {
+                MaxOperations = 100,
+                TimeLimit = TimeSpan.FromSeconds(10)
+            };
+
+            return runner.WithTransactionAsync(
+                clusterKey,
                 async (tx, ct) =>
                 {
                     var orders = tx.Repositories.GetRepository<Order>("orders");
@@ -41,31 +49,33 @@ public class TransactionsExampleTests
 
                     var stored = await orders.StoreAsync(order, ct);
                     if (stored.IsFailed)
+                    {
                         return stored.ToResult();
+                    }
 
-                    var payment = await payments.StoreAsync(new Payment { OrderId = stored.Value.Id }, ct);
+                    var paymentDocument = new Payment { OrderId = stored.Value.Id };
+                    var payment = await payments.StoreAsync(paymentDocument, ct);
                     if (payment.IsFailed)
+                    {
                         return payment.ToResult();
+                    }
 
                     return Result.Ok(stored.Value.Id);
                 },
-                new MongoTransactionOptions
-                {
-                    MaxOperations = 100,
-                    TimeLimit = TimeSpan.FromSeconds(10)
-                },
+                options,
                 cancellationToken);
+        }
     }
 
     [OneTimeSetUp]
-    public async Task StartReplicaSet()
+    public async Task StartReplicaSetAsync()
     {
         _replicaSet = MongoTestImages.CreateReplicaSet();
         await _replicaSet.StartAsync();
     }
 
     [OneTimeTearDown]
-    public async Task StopReplicaSet() => await _replicaSet.DisposeAsync();
+    public async Task StopReplicaSetAsync() => await _replicaSet.DisposeAsync();
 
     private ServiceProvider BuildProvider()
     {

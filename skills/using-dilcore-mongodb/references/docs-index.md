@@ -26,6 +26,7 @@ Every guide has the same sections: Setup, Use, Handle failures, Pitfalls, See al
 | Namespace prefixes and contributors | [docs/guides/namespace-prefixes.md](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/namespace-prefixes.md) |
 | Multi-tenant database names (fail closed) | [docs/guides/multi-tenant-databases.md](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/multi-tenant-databases.md) |
 | Provision indexes, TTL and collections | [docs/guides/provision-indexes-and-ttl.md](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/provision-indexes-and-ttl.md) |
+| Expire documents with a TTL index | [docs/guides/expire-documents-with-ttl.md](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/expire-documents-with-ttl.md) |
 | Custom provisioning steps | [docs/guides/custom-provisioning-steps.md](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/custom-provisioning-steps.md) |
 | Transactions and budgets | [docs/guides/transactions.md](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/transactions.md) |
 | JSON documents with System.Text.Json | [docs/guides/json-system-text-json.md](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-system-text-json.md) |

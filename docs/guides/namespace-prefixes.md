@@ -9,11 +9,8 @@ using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
-public sealed class User : IDocumentEntity<Guid>
-{
-    public Guid Id { get; set; }
-    public string Name { get; set; } = "";
-}
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -29,6 +26,12 @@ services.AddMongoDb(mongo => mongo
             .WithCollectionName("users")
             .WithNamespacePrefix("feature"));
     }));
+
+public sealed class User : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = "";
+}
 ```
 
 ## Use
@@ -38,14 +41,13 @@ Resolve the physical names through the same pipeline the repositories use:
 ```csharp
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Keys;
-using MongoDB.Driver;
 
 public sealed class NameInspector(IMongoDbCollectionFactory collections)
 {
-    public async Task<string?> CollectionNameAsync(CancellationToken cancellationToken)
+    public async Task<string?> ResolveCollectionNameAsync(CancellationToken cancellationToken = default)
     {
-        var collection = await collections.GetCollectionAsync<User>(
-            new MongoDocumentBindingKey("users"), cancellationToken);
+        var bindingKey = new MongoDocumentBindingKey("users");
+        var collection = await collections.GetCollectionAsync<User>(bindingKey, cancellationToken);
 
         return collection.IsSuccess
             ? $"{collection.Value.Database.DatabaseNamespace.DatabaseName}.{collection.Value.CollectionNamespace.CollectionName}"
@@ -67,7 +69,11 @@ public sealed class EnvironmentSegmentContributor : INamespaceSegmentContributor
     public Task<Result<string?>> ContributeAsync(
         NamespaceResolutionRequest request,
         CancellationToken cancellationToken = default)
-        => Task.FromResult(Result.Ok<string?>("staging"));
+    {
+        var segment = Result.Ok<string?>("staging");
+
+        return Task.FromResult(segment);
+    }
 }
 
 services.AddScoped<INamespaceSegmentContributor, EnvironmentSegmentContributor>();
@@ -90,7 +96,7 @@ A contributor that returns a failed `Result` makes the repository or collection 
 ## Pitfalls
 
 - A prefix of `""` or whitespace is rejected at registration. Do not use an empty prefix to mean "no prefix".
-- Contributors are scoped. Do not cache their results in a singleton.
+- Contributors are scoped. Do not cache their results in a singleton. A custom contributor value must stay constant for the life of that scope: the namespace cache key does not include contributor output, so a later change in the same scope is ignored. Callers whose prefix depends on the tenant use `WithNamespacePrefixResolver<T>`, which disables caching for that database or binding.
 - Changing a prefix changes the physical name, so existing data stays under the old name.
 
 ## See also

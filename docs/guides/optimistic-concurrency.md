@@ -10,12 +10,8 @@ using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
-public sealed class Invoice : IDocumentEntity<Guid>, IHasConcurrencyToken
-{
-    public Guid Id { get; set; }
-    public long ETag { get; set; }      // managed by the repository
-    public decimal Total { get; set; }
-}
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -26,6 +22,13 @@ services.AddMongoDb(mongo => mongo
             .WithCollectionName("invoices")
             .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
     }));
+
+public sealed class Invoice : IDocumentEntity<Guid>, IHasConcurrencyToken
+{
+    public Guid Id { get; set; }
+    public long ETag { get; set; }      // managed by the repository
+    public decimal Total { get; set; }
+}
 ```
 
 ## Use
@@ -37,11 +40,16 @@ using FluentResults;
 
 public sealed class InvoiceService(IGenericRepository<Invoice> invoices)
 {
-    public async Task<Result<Invoice>> ReviseAsync(Guid id, decimal total, CancellationToken cancellationToken)
+    public async Task<Result<Invoice>> ReviseAsync(
+        Guid id,
+        decimal total,
+        CancellationToken cancellationToken = default)
     {
         var current = await invoices.GetAsync(id, cancellationToken);
         if (current.IsFailed)
+        {
             return current;
+        }
 
         // The loaded ETag travels with the entity. A concurrent writer changes the stored ETag,
         // so this replace fails with ConcurrencyConflictError instead of overwriting their change.
@@ -51,7 +59,7 @@ public sealed class InvoiceService(IGenericRepository<Invoice> invoices)
     }
 
     // Delete only when the caller still sees the current version.
-    public Task<Result<bool>> DeleteAsync(Invoice seen, CancellationToken cancellationToken)
+    public Task<Result<bool>> DeleteAsync(Invoice seen, CancellationToken cancellationToken = default)
         => invoices.DeleteAsync(seen.Id, seen.ETag, cancellationToken);
 }
 ```

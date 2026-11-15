@@ -21,16 +21,18 @@ public class KeysetPagingExampleTests : ExampleIntegrationTests
 
     public sealed class PostService(IGenericRepository<Post> posts)
     {
-        public Task<Result<KeysetPage<Post>>> ListAsync(string? cursor, CancellationToken cancellationToken)
-            => posts.GetPageAsync(
-                new KeysetPageRequest<Post>
-                {
-                    Filter = Builders<Post>.Filter.Empty,
-                    Sort = Builders<Post>.Sort.Descending(x => x.CreatedAt),
-                    PageSize = 2,
-                    Cursor = cursor
-                },
-                cancellationToken);
+        public Task<Result<KeysetPage<Post>>> ListAsync(string? cursor, CancellationToken cancellationToken = default)
+        {
+            var request = new KeysetPageRequest<Post>
+            {
+                Filter = Builders<Post>.Filter.Empty,
+                Sort = Builders<Post>.Sort.Descending(x => x.CreatedAt),
+                PageSize = 2,
+                Cursor = cursor
+            };
+
+            return posts.GetPageAsync(request, cancellationToken);
+        }
     }
 
     private ServiceProvider BuildProvider()

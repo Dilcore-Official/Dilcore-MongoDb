@@ -164,8 +164,9 @@ A person can also run the workflow by hand to publish a stable version or to do 
 `Dilcore.MongoDB.NewtonsoftJson` always share a version number. A run fails if it does not produce all four.
 
 **Versioning.** Versions follow [SemVer](https://semver.org/). The major version is `2` and lives in
-`MAJOR_VERSION` in the workflow. Nobody edits a version by hand: each run computes the next one from the git
-tags, and a publishing run creates the matching `vX.Y.Z` tag.
+`MAJOR_VERSION` in the workflow. Nobody edits a version by hand: each run computes the next one from the final
+`vX.Y.Z` tags and the `vX.Y.Z-reserved` tags. A publishing run reserves that version on its commit, then creates
+the matching `vX.Y.Z` tag only after the packages are on NuGet.org.
 
 | Run | Version | Next number |
 |-----|---------|-------------|
@@ -198,12 +199,15 @@ from it.
    version, run it by hand: Actions → Publish NuGet Packages → **Run workflow** on `main` with `preview` unticked.
 3. The run computes the next version, restores in locked mode, checks formatting, builds with warnings as
    errors, and runs the whole test suite (including the packed-consumer smoke test and the package metadata
-   tests). After the `nuget` environment is approved it packs with that version, pushes the `.nupkg` and
-   `.snupkg` files to NuGet.org, and only then tags the published commit `vX.Y.Z` and creates the GitHub
-   Release (marked pre-release for preview versions). The tag is created after a successful push, so the
-   commit history shows which commit produced which version, and a failed publish leaves no tag and the next
-   run reuses the same version number. If the tag step fails after a successful push, re-run the failed jobs of that
-   same run: the push is skipped as a duplicate and the tag is created on the same commit.
+   tests). After the `nuget` environment is approved it packs with that version and reserves it with a
+   lightweight tag `vX.Y.Z-reserved` on this commit. A retry continues only when that reservation already
+   points at the same commit. A different commit cannot publish or claim the version. The run then pushes the
+   `.nupkg` and `.snupkg` files to NuGet.org, and only then creates the final `vX.Y.Z` tag, removes the
+   reservation, and creates the GitHub Release (marked pre-release for preview versions). A failed publish
+   leaves the reservation and no final tag, so the next run of this commit reuses the number and another
+   commit takes the following number. If the tag step fails after a successful push, re-run the failed jobs of
+   that same run: the reservation matches, the push is skipped as a duplicate, and the final tag is created on
+   the same commit.
 4. **Dry run:** tick `dry_run` (default off). The run computes the next version, tests, packs, waits for the
    `nuget` environment approval, and logs in to NuGet.org with OIDC, which proves the trusted publishing policy,
    `NUGET_USER` and the environment name are right. It then stops: no push, no tag, no release, and the packages
@@ -235,7 +239,7 @@ into `main` that changes Markdown, `docs/`, `samples/` or `context7.json`. Libra
 
 - Preview documentation is `main`. Preview tags (`v2.0.0-preview.N`) are **not** added as Context7 versions: each
   one would become a separate version (a claimed library is limited to 20) and most would be identical to `main`.
-- Stable versions are added to `previousVersions` in `context7.json` (`{ "tag": "v2.0.0", "title": "version 2.0.0" }`)
+- Stable versions are added to `previousVersions` in `context7.json` (`{ "tag": "v2.0.0" }`)
   in the release pull request, and the tag must already exist. Context7 then serves `/dilcore-official/dilcore-mongodb/v2.0.0`
   next to the latest docs.
 - After changing `context7.json` or after a first setup, query Context7 for these topics and check that the

@@ -9,13 +9,11 @@ using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
-public sealed class Order : IDocumentEntity<Guid>
-{
-    public Guid Id { get; set; }
-    public string Sku { get; set; } = "";
-}
-
 // connectionString comes from configuration or a secret store, never from source code.
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var archiveConnectionString = Environment.GetEnvironmentVariable("MONGODB_ARCHIVE_CONNECTION_STRING")!;
+var services = new ServiceCollection();
+
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
     .AddCluster("archive", c => c.UseConnectionString(archiveConnectionString))
@@ -31,6 +29,12 @@ services.AddMongoDb(mongo => mongo
         // Same CLR type, different binding key and database.
         db.AddDocumentBinding<Order>("archived-orders", d => d.WithCollectionName("orders"));
     }));
+
+public sealed class Order : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string Sku { get; set; } = "";
+}
 ```
 
 ## Use
@@ -42,7 +46,7 @@ using FluentResults;
 
 public sealed class ArchiveService(IRepositoryResolver repositories)
 {
-    public async Task<Result> ArchiveAsync(Order order, CancellationToken cancellationToken)
+    public async Task<Result> ArchiveAsync(Order order, CancellationToken cancellationToken = default)
     {
         // Two bindings share the Order type, so resolve by binding key.
         var archived = repositories.GetRepository<Order>("archived-orders");

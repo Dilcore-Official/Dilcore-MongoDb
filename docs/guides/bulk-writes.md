@@ -9,12 +9,8 @@ using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
-public sealed class Reading : IDocumentEntity<Guid>
-{
-    public Guid Id { get; set; }
-    public string Sensor { get; set; } = "";
-    public double Value { get; set; }
-}
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -28,6 +24,13 @@ services.AddMongoDb(mongo => mongo
             .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7)
             .WithBulkRepository());
     }));
+
+public sealed class Reading : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string Sensor { get; set; } = "";
+    public double Value { get; set; }
+}
 ```
 
 ## Use
@@ -40,7 +43,11 @@ using FluentResults;
 
 public sealed class ReadingImporter(IGenericBulkRepository<Reading> bulk)
 {
-    public async Task<Result> ImportAsync(IReadOnlyList<Reading> batch, CancellationToken cancellationToken)
+    public IReadOnlyList<int> FailedIndexes { get; private set; } = [];
+
+    public async Task<Result> ImportAsync(
+        IReadOnlyList<Reading> batch,
+        CancellationToken cancellationToken = default)
     {
         // Unordered: one failing item does not stop the rest.
         var options = new MongoBulkWriteOptions { IsOrdered = false };
@@ -49,16 +56,15 @@ public sealed class ReadingImporter(IGenericBulkRepository<Reading> bulk)
 
         // Some items can succeed while others fail. The error lists every item by its index in the input.
         var partial = result.Errors.OfType<BulkWritePartialFailureError>().FirstOrDefault();
-        if (partial is not null)
-        {
-            var failed = partial.Items.Where(i => !i.Succeeded).Select(i => i.Index);
-            // Report or retry only the failed indexes.
-        }
+        var failed = partial is null
+            ? []
+            : partial.Items.Where(i => !i.Succeeded).Select(i => i.Index);
+        FailedIndexes = failed.ToList();
 
         return result.ToResult();
     }
 
-    public Task<Result> RemoveSensorAsync(string sensor, CancellationToken cancellationToken)
+    public Task<Result> RemoveSensorAsync(string sensor, CancellationToken cancellationToken = default)
         => bulk.BulkDeleteAsync(x => x.Sensor == sensor, cancellationToken);
 }
 ```

@@ -2,6 +2,7 @@ using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Abstractions.Repositories;
 using Dilcore.MongoDB.Extensions;
+using FluentResults;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -18,19 +19,27 @@ public class DriverEscapeHatchesExampleTests : ExampleIntegrationTests
 
     public sealed class ReportService(IMongoDbCollectionFactory collections, IServiceProvider provider)
     {
-        public async Task<IReadOnlyList<BsonDocument>> TopSkusAsync(CancellationToken cancellationToken)
+        public async Task<Result<IReadOnlyList<BsonDocument>>> GetTopSkusAsync(
+            CancellationToken cancellationToken = default)
         {
-            var resolved = await collections.GetCollectionAsync<Order>(new MongoDocumentBindingKey("orders"), cancellationToken);
-            var collection = resolved.Value;
+            var bindingKey = new MongoDocumentBindingKey("orders");
+            var resolved = await collections.GetCollectionAsync<Order>(bindingKey, cancellationToken);
+            if (resolved.IsFailed)
+            {
+                return resolved.ToResult();
+            }
 
-            return await collection.Aggregate()
+            var collection = resolved.Value;
+            var top = await collection.Aggregate()
                 .Group(new BsonDocument { { "_id", "$sku" }, { "count", new BsonDocument("$sum", 1) } })
                 .SortByDescending(x => x["count"])
                 .Limit(10)
                 .ToListAsync(cancellationToken);
+
+            return Result.Ok<IReadOnlyList<BsonDocument>>(top);
         }
 
-        public IMongoClient Client() => provider.GetRequiredKeyedService<IMongoClient>("primary");
+        public IMongoClient GetClient() => provider.GetRequiredKeyedService<IMongoClient>("primary");
     }
 
     private ServiceProvider BuildProvider()
@@ -63,12 +72,13 @@ public class DriverEscapeHatchesExampleTests : ExampleIntegrationTests
         var service = ActivatorUtilities.CreateInstance<ReportService>(scope.ServiceProvider);
 
         // Act
-        var top = await service.TopSkusAsync(CancellationToken.None);
+        var top = await service.GetTopSkusAsync(CancellationToken.None);
 
         // Assert
-        top[0]["_id"].AsString.ShouldBe("a");
-        top[0]["count"].ToInt32().ShouldBe(2);
-        service.Client().ShouldBeSameAs(provider.GetRequiredKeyedService<IMongoClient>("primary"));
+        top.ShouldBeSuccess();
+        top.Value[0]["_id"].AsString.ShouldBe("a");
+        top.Value[0]["count"].ToInt32().ShouldBe(2);
+        service.GetClient().ShouldBeSameAs(provider.GetRequiredKeyedService<IMongoClient>("primary"));
     }
 
     [Test]

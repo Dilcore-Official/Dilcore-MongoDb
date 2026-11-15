@@ -9,6 +9,9 @@ using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.NewtonsoftJson;
 using Microsoft.Extensions.DependencyInjection;
 
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
+
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
     .AddDatabase("app", db => db.OnCluster("primary")));
@@ -22,6 +25,7 @@ services.AddNewtonsoftJsonDocuments();
 ```csharp
 using Dilcore.MongoDB.Abstractions.Json;
 using Dilcore.MongoDB.Abstractions.Keys;
+using Dilcore.MongoDB.Abstractions.Results;
 using Dilcore.MongoDB.NewtonsoftJson;
 using FluentResults;
 using Newtonsoft.Json;
@@ -29,7 +33,7 @@ using Newtonsoft.Json.Linq;
 
 public sealed class PayloadService(INewtonsoftJsonDocumentStoreFactory stores)
 {
-    public async Task<Result<JObject>> RoundTripAsync(string json, CancellationToken cancellationToken)
+    public async Task<Result<JObject>> RoundTripAsync(string json, CancellationToken cancellationToken = default)
     {
         var store = stores.Create(new MongoDatabaseKey("app"));
 
@@ -39,11 +43,21 @@ public sealed class PayloadService(INewtonsoftJsonDocumentStoreFactory stores)
             DateParseHandling = DateParseHandling.None,
             FloatParseHandling = FloatParseHandling.Decimal
         };
-        var payload = JObject.Load(reader);
+        JObject payload;
+        try
+        {
+            payload = JObject.Load(reader);
+        }
+        catch (JsonReaderException exception)
+        {
+            return Result.Fail<JObject>(new JsonConversionError(exception.Message));
+        }
 
         var inserted = await store.InsertAsync("payloads", payload, cancellationToken: cancellationToken);
         if (inserted.IsFailed)
+        {
             return inserted.ToResult();
+        }
 
         // Reads return Canonical Extended JSON by default. Ask for relaxed output to get plain JSON back.
         var relaxed = new JsonBsonConversionOptions { OutputMode = JsonBsonOutputMode.RelaxedExtendedJson };
@@ -67,11 +81,11 @@ if (inserted.HasError<DuplicateKeyError>())
 }
 ```
 
-The cases are the same as for [System.Text.Json](json-system-text-json.md): `JsonConversionError` for malformed JSON, `DocumentTooLargeError`, `DocumentNotFoundError`, `DuplicateKeyError`, and an `InvalidOperationException` at registration when `AddMongoDb` was not called first. In addition, `JsonSerializerSettings.TypeNameHandling` other than `None` is rejected.
+The cases are the same as for [System.Text.Json](json-system-text-json.md): `JsonConversionError` for malformed JSON, `DocumentTooLargeError`, `DocumentNotFoundError`, `DuplicateKeyError`, and an `InvalidOperationException` at registration when `AddMongoDb` was not called first. `JsonSerializerSettings.TypeNameHandling` other than `None` is rejected only when those settings are passed into token conversion (`InsertAsync` or `ToBson`). That check cannot see JSON the caller already deserialized. Callers must use `TypeNameHandling.None` for their own deserialization.
 
 ## Pitfalls
 
-- Never enable `TypeNameHandling` for untrusted input. The adapter rejects it.
+- Never enable `TypeNameHandling` for untrusted input. The adapter rejects it only for settings supplied to token conversion, so use `TypeNameHandling.None` when you deserialize yourself.
 - Call `AddNewtonsoftJsonDocuments()` after `AddMongoDb`.
 - Parse with `DateParseHandling.None` (and `FloatParseHandling.Decimal` for money) before inserting, or dates and decimals can change type.
 - Use Canonical Extended JSON when BSON type fidelity matters: [JSON conversion options](json-conversion-options.md).

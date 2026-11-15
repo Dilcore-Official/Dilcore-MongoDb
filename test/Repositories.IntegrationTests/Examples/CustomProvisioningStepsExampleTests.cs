@@ -3,6 +3,7 @@ using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Abstractions.Provisioning;
 using Dilcore.MongoDB.Extensions;
 using FluentResults;
+using MongoDB.Driver;
 
 namespace Dilcore.MongoDB.Repositories.IntegrationTests.Examples;
 
@@ -11,6 +12,8 @@ public class CustomProvisioningStepsExampleTests : ExampleIntegrationTests
 {
     public sealed class MetricsCollectionStep : IProvisioningStep
     {
+        private const string TimeSeriesName = "metrics_ts";
+
         public string Name => "metrics-timeseries";
 
         public async Task<Result<ProvisioningStepResult>> ExecuteAsync(
@@ -18,14 +21,38 @@ public class CustomProvisioningStepsExampleTests : ExampleIntegrationTests
             bool apply,
             CancellationToken cancellationToken = default)
         {
-            var database = await databaseResolver.GetDatabaseAsync(new MongoDatabaseKey("telemetry"), cancellationToken);
+            var databaseKey = new MongoDatabaseKey("telemetry");
+            var database = await databaseResolver.GetDatabaseAsync(databaseKey, cancellationToken);
             if (database.IsFailed)
+            {
                 return database.ToResult();
+            }
+
+            var names = await database.Value.ListCollectionNamesAsync(cancellationToken: cancellationToken);
+            var existing = await names.ToListAsync(cancellationToken);
+            if (existing.Contains(TimeSeriesName))
+            {
+                return Result.Ok(new ProvisioningStepResult
+                {
+                    Name = Name,
+                    Action = "skip",
+                    Details = database.Value.DatabaseNamespace.DatabaseName
+                });
+            }
+
+            if (apply)
+            {
+                var options = new CreateCollectionOptions
+                {
+                    TimeSeriesOptions = new TimeSeriesOptions("timestamp")
+                };
+                await database.Value.CreateCollectionAsync(TimeSeriesName, options, cancellationToken);
+            }
 
             return Result.Ok(new ProvisioningStepResult
             {
                 Name = Name,
-                Action = apply ? "applied" : "would-apply",
+                Action = apply ? "create" : "would-create",
                 Details = database.Value.DatabaseNamespace.DatabaseName
             });
         }
@@ -65,11 +92,16 @@ public class CustomProvisioningStepsExampleTests : ExampleIntegrationTests
         var dryRun = await provisioner.DryRunAsync();
         var report = await provisioner.ApplyAsync(CancellationToken.None);
         var custom = report.Value.Steps.Single(s => s.Name == "metrics-timeseries");
+        var databases = scope.ServiceProvider.GetRequiredService<IMongoDatabaseResolver>();
+        var telemetry = await databases.GetDatabaseAsync(new MongoDatabaseKey("telemetry"));
+        var listed = await telemetry.Value.ListCollectionNamesAsync();
+        var collectionNames = await listed.ToListAsync();
 
         // Assert
-        dryRun.Value.Steps.Single(s => s.Name == "metrics-timeseries").Action.ShouldBe("would-apply");
-        custom.Action.ShouldBe("applied");
+        dryRun.Value.Steps.Single(s => s.Name == "metrics-timeseries").Action.ShouldBe("would-create");
+        custom.Action.ShouldBe("create");
         custom.Details.ShouldBe("telemetry");
+        collectionNames.ShouldContain("metrics_ts");
     }
 
     [Test]

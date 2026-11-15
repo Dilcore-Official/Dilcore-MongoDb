@@ -9,15 +9,8 @@ using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
-public sealed class Employee : IDocumentEntity<Guid>
-{
-    public Guid Id { get; set; }
-    public string Name { get; set; } = "";
-    public string Department { get; set; } = "";
-    public decimal Salary { get; set; }
-}
-
-public sealed record EmployeeSummary(string Name, string Department);
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -31,6 +24,16 @@ services.AddMongoDb(mongo => mongo
             .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7)
             .WithProjectionRepository());
     }));
+
+public sealed class Employee : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = "";
+    public string Department { get; set; } = "";
+    public decimal Salary { get; set; }
+}
+
+public sealed record EmployeeSummary(string Name, string Department);
 ```
 
 ## Use
@@ -43,17 +46,27 @@ using MongoDB.Driver;
 public sealed class DirectoryService(IGenericProjectionRepository<Employee> employees)
 {
     // Salary is never read from the database.
-    public Task<Result<IReadOnlyList<EmployeeSummary>>> ListAsync(string department, CancellationToken cancellationToken)
-        => employees.GetListAsync(
-            Builders<Employee>.Filter.Eq(x => x.Department, department),
-            x => new EmployeeSummary(x.Name, x.Department),
-            cancellationToken);
+    public Task<Result<IReadOnlyList<EmployeeSummary>>> ListAsync(
+        string department,
+        CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<Employee>.Filter.Eq(x => x.Department, department);
 
-    public Task<Result<EmployeeSummary>> FindAsync(Guid id, CancellationToken cancellationToken)
-        => employees.GetAsync(
-            Builders<Employee>.Filter.Eq(x => x.Id, id),
+        return employees.GetListAsync(
+            filter,
             x => new EmployeeSummary(x.Name, x.Department),
             cancellationToken);
+    }
+
+    public Task<Result<EmployeeSummary>> FindAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<Employee>.Filter.Eq(x => x.Id, id);
+
+        return employees.GetAsync(
+            filter,
+            x => new EmployeeSummary(x.Name, x.Department),
+            cancellationToken);
+    }
 }
 ```
 

@@ -11,6 +11,7 @@ public class PackageSelectionExampleTests : ExampleIntegrationTests
     {
         // Arrange
         var services = new ServiceCollection();
+        var connectionString = MongoDbContainer.GetConnectionString();
 
         services.AddMongoDb(mongo => mongo
             .AddCluster("primary", c => c.UseConnectionString(connectionString))

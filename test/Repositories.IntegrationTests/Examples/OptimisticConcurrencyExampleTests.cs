@@ -19,18 +19,23 @@ public class OptimisticConcurrencyExampleTests : ExampleIntegrationTests
 
     public sealed class InvoiceService(IGenericRepository<Invoice> invoices)
     {
-        public async Task<Result<Invoice>> ReviseAsync(Guid id, decimal total, CancellationToken cancellationToken)
+        public async Task<Result<Invoice>> ReviseAsync(
+            Guid id,
+            decimal total,
+            CancellationToken cancellationToken = default)
         {
             var current = await invoices.GetAsync(id, cancellationToken);
             if (current.IsFailed)
+            {
                 return current;
+            }
 
             current.Value.Total = total;
 
             return await invoices.ReplaceAsync(current.Value, cancellationToken);
         }
 
-        public Task<Result<bool>> DeleteAsync(Invoice seen, CancellationToken cancellationToken)
+        public Task<Result<bool>> DeleteAsync(Invoice seen, CancellationToken cancellationToken = default)
             => invoices.DeleteAsync(seen.Id, seen.ETag, cancellationToken);
     }
 

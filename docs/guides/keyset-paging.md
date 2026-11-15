@@ -1,6 +1,6 @@
 # Page through results with keyset cursors
 
-Read large result sets in stable pages that do not skip or repeat rows. Package: `Dilcore.MongoDB`.
+Read large result sets in keyset pages. Package: `Dilcore.MongoDB`. Requests do not share a snapshot, so a sort value that changes between pages can skip or repeat documents. The `_id` tie-breaker only orders equal sort values. Use an immutable sort key, or read inside one snapshot, when the traversal must be consistent.
 
 ## Setup
 
@@ -10,13 +10,8 @@ using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
-public sealed class Post : IDocumentEntity<Guid>, IAuditableDocument
-{
-    public Guid Id { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
-    public string Title { get; set; } = "";
-}
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -27,6 +22,14 @@ services.AddMongoDb(mongo => mongo
             .WithCollectionName("posts")
             .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
     }));
+
+public sealed class Post : IDocumentEntity<Guid>, IAuditableDocument
+{
+    public Guid Id { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public string Title { get; set; } = "";
+}
 ```
 
 ## Use
@@ -39,16 +42,18 @@ using MongoDB.Driver;
 
 public sealed class PostService(IGenericRepository<Post> posts)
 {
-    public Task<Result<KeysetPage<Post>>> ListAsync(string? cursor, CancellationToken cancellationToken)
-        => posts.GetPageAsync(
-            new KeysetPageRequest<Post>
-            {
-                Filter = Builders<Post>.Filter.Empty,
-                Sort = Builders<Post>.Sort.Descending(x => x.CreatedAt),   // the cursor is bound to this sort
-                PageSize = 50,
-                Cursor = cursor                                            // NextCursor of the previous page, or null
-            },
-            cancellationToken);
+    public Task<Result<KeysetPage<Post>>> ListAsync(string? cursor, CancellationToken cancellationToken = default)
+    {
+        var request = new KeysetPageRequest<Post>
+        {
+            Filter = Builders<Post>.Filter.Empty,
+            Sort = Builders<Post>.Sort.Descending(x => x.CreatedAt),   // the cursor is bound to this sort
+            PageSize = 50,
+            Cursor = cursor                                            // NextCursor of the previous page, or null
+        };
+
+        return posts.GetPageAsync(request, cancellationToken);
+    }
 }
 
 // The caller sends page.Value.NextCursor back while page.Value.HasMore is true.
@@ -78,6 +83,7 @@ A failed `Result` is returned for:
 - Never reuse a cursor with a different sort. Start from `Cursor = null` when the sort changes.
 - Treat the cursor as an opaque string. Do not parse or build one.
 - Filters are applied on every page. Changing the filter between pages can skip or repeat rows.
+- Pages are separate reads. A document whose sort value changes can move into a page you already returned or into one you will skip. `_id` does not freeze a sort value that is not equal to its neighbour. Prefer an immutable sort key, or a snapshot read, for a consistent traversal.
 
 ## See also
 

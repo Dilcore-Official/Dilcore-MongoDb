@@ -9,12 +9,8 @@ using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
-public sealed class Product : IDocumentEntity<Guid>
-{
-    public Guid Id { get; set; }
-    public string Sku { get; set; } = "";
-    public int Stock { get; set; }
-}
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -25,6 +21,13 @@ services.AddMongoDb(mongo => mongo
             .WithCollectionName("products")
             .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
     }));
+
+public sealed class Product : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string Sku { get; set; } = "";
+    public int Stock { get; set; }
+}
 ```
 
 ## Use
@@ -38,26 +41,28 @@ using MongoDB.Driver;
 public sealed class ProductService(IGenericRepository<Product> products)
 {
     // An empty Id inserts. A set Id updates the stored snapshot.
-    public Task<Result<Product>> SaveAsync(Product product, CancellationToken cancellationToken)
+    public Task<Result<Product>> SaveAsync(Product product, CancellationToken cancellationToken = default)
         => products.StoreAsync(product, cancellationToken);
 
     // GetAsync(id) is an extension from Dilcore.MongoDB.Repositories.GenericRepositoryExtensions.
-    public Task<Result<Product>> FindAsync(Guid id, CancellationToken cancellationToken)
+    public Task<Result<Product>> FindAsync(Guid id, CancellationToken cancellationToken = default)
         => products.GetAsync(id, cancellationToken);
 
-    public Task<Result<IReadOnlyList<Product>>> LowStockAsync(CancellationToken cancellationToken)
+    public Task<Result<IReadOnlyList<Product>>> GetLowStockAsync(CancellationToken cancellationToken = default)
         => products.GetListAsync(x => x.Stock < 5, cancellationToken);
 
     // Replace swaps the whole stored document.
-    public Task<Result<Product>> ReplaceAsync(Product changed, CancellationToken cancellationToken)
+    public Task<Result<Product>> ReplaceAsync(Product changed, CancellationToken cancellationToken = default)
         => products.ReplaceAsync(changed, cancellationToken);
 
     // Patch applies only the update you pass. The filter decides which document is touched.
-    public Task<Result<Product>> RestockAsync(Guid id, int amount, CancellationToken cancellationToken)
-        => products.PatchAsync(
-            Builders<Product>.Filter.Eq(x => x.Id, id),
-            Builders<Product>.Update.Inc(x => x.Stock, amount),
-            cancellationToken);
+    public Task<Result<Product>> RestockAsync(Guid id, int amount, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<Product>.Filter.Eq(x => x.Id, id);
+        var update = Builders<Product>.Update.Inc(x => x.Stock, amount);
+
+        return products.PatchAsync(filter, update, cancellationToken);
+    }
 }
 ```
 
@@ -88,7 +93,7 @@ if (found.HasError<DocumentNotFoundError>())
 |-------|------|
 | `DocumentNotFoundError` | `GetAsync` finds nothing; `ReplaceAsync` or `PatchAsync` matches nothing (without a concurrency token) |
 | `DuplicateKeyError` | An insert or update violates a unique index |
-| `TransientWriteError` | A retryable write failure. Safe to retry |
+| `TransientWriteError` | A retryable write failure whose outcome may be unknown. Retry only an idempotent operation, or read the current state before retrying |
 | `ConcurrencyConflictError` | A stale ETag, see [Optimistic concurrency](optimistic-concurrency.md) |
 
 The full table is in [Handle typed errors](handle-errors.md).

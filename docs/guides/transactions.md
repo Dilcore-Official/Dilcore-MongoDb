@@ -11,17 +11,8 @@ using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
-public sealed class Order : IDocumentEntity<Guid>
-{
-    public Guid Id { get; set; }
-    public string Sku { get; set; } = "";
-}
-
-public sealed class Payment : IDocumentEntity<Guid>
-{
-    public Guid Id { get; set; }
-    public Guid OrderId { get; set; }
-}
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -35,6 +26,18 @@ services.AddMongoDb(mongo => mongo
             .WithCollectionName("payments")
             .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
     }));
+
+public sealed class Order : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string Sku { get; set; } = "";
+}
+
+public sealed class Payment : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public Guid OrderId { get; set; }
+}
 ```
 
 ## Use
@@ -46,9 +49,17 @@ using FluentResults;
 
 public sealed class CheckoutService(IMongoDbTransactionRunner runner)
 {
-    public Task<Result<Guid>> PlaceOrderAsync(Order order, CancellationToken cancellationToken)
-        => runner.WithTransactionAsync(
-            new MongoClusterKey("primary"),
+    public Task<Result<Guid>> PlaceOrderAsync(Order order, CancellationToken cancellationToken = default)
+    {
+        var clusterKey = new MongoClusterKey("primary");
+        var options = new MongoTransactionOptions
+        {
+            MaxOperations = 100,                     // client-side budget, tighter than the 1000 default
+            TimeLimit = TimeSpan.FromSeconds(10)
+        };
+
+        return runner.WithTransactionAsync(
+            clusterKey,
             async (tx, ct) =>
             {
                 // Take repositories from the context, not from DI, so the writes join this session.
@@ -57,20 +68,22 @@ public sealed class CheckoutService(IMongoDbTransactionRunner runner)
 
                 var stored = await orders.StoreAsync(order, ct);
                 if (stored.IsFailed)
+                {
                     return stored.ToResult();            // a failed Result aborts the transaction
+                }
 
-                var payment = await payments.StoreAsync(new Payment { OrderId = stored.Value.Id }, ct);
+                var paymentDocument = new Payment { OrderId = stored.Value.Id };
+                var payment = await payments.StoreAsync(paymentDocument, ct);
                 if (payment.IsFailed)
+                {
                     return payment.ToResult();
+                }
 
                 return Result.Ok(stored.Value.Id);
             },
-            new MongoTransactionOptions
-            {
-                MaxOperations = 100,                     // client-side budget, tighter than the 1000 default
-                TimeLimit = TimeSpan.FromSeconds(10)
-            },
+            options,
             cancellationToken);
+    }
 }
 ```
 
@@ -110,7 +123,7 @@ else if (result.IsFailed)
 }
 ```
 
-An exception other than a retryable transaction error aborts the transaction and propagates to the caller.
+A `MongoException` caught from `WithTransactionAsync` aborts the transaction and returns a failed `Result`, including when the error is not retryable. An exception outside that mapping may propagate to the caller.
 
 ## Pitfalls
 

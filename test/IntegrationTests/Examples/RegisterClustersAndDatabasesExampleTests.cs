@@ -17,7 +17,7 @@ public class RegisterClustersAndDatabasesExampleTests : ExampleIntegrationTests
 
     public sealed class ArchiveService(IRepositoryResolver repositories)
     {
-        public async Task<Result> ArchiveAsync(Order order, CancellationToken cancellationToken)
+        public async Task<Result> ArchiveAsync(Order order, CancellationToken cancellationToken = default)
         {
             var archived = repositories.GetRepository<Order>("archived-orders");
 

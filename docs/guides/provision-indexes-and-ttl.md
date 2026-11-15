@@ -10,12 +10,8 @@ using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 
-public sealed class Session : IDocumentEntity<Guid>
-{
-    public Guid Id { get; set; }
-    public string UserName { get; set; } = "";
-    public DateTime ExpiresAt { get; set; }
-}
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -30,9 +26,18 @@ services.AddMongoDb(mongo => mongo
                 // Always name the index. Apply compares by name to detect drift and removals.
                 new CreateIndexOptions { Name = "sessions_user", Unique = true }))
 
-            // Adds a named expire-after index "{collection}_ttl". The server removes documents after one hour.
-            .WithCollectionItemsTimeToLive(TimeSpan.FromHours(1), x => x.ExpiresAt));
+            // Expire at the timestamp stored in ExpiresAt. A non-zero lifetime is added to that field,
+            // so one hour would mean an hour after ExpiresAt, not an hour after the session was created.
+            // The server may delete the document after it becomes eligible.
+            .WithCollectionItemsTimeToLive(TimeSpan.Zero, x => x.ExpiresAt));
     }));
+
+public sealed class Session : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string UserName { get; set; } = "";
+    public DateTime ExpiresAt { get; set; }
+}
 ```
 
 ## Use
@@ -44,17 +49,32 @@ using Microsoft.Extensions.DependencyInjection;
 public static class Provisioning
 {
     // Call after the host is built and before it serves requests, or from a deploy job.
-    public static async Task ProvisionAsync(IServiceProvider services, CancellationToken cancellationToken)
+    public static async Task ProvisionAsync(
+        IServiceProvider services,
+        bool allowIndexRemoval,
+        CancellationToken cancellationToken = default)
     {
         using var scope = services.CreateScope();
         var provisioner = scope.ServiceProvider.GetRequiredService<IMongoDbProvisioner>();
 
         // Preview first on an existing database. Applied is false and nothing changes.
         var preview = await provisioner.DryRunAsync(cancellationToken);
+        if (preview.IsFailed)
+        {
+            throw new InvalidOperationException("MongoDB provisioning preview failed.");
+        }
+
+        var wouldRemove = preview.Value.Steps.Any(step => step.Action == "would-remove");
+        if (wouldRemove && !allowIndexRemoval)
+        {
+            throw new InvalidOperationException("Review the index removal before applying.");
+        }
 
         var report = await provisioner.ApplyAsync(cancellationToken);
         if (report.IsFailed)
+        {
             throw new InvalidOperationException("MongoDB provisioning failed.");   // fail closed at startup
+        }
     }
 }
 ```
@@ -78,8 +98,9 @@ Documents are never deleted, only index metadata changes. Comparison covers `key
 var report = await provisioner.ApplyAsync(cancellationToken);
 if (report.IsFailed)
 {
-    // report.Errors holds the failing step. For example DuplicateKeyError when a new unique
-    // index meets existing duplicate values. Stop the deployment.
+    // report.Errors holds the failing step as a plain message, for example when existing
+    // duplicate values block a new unique index. That failure is not a DuplicateKeyError.
+    // Stop the deployment.
 }
 ```
 
@@ -93,6 +114,7 @@ if (report.IsFailed)
 
 ## See also
 
+- [Expire documents automatically with TTL](expire-documents-with-ttl.md)
 - [Custom provisioning steps](custom-provisioning-steps.md)
 - [Register clusters and databases](register-clusters-and-databases.md)
 - [Samples](../../samples/MongoDb.Capabilities.Sample)

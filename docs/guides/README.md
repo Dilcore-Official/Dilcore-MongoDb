@@ -32,6 +32,7 @@ Task-oriented pages for the Dilcore MongoDB packages. Every page has the same sh
 ## Provisioning
 
 - [Provision collections, indexes and TTL](provision-indexes-and-ttl.md)
+- [Expire documents automatically with TTL](expire-documents-with-ttl.md)
 - [Add custom provisioning steps](custom-provisioning-steps.md)
 
 ## Transactions

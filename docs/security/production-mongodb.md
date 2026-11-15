@@ -11,13 +11,10 @@ using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 
-public sealed class Order : IDocumentEntity<Guid>
-{
-    public Guid Id { get; set; }
-}
-
 // connectionString comes from the host secret store (environment variable, Key Vault,
 // Secrets Manager, Kubernetes secret). Never commit it and never log it.
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 var settings = MongoClientSettings.FromConnectionString(connectionString);
 settings.UseTls = true;                                  // do not disable certificate validation in production
 settings.ApplicationName = "orders-api";
@@ -31,6 +28,11 @@ services.AddMongoDb(mongo => mongo
         db.OnCluster("primary");
         db.AddDocumentBinding<Order>("orders", d => d.WithCollectionName("orders"));
     }));
+
+public sealed class Order : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+}
 ```
 
 With a plain connection string you can set the same options in the string (`tls=true`) and use `UseConnectionString`. Use `UseExistingClient` when you need driver settings the string cannot express.
@@ -49,7 +51,7 @@ With a plain connection string you can set the same options in the string (`tls=
 |---------|---------|----------|
 | `InvalidOperationException` at startup | Registration is invalid | Fix the registration. The host should not start |
 | Failed `Result` with a namespace message | Missing tenant prefix or unknown database | Reject the request. Do not fall back to a shared database |
-| `TransientWriteError` | Retryable write failure | Retry with backoff |
+| `TransientWriteError` | The write may already have been applied | Retry with backoff only when the write is idempotent |
 | Driver `MongoAuthenticationException` or TLS errors | Credentials or certificate problem | Alert. Do not retry in a loop |
 
 See [Handle typed errors](../guides/handle-errors.md).

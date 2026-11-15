@@ -45,11 +45,11 @@ Install previews with `dotnet add package Dilcore.MongoDB --prerelease`. All pac
 | CRUD, paging, bulk, projections | `IGenericRepository<T>`, bulk and projection repositories | [crud](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/crud-with-repositories.md), [paging](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/keyset-paging.md), [bulk](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/bulk-writes.md), [projections](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/projections.md), [errors](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/handle-errors.md) |
 | ETag, audit stamps, soft delete, Guid ids | Policy interfaces + binding options | [documents](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/define-documents.md), [ETag](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/optimistic-concurrency.md), [soft delete](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/soft-delete.md) |
 | Per-tenant or per-environment database names | `INamespacePrefixResolver` | [tenants](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/multi-tenant-databases.md), [prefixes](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/namespace-prefixes.md) |
-| Indexes, TTL, collections | `IMongoDbProvisioner` | [indexes and TTL](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/provision-indexes-and-ttl.md), [custom steps](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/custom-provisioning-steps.md) |
+| Indexes, TTL, collections | `IMongoDbProvisioner` | [indexes and TTL](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/provision-indexes-and-ttl.md), [expire documents](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/expire-documents-with-ttl.md), [custom steps](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/custom-provisioning-steps.md) |
 | Several writes that must commit together | `IMongoDbTransactionRunner` | [transactions](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/transactions.md) |
 | Documents without a CLR type | `IJsonDocumentStore` | [System.Text.Json](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-system-text-json.md), [Newtonsoft.Json](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-newtonsoft.md), [conversion options](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-conversion-options.md) |
 | Just the collection or database, no repository | Keyed `IMongoCollection<T>` (key = binding), `IMongoDbCollectionFactory`, keyed `IMongoDatabase` | [resolve collections](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/resolve-collections.md) |
-| Anything the toolkit does not wrap | Keyed `IMongoClient`, `IMongoDatabase`, `IMongoDbCollectionFactory` | [driver escape hatches](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/product/driver-escape-hatches.md) |
+| Anything the toolkit does not wrap | `IMongoDbCollectionFactory` for tenant-aware collections. The keyed `IMongoClient` is a raw client and bypasses namespace resolution | [driver escape hatches](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/product/driver-escape-hatches.md) |
 
 Every guide has the same sections (Setup, Use, Handle failures, Pitfalls, See also). The full list of pages is in [references/docs-index.md](references/docs-index.md). Worked, commented examples for the most common combinations are in [references/examples.md](references/examples.md).
 
@@ -81,6 +81,8 @@ Every guide has the same sections (Setup, Use, Handle failures, Pitfalls, See al
 **Provisioning**
 - Create indexes and collections with `IMongoDbProvisioner` at startup or in a deploy job, never in a request. Resolving a collection does not create indexes.
 - Set `CreateIndexOptions.Name` on every index. Apply removes server indexes that are not declared on the binding, so declare every index you want to keep. Run `DryRunAsync` first when changing indexes on existing data.
+- A TTL field must be stored as a BSON `Date`. Use `DateTime` or `DateTime?` in UTC. `DateTimeOffset` is a subdocument by default, so the index is created and nothing expires. `null` or a missing field does not expire, which is how you keep a document.
+- The server deletes eligible documents on a background pass (about once a minute). Filter reads on the deadline when a document must disappear at that instant. Nothing expires until `ApplyAsync` has created the index.
 
 **Transactions**
 - They need a replica set. Standalone `mongod` returns a failed `Result`.
@@ -90,11 +92,11 @@ Every guide has the same sections (Setup, Use, Handle failures, Pitfalls, See al
 
 **JSON**
 - Use Canonical Extended JSON when BSON type fidelity matters (`ObjectId`, `long`, `decimal`, dates). Relaxed output may widen numbers.
-- Never enable Newtonsoft `TypeNameHandling` for untrusted input. The adapter rejects it.
+- Never enable Newtonsoft `TypeNameHandling` for untrusted input. The adapter rejects it only when those settings are supplied to token conversion. Use `TypeNameHandling.None` for your own deserialization.
 - `AddSystemTextJsonDocuments()` and `AddNewtonsoftJsonDocuments()` must come **after** `AddMongoDb`.
 
 **Escape hatches**
-- Reach the driver through the keyed `IMongoClient`, `IMongoDatabase` or `IMongoDbCollectionFactory` so the same namespace pipeline applies. Dispose cursors you open. Do not wrap driver features in your own provider-neutral abstraction.
+- Direct access through the keyed `IMongoClient` does not apply tenant resolution: `GetDatabase` bypasses the namespace pipeline. Use `IMongoDbCollectionFactory` for tenant-aware collection access. Dispose cursors you open. Do not wrap driver features in your own provider-neutral abstraction.
 
 **Logging and secrets**
 - Do not log connection strings, credentials or full documents that may hold personal data.
@@ -115,4 +117,5 @@ Every guide has the same sections (Setup, Use, Handle failures, Pitfalls, See al
 | Transaction returns a failed result immediately | Standalone server (no replica set) |
 | Writes in a transaction survive an abort | Repository was taken from the request scope, not from the transaction context |
 | Indexes disappear after deploy | They were not declared on the binding and `ApplyAsync` removed them |
+| TTL index exists but documents never expire | The field is not a BSON `Date` (`DateTimeOffset`, a string, or a number), or `ApplyAsync` never created the index |
 | `CollectionResolutionException` from `GetAsyncEnumerable` | The streaming method throws on resolution failure instead of returning a `Result` |
