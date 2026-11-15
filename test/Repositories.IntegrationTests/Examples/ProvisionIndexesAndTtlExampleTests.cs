@@ -55,9 +55,11 @@ public class ProvisionIndexesAndTtlExampleTests : ExampleIntegrationTests
 
     private async Task<List<BsonDocument>> ServerIndexesAsync()
     {
-        var collection = new MongoClient(connectionString).GetDatabase("auth").GetCollection<BsonDocument>("sessions");
+        using var client = new MongoClient(connectionString);
+        var collection = client.GetDatabase("auth").GetCollection<BsonDocument>("sessions");
+        var indexes = await collection.Indexes.ListAsync();
 
-        return await (await collection.Indexes.ListAsync()).ToListAsync();
+        return await indexes.ToListAsync();
     }
 
     [Test]
@@ -91,7 +93,8 @@ public class ProvisionIndexesAndTtlExampleTests : ExampleIntegrationTests
         await using var provider = BuildProvider();
         using var scope = provider.CreateScope();
         var provisioner = scope.ServiceProvider.GetRequiredService<IMongoDbProvisioner>();
-        var collection = new MongoClient(connectionString).GetDatabase("auth").GetCollection<BsonDocument>("sessions");
+        using var client = new MongoClient(connectionString);
+        var collection = client.GetDatabase("auth").GetCollection<BsonDocument>("sessions");
         await collection.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
             Builders<BsonDocument>.IndexKeys.Ascending("other"), new CreateIndexOptions { Name = "stray" }));
 
@@ -110,7 +113,8 @@ public class ProvisionIndexesAndTtlExampleTests : ExampleIntegrationTests
     {
         // Arrange
         await using var provider = BuildProvider();
-        var collection = new MongoClient(connectionString).GetDatabase("auth").GetCollection<BsonDocument>("sessions");
+        using var client = new MongoClient(connectionString);
+        var collection = client.GetDatabase("auth").GetCollection<BsonDocument>("sessions");
         await collection.InsertManyAsync([new BsonDocument("UserName", "a"), new BsonDocument("UserName", "a")]);
 
         // Act

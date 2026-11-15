@@ -71,7 +71,12 @@ public class MultiTenantDatabasesExampleTests : ExampleIntegrationTests
     }
 
     private async Task<List<string>> DatabaseNamesAsync()
-        => await (await new MongoClient(connectionString).ListDatabaseNamesAsync()).ToListAsync();
+    {
+        using var client = new MongoClient(connectionString);
+        var names = await client.ListDatabaseNamesAsync();
+
+        return await names.ToListAsync();
+    }
 
     [Test]
     public async Task EachTenant_WritesToItsOwnDatabase()
