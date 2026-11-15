@@ -5,6 +5,7 @@ Insert, update and delete in batches with `IGenericBulkRepository<TDocument>`. P
 ## Setup
 
 ```csharp
+using System;
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,7 +50,8 @@ public sealed class ReadingImporter(IGenericBulkRepository<Reading> bulk)
         IReadOnlyList<Reading> batch,
         CancellationToken cancellationToken = default)
     {
-        // Unordered: one failing item does not stop the rest.
+        // Unordered applies inside the current chunk: one failing item does not stop the other items in that chunk.
+        // A write error still returns before later chunks are sent.
         var options = new MongoBulkWriteOptions { IsOrdered = false };
 
         var result = await bulk.BulkStoreRangeAsync(batch, options, cancellationToken);
@@ -84,6 +86,7 @@ An update whose ETag no longer matches is a failed item, not a silent success. E
 
 - Inject `IGenericBulkRepository<T>` only after `WithBulkRepository()` is on the binding.
 - With `IsOrdered = true` (the default) the first failure stops the batch, so later items are not written.
+- `IsOrdered = false` continues past a failing item only inside the current chunk. A write error returns before later chunks are submitted, so the rest of the input is not attempted.
 - Do not treat a failed `Result` as "nothing was written": check `BulkWritePartialFailureError` first.
 
 ## See also

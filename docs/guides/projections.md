@@ -5,6 +5,7 @@ Project documents into smaller types on the server with `IGenericProjectionRepos
 ## Setup
 
 ```csharp
+using System;
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;

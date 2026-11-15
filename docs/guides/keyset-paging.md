@@ -1,10 +1,11 @@
 # Page through results with keyset cursors
 
-Read large result sets in keyset pages. Package: `Dilcore.MongoDB`. Requests do not share a snapshot, so a sort value that changes between pages can skip or repeat documents. The `_id` tie-breaker only orders equal sort values. Use an immutable sort key, or read inside one snapshot, when the traversal must be consistent.
+Read large result sets in keyset pages. Package: `Dilcore.MongoDB`. An immutable sort key stops a document from moving between pages when its sort value changes. Inserts and deletes between page reads can still add or drop documents, and later pages do not go back for them. The `_id` tie-breaker only orders equal sort values. A consistent snapshot needs snapshot reads.
 
 ## Setup
 
 ```csharp
+using System;
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Extensions;

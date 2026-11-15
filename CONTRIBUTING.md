@@ -202,12 +202,12 @@ from it.
    tests). After the `nuget` environment is approved it packs with that version and reserves it with a
    lightweight tag `vX.Y.Z-reserved` on this commit. A retry continues only when that reservation already
    points at the same commit. A different commit cannot publish or claim the version. The run then pushes the
-   `.nupkg` and `.snupkg` files to NuGet.org, and only then creates the final `vX.Y.Z` tag, removes the
-   reservation, and creates the GitHub Release (marked pre-release for preview versions). A failed publish
-   leaves the reservation and no final tag, so the next run of this commit reuses the number and another
-   commit takes the following number. If the tag step fails after a successful push, re-run the failed jobs of
-   that same run: the reservation matches, the push is skipped as a duplicate, and the final tag is created on
-   the same commit.
+   `.nupkg` and `.snupkg` files to NuGet.org, and only then creates the final `vX.Y.Z` tag and the GitHub
+   Release (marked pre-release for preview versions). The reservation is removed after that release exists. A failed publish leaves the reservation and
+   no final tag, so the next run of this commit reuses the number and another commit takes the following
+   number. If the tag or release step fails after a successful push, the reservation stays. Re-run the failed
+   jobs of that same run: the reservation matches, the push is skipped as a duplicate, and the same version
+   is tagged and released.
 4. **Dry run:** tick `dry_run` (default off). The run computes the next version, tests, packs, waits for the
    `nuget` environment approval, and logs in to NuGet.org with OIDC, which proves the trusted publishing policy,
    `NUGET_USER` and the environment name are right. It then stops: no push, no tag, no release, and the packages

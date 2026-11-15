@@ -11,8 +11,9 @@ name: 📦 Publish NuGet Packages
 #
 # All libraries are packed in the same run with the same version, so they are always released together.
 # On main a publishing run reserves vX.Y.Z-reserved on this commit, pushes the packages, and only after that
-# succeeded creates the final vX.Y.Z tag and the GitHub Release. A retry continues only when that reservation
-# already points at this commit. dry_run = true tests the whole path (tests, pack, environment approval, OIDC login)
+# succeeded creates the final vX.Y.Z tag and the GitHub Release. The reservation stays until that release
+# exists, so a failed release keeps the version for a retry of the same commit. A retry continues only when
+# that reservation already points at this commit. dry_run = true tests the whole path (tests, pack, environment approval, OIDC login)
 # and stops before the reservation, the push, the tag and the release; it works from any branch. From another
 # branch without dry_run the workflow only packs and uploads an artifact.
 # One-time setup (nuget.org policy, GitHub environment, NUGET_USER secret): CONTRIBUTING.md, "Releasing".
@@ -273,8 +274,8 @@ jobs:
           --skip-duplicate
 
       # The final tag is created only after the push succeeded. A retry is a no-op when the tag already
-      # points at this commit, and it fails when another commit owns the tag. The reservation is removed
-      # once the final tag exists.
+      # points at this commit, and it fails when another commit owns the tag. The reservation stays until
+      # the GitHub Release exists.
       - name: 🏷️ Tag the published commit
         if: ${{ !inputs.dry_run }}
         env:
@@ -290,7 +291,6 @@ jobs:
             git tag "v${VERSION}" "${GITHUB_SHA}"
             git push origin "refs/tags/v${VERSION}"
           fi
-          git push origin ":refs/tags/v${VERSION}-reserved" || true
 
       - name: 🏷️ Create GitHub Release
         if: ${{ !inputs.dry_run }}
@@ -308,3 +308,9 @@ jobs:
             flags+=(--prerelease)
           fi
           gh release create "v${VERSION}" artifacts/* "${flags[@]}"
+
+      - name: 🧹 Remove version reservation
+        if: ${{ !inputs.dry_run }}
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: git push origin ":refs/tags/v${VERSION}-reserved" || true

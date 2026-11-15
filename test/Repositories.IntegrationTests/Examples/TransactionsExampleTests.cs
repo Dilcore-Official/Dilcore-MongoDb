@@ -47,7 +47,8 @@ public class TransactionsExampleTests
                     var orders = tx.Repositories.GetRepository<Order>("orders");
                     var payments = tx.Repositories.GetRepository<Payment>("payments");
 
-                    var stored = await orders.StoreAsync(order, ct);
+                    var attempt = new Order { Id = order.Id, Sku = order.Sku };
+                    var stored = await orders.StoreAsync(attempt, ct);
                     if (stored.IsFailed)
                     {
                         return stored.ToResult();

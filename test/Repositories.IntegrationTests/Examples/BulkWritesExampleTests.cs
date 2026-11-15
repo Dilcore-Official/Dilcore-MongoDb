@@ -26,6 +26,8 @@ public class BulkWritesExampleTests : ExampleIntegrationTests
             IReadOnlyList<Reading> batch,
             CancellationToken cancellationToken = default)
         {
+            // Unordered applies inside the current chunk: one failing item does not stop the other items in that chunk.
+            // A write error still returns before later chunks are sent.
             var options = new MongoBulkWriteOptions { IsOrdered = false };
 
             var result = await bulk.BulkStoreRangeAsync(batch, options, cancellationToken);

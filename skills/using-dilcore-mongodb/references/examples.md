@@ -144,6 +144,8 @@ if (wouldRemove)
 }
 
 // Keep the preview for that review. Do not call ApplyAsync until the removal is explicitly approved.
+// Run provisioning from one deployment step. ApplyAsync recomputes removals from the current index list,
+// so an index created after DryRunAsync is removed without passing the would-remove check.
 ```
 
 ## 4. Several clusters and databases
@@ -203,6 +205,9 @@ public sealed class TenantDatabasePrefixResolver(ITenantAccessor tenants) : INam
     }
 }
 
+// AddMongoDb registers the resolver, not ITenantAccessor. Register your accessor first.
+services.AddScoped<ITenantAccessor, RequestTenantAccessor>();
+
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
     .AddDatabase("shop", db =>
@@ -240,7 +245,15 @@ public sealed class CheckoutService(IMongoDbTransactionRunner runner)
                 var orders = tx.Repositories.GetRepository<Order>("orders");
                 var payments = tx.Repositories.GetRepository<Payment>("payments");
 
-                var stored = await orders.StoreAsync(order, ct);
+                // A retry runs this callback again. A fresh instance keeps Id and ETag unset
+                // after a rolled-back insert, so the next attempt still takes the insert path.
+                var attempt = new Order
+                {
+                    Id = order.Id,
+                    Sku = order.Sku,
+                    ExpiresAt = order.ExpiresAt
+                };
+                var stored = await orders.StoreAsync(attempt, ct);
                 if (stored.IsFailed)
                 {
                     return stored.ToResult();            // a failed Result aborts the transaction
@@ -261,11 +274,11 @@ public sealed class CheckoutService(IMongoDbTransactionRunner runner)
 }
 ```
 
-The callback can run again after a transient error. Do not send e-mails or call other systems inside it.
+The callback can run again after a transient error. Build each stored entity inside the callback so a rolled-back attempt does not leave `Id` or `ETag` set on the caller's instance. Do not send e-mails or call other systems inside it. A failure before commit aborts the transaction. A commit-stage failure, such as `UnknownTransactionCommitResult`, can leave the outcome unknown.
 
 ## 7. Keyset paging
 
-The `_id` tie-breaker orders equal sort values. Requests do not share a snapshot, so a sort value that changes between pages can still skip or repeat documents. Prefer an immutable sort key.
+The `_id` tie-breaker orders equal sort values. An immutable sort key stops a document from moving when its sort value changes. Inserts and deletes between page reads can still add or drop documents. A consistent snapshot needs snapshot reads.
 
 ```csharp
 public Task<Result<KeysetPage<Order>>> ListAsync(string? cursor, CancellationToken cancellationToken = default)
@@ -336,7 +349,7 @@ public async Task<Result> ImportAsync(
     var options = new MongoBulkWriteOptions { IsOrdered = false };
     var result = await bulk.BulkStoreRangeAsync(batch, options, cancellationToken);
 
-    // Some items can succeed while others fail. The error lists every item by its index in the input.
+    // Unordered continues past a failing item only inside the current chunk. A write error returns before later chunks are sent.
     if (result.HasError<BulkWritePartialFailureError>())
     {
         var failed = result.Errors.OfType<BulkWritePartialFailureError>().SelectMany(e => e.Items).Where(i => !i.Succeeded);
@@ -386,18 +399,19 @@ public sealed class AuditWriter(
     [FromKeyedServices("orders")] IMongoCollection<Order> orders,   // key = binding key, scoped
     IMongoDbCollectionFactory collections)
 {
-    public async Task WriteAsync(string message, CancellationToken cancellationToken = default)
+    public async Task<Result> WriteAsync(string message, CancellationToken cancellationToken = default)
     {
         // Untyped collection by logical name. The namespace pipeline still applies.
         var databaseKey = new MongoDatabaseKey("shop");
         var audit = await collections.GetCollectionAsync(databaseKey, "audit-log", cancellationToken: cancellationToken);
         if (audit.IsFailed)
         {
-            return;
+            return audit.ToResult();
         }
 
         var document = new BsonDocument("message", message);
         await audit.Value.InsertOneAsync(document, cancellationToken: cancellationToken);
+        return Result.Ok();
     }
 }
 ```

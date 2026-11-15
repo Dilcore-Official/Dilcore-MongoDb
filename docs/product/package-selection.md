@@ -11,6 +11,7 @@ dotnet add package Dilcore.MongoDB --prerelease
 ```
 
 ```csharp
+using System;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 

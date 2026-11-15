@@ -12,7 +12,7 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
 
 - New guide `docs/guides/resolve-collections.md` shows how to get a collection or database without repositories: keyed `IMongoCollection<T>`, `IMongoDbCollectionFactory` and `IMongoDatabaseResolver`
 - Consumer documentation is rewritten as task-oriented guides in `docs/guides/` (setup, use, failure handling, pitfalls), indexed in `docs/guides/README.md`. Every code example is covered by an integration test under `test/*/Examples/`, and `ArchitectureTests` checks that the guides, their tests and the skill index stay in sync.
-- The release workflow reserves `vX.Y.Z-reserved` on the publishing commit before the NuGet push and creates the final `vX.Y.Z` tag only after the packages were pushed. A retry continues only when that reservation matches the same commit ([#111](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/111)).
+- The release workflow reserves `vX.Y.Z-reserved` on the publishing commit before the NuGet push, creates the final `vX.Y.Z` tag after the packages were pushed, and removes the reservation only after the GitHub Release exists. A retry continues only when that reservation matches the same commit ([#111](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/111)).
 
 ### Added
 

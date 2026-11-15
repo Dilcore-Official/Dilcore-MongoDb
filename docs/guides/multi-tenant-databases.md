@@ -7,6 +7,7 @@ Route requests to a per-tenant database with a scoped prefix resolver that fails
 The library has no tenant type. Your application owns the resolver and the tenant source.
 
 ```csharp
+using System;
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Namespace;
 using Dilcore.MongoDB.Extensions;
@@ -15,6 +16,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
 var services = new ServiceCollection();
+
+// AddMongoDb registers the resolver, not ITenantAccessor. Register your accessor first.
+services.AddScoped<ITenantAccessor, RequestTenantAccessor>();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -33,6 +37,12 @@ services.AddMongoDb(mongo => mongo
 public interface ITenantAccessor
 {
     Task<string?> GetCurrentTenantIdAsync(CancellationToken cancellationToken = default);
+}
+
+public sealed class RequestTenantAccessor : ITenantAccessor
+{
+    public Task<string?> GetCurrentTenantIdAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<string?>("tenantA");
 }
 
 public sealed class TenantDatabasePrefixResolver(ITenantAccessor tenants) : INamespacePrefixResolver

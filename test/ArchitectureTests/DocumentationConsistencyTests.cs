@@ -241,6 +241,32 @@ public partial class DocumentationConsistencyTests
         offenders.ShouldBeEmpty(page);
     }
 
+    [Test]
+    public void CSharpBlock_KeepsContentAfterAFenceLikeLine()
+    {
+        // Arrange
+        var markdown = string.Join(
+            '\n',
+            [
+                "```csharp",
+                "var sample = \"\"\"",
+                "``` not a fence",
+                "\"\"\";",
+                "void Run(CancellationToken cancellationToken)",
+                "{",
+                "}",
+                "```"
+            ]);
+
+        // Act
+        var blocks = CSharpBlocks(markdown).ToList();
+        var offenders = blocks.SelectMany(SnippetStyleOffenders).ToList();
+
+        // Assert
+        blocks.Count.ShouldBe(1);
+        offenders.ShouldContain(offender => offender.Contains("CancellationToken is not optional", StringComparison.Ordinal));
+    }
+
     private static IEnumerable<string> ReadmePaths()
         =>
         [
@@ -255,28 +281,62 @@ public partial class DocumentationConsistencyTests
     {
         var lines = markdown.Split('\n');
         var block = new List<string>();
-        var inside = false;
+        var fenceLength = 0;
         foreach (var line in lines)
         {
-            if (!inside && line.StartsWith("```csharp", StringComparison.Ordinal))
+            if (fenceLength == 0 && TryCSharpFenceLength(line, out var openingLength))
             {
-                inside = true;
+                fenceLength = openingLength;
                 block.Clear();
                 continue;
             }
 
-            if (inside && line.StartsWith("```", StringComparison.Ordinal))
+            if (fenceLength > 0 && IsClosingFence(line, fenceLength))
             {
-                inside = false;
+                fenceLength = 0;
                 yield return string.Join('\n', block);
                 continue;
             }
 
-            if (inside)
+            if (fenceLength > 0)
             {
                 block.Add(line);
             }
         }
+    }
+
+    private static bool TryCSharpFenceLength(string line, out int length)
+    {
+        length = 0;
+        if (!line.StartsWith("```", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        while (length < line.Length && line[length] == '`')
+        {
+            length++;
+        }
+
+        return line.AsSpan(length).StartsWith("csharp", StringComparison.Ordinal);
+    }
+
+    private static bool IsClosingFence(string line, int fenceLength)
+    {
+        var trimmedStart = line.TrimStart(' ');
+        var indent = line.Length - trimmedStart.Length;
+        if (indent > 3)
+        {
+            return false;
+        }
+
+        var marker = 0;
+        while (marker < trimmedStart.Length && trimmedStart[marker] == '`')
+        {
+            marker++;
+        }
+
+        return marker >= fenceLength && trimmedStart.AsSpan(marker).Trim().Length == 0;
     }
 
     private static IEnumerable<string> RegistrationOrderOffenders(string block)
@@ -349,17 +409,13 @@ public partial class DocumentationConsistencyTests
     private static IEnumerable<string> UsingOffenders(string block)
     {
         var seenCode = false;
-        foreach (var raw in block.Split('\n'))
-        {
-            var line = raw.Trim();
-            if (line.Length == 0 || line.StartsWith("//", StringComparison.Ordinal))
-            {
-                continue;
-            }
+        var lines = block.Split('\n')
+            .Select(static raw => raw.Trim())
+            .Where(static line => line.Length > 0 && !line.StartsWith("//", StringComparison.Ordinal));
 
-            if (line.StartsWith("using ", StringComparison.Ordinal)
-                && !line.StartsWith("using var ", StringComparison.Ordinal)
-                && !line.StartsWith("using (", StringComparison.Ordinal))
+        foreach (var line in lines)
+        {
+            if (IsUsingDirective(line))
             {
                 if (seenCode)
                 {
@@ -372,6 +428,11 @@ public partial class DocumentationConsistencyTests
             seenCode = true;
         }
     }
+
+    private static bool IsUsingDirective(string line)
+        => line.StartsWith("using ", StringComparison.Ordinal)
+            && !line.StartsWith("using var ", StringComparison.Ordinal)
+            && !line.StartsWith("using (", StringComparison.Ordinal);
 
     private static IEnumerable<string> BraceOffenders(string block)
     {
@@ -407,34 +468,40 @@ public partial class DocumentationConsistencyTests
     }
 
     private static IEnumerable<string> CancellationOffenders(string block)
-    {
-        foreach (var raw in block.Split('\n'))
-        {
-            if (MissingCancellationDefault().IsMatch(raw))
-            {
-                yield return $"CancellationToken is not optional: {raw.Trim()}";
-            }
-        }
-    }
+        => block.Split('\n')
+            .Where(raw => MissingCancellationDefault().IsMatch(raw))
+            .Select(raw => $"CancellationToken is not optional: {raw.Trim()}");
 
     private static IEnumerable<string> ArgumentOffenders(string block)
     {
-        foreach (var raw in block.Split('\n'))
-        {
-            var line = raw.Trim();
-            if (line.StartsWith("Builders<", StringComparison.Ordinal)
-                && (line.Contains(".Filter.", StringComparison.Ordinal) || line.Contains(".Update.", StringComparison.Ordinal)))
-            {
-                yield return $"builder call used as an argument: {line}";
-            }
+        var lines = block.Split('\n').Select(static raw => raw.Trim());
 
-            var parsesObject = line.Contains("JObject.Parse(", StringComparison.Ordinal)
-                && !line.Contains("var ", StringComparison.Ordinal);
-            if (line.Contains("FromResult(Result.Ok", StringComparison.Ordinal) || parsesObject)
-            {
-                yield return $"method call used as an argument: {line}";
-            }
-        }
+        return lines.SelectMany(ArgumentLineOffenders);
+    }
+
+    private static IEnumerable<string> ArgumentLineOffenders(string line)
+    {
+        var builder = BuilderArgument(line);
+        var method = MethodArgument(line);
+        string?[] offenders = [builder, method];
+
+        return offenders.OfType<string>();
+    }
+
+    private static string? BuilderArgument(string line)
+        => line.StartsWith("Builders<", StringComparison.Ordinal)
+            && (line.Contains(".Filter.", StringComparison.Ordinal) || line.Contains(".Update.", StringComparison.Ordinal))
+            ? $"builder call used as an argument: {line}"
+            : null;
+
+    private static string? MethodArgument(string line)
+    {
+        var parsesObject = line.Contains("JObject.Parse(", StringComparison.Ordinal)
+            && !line.Contains("var ", StringComparison.Ordinal);
+
+        return line.Contains("FromResult(Result.Ok", StringComparison.Ordinal) || parsesObject
+            ? $"method call used as an argument: {line}"
+            : null;
     }
 
     private static SearchOption SearchOptions => SearchOption.AllDirectories;

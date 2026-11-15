@@ -7,6 +7,7 @@ Transactions need a **replica set** (or mongos). A standalone `mongod` cannot ru
 ## Setup
 
 ```csharp
+using System;
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;
@@ -66,7 +67,10 @@ public sealed class CheckoutService(IMongoDbTransactionRunner runner)
                 var orders = tx.Repositories.GetRepository<Order>("orders");
                 var payments = tx.Repositories.GetRepository<Payment>("payments");
 
-                var stored = await orders.StoreAsync(order, ct);
+                // A retry runs this callback again. A fresh instance keeps Id and ETag unset
+                // after a rolled-back insert, so the next attempt still takes the insert path.
+                var attempt = new Order { Id = order.Id, Sku = order.Sku };
+                var stored = await orders.StoreAsync(attempt, ct);
                 if (stored.IsFailed)
                 {
                     return stored.ToResult();            // a failed Result aborts the transaction
@@ -123,7 +127,7 @@ else if (result.IsFailed)
 }
 ```
 
-A `MongoException` caught from `WithTransactionAsync` aborts the transaction and returns a failed `Result`, including when the error is not retryable. An exception outside that mapping may propagate to the caller.
+A `MongoException` thrown from the callback before commit aborts the transaction and returns a failed `Result`, including when the error is not retryable. A failure during commit, such as `UnknownTransactionCommitResult` after the driver exhausts commit retries, also returns a failed `Result`, but the writes may already have committed. Do not repeat those writes until you know the outcome. An exception outside that mapping may propagate to the caller.
 
 ## Pitfalls
 

@@ -60,7 +60,7 @@ Every guide has the same sections (Setup, Use, Handle failures, Pitfalls, See al
 - Never hard-code a connection string. Read it from configuration or a secret store. Production posture (TLS, least privilege): [production MongoDB guide](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/security/production-mongodb.md).
 - `IGenericRepository<T>` can be injected directly only when `T` has **one** binding. With several bindings of the same type, resolve by key through `IRepositoryResolver.GetRepository<T>(bindingKey)`.
 - BSON conventions are process-wide and set once in `AddMongoDb`. Do not register conflicting conventions elsewhere, and do not change them on existing data without reading ADR 0003.
-- Enable bulk or projection repositories per binding (`WithBulkRepository`, `WithProjectionRepository`) before injecting them.
+- Enable bulk or projection repositories per binding (`WithBulkRepository`, `WithProjectionRepository`) before injecting them. With `IsOrdered` false, a failure continues only inside the current chunk. Later chunks are not submitted.
 
 **Results and errors**
 - Repository methods return `FluentResults` `Result<T>`. Check `IsFailed` or `HasError<TError>()`. Do not call `.Value` on a result you have not checked.
@@ -72,22 +72,23 @@ Every guide has the same sections (Setup, Use, Handle failures, Pitfalls, See al
 - `WithGuidIdGeneration` is only for `Guid` ids. Do not use it with `ObjectId`.
 - Choose the update method on purpose: `ReplaceAsync` replaces the document (ETag guarded), `UpdateSnapshotAsync` sets the mutable snapshot and keeps unknown stored fields, `PatchAsync` applies only the `UpdateDefinition` you give it.
 - `PurgeAsync` permanently deletes every match, including documents that are not soft-deleted. Use it only when permanent deletion is the intent.
-- Keyset paging cursors are bound to the sort that produced them. Do not reuse a cursor with a different sort.
+- Keyset paging cursors are bound to the sort that produced them. Do not reuse a cursor with a different sort. An immutable sort key stops movement caused by sort-key updates. Inserts and deletes between pages still change the traversal. A consistent snapshot needs snapshot reads.
 
 **Tenancy (fail closed)**
-- The library has no tenant type. The application owns the prefix resolver. If the tenant is unknown, return `Result.Fail` from `ResolveAsync`. Never return an empty or default prefix, because that would send the request to a shared database.
+- The library has no tenant type. The application owns the prefix resolver and registers `ITenantAccessor` itself. `AddMongoDb` registers the resolver, not the accessor. If the tenant is unknown, empty, or whitespace, return `Result.Fail` from `ResolveAsync`. Never return an empty or default prefix, because that would send the request to a shared database.
 - Prefix resolvers are scoped. Do not cache the resolved prefix in a singleton.
 
 **Provisioning**
 - Create indexes and collections with `IMongoDbProvisioner` at startup or in a deploy job, never in a request. Resolving a collection does not create indexes.
-- Set `CreateIndexOptions.Name` on every index. Apply removes server indexes that are not declared on the binding, so declare every index you want to keep. Run `DryRunAsync` first when changing indexes on existing data.
+- Set `CreateIndexOptions.Name` on every index. Apply removes server indexes that are not declared on the binding, so declare every index you want to keep. Run `DryRunAsync` first when changing indexes on existing data. Run provisioning from one deployment step: `ApplyAsync` recomputes removals from the current index list, so an index created after `DryRunAsync` is removed without the `would-remove` check.
 - A TTL field must be stored as a BSON `Date`. Use `DateTime` or `DateTime?` in UTC. `DateTimeOffset` is a subdocument by default, so the index is created and nothing expires. `null` or a missing field does not expire, which is how you keep a document.
 - The server deletes eligible documents on a background pass (about once a minute). Filter reads on the deadline when a document must disappear at that instant. Nothing expires until `ApplyAsync` has created the index.
 
 **Transactions**
 - They need a replica set. Standalone `mongod` returns a failed `Result`.
 - Resolve repositories from `IMongoDbTransactionContext.Repositories`, not from the request scope, or the writes will not join the session and survive an abort.
-- Do not open a second runner or session inside the callback. Keep operations sequential. The callback can run more than once on a transient error, so it must be safe to repeat.
+- Do not open a second runner or session inside the callback. Keep operations sequential. The callback can run more than once on a transient error, so build a new entity inside the callback and keep the callback safe to repeat.
+- A failure before commit aborts the transaction. A commit-stage failure, such as `UnknownTransactionCommitResult`, returns a failed `Result` with an unknown outcome. Do not repeat those writes until you know they did not commit.
 - Return a failed `Result` to abort. Budgets (`MaxOperations`, `MaxEstimatedBytes`, `TimeLimit`) are client-side estimates, not MongoDB server limits.
 
 **JSON**

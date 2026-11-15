@@ -5,6 +5,7 @@ Hide deleted documents from reads and bring them back with `ISoftDeletable`. Pac
 ## Setup
 
 ```csharp
+using System;
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Extensions;

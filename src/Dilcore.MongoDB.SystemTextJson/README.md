@@ -52,6 +52,7 @@ using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.SystemTextJson;
 using Microsoft.Extensions.DependencyInjection;
 
+using var provider = services.BuildServiceProvider();
 using var scope = provider.CreateScope();
 var factory = scope.ServiceProvider.GetRequiredService<ISystemTextJsonDocumentStoreFactory>();
 var databaseKey = new MongoDatabaseKey("app");

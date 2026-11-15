@@ -47,6 +47,11 @@ public sealed class PayloadService(INewtonsoftJsonDocumentStoreFactory stores)
         try
         {
             payload = JObject.Load(reader);
+            if (reader.Read() && reader.TokenType != JsonToken.Comment)
+            {
+                return Result.Fail<JObject>(new JsonConversionError(
+                    "Additional text encountered after finished reading JSON content."));
+            }
         }
         catch (JsonReaderException exception)
         {

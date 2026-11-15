@@ -28,6 +28,11 @@ public class NewtonsoftJsonExampleTests : ExampleIntegrationTests
             try
             {
                 payload = JObject.Load(reader);
+                if (reader.Read() && reader.TokenType != JsonToken.Comment)
+                {
+                    return Result.Fail<JObject>(new JsonConversionError(
+                        "Additional text encountered after finished reading JSON content."));
+                }
             }
             catch (JsonReaderException exception)
             {
@@ -125,6 +130,21 @@ public class NewtonsoftJsonExampleTests : ExampleIntegrationTests
 
         // Act
         var result = await service.RoundTripAsync("{ nope", CancellationToken.None);
+
+        // Assert
+        result.HasError<JsonConversionError>().ShouldBeTrue();
+    }
+
+    [Test]
+    public async Task RoundTrip_TrailingContent_ReturnsJsonConversionError()
+    {
+        // Arrange
+        await using var provider = BuildProvider();
+        using var scope = provider.CreateScope();
+        var service = ActivatorUtilities.CreateInstance<PayloadService>(scope.ServiceProvider);
+
+        // Act
+        var result = await service.RoundTripAsync("""{"a":1}{"b":2}""", CancellationToken.None);
 
         // Assert
         result.HasError<JsonConversionError>().ShouldBeTrue();

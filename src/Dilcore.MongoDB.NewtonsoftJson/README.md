@@ -51,6 +51,7 @@ using Dilcore.MongoDB.NewtonsoftJson;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
 
+using var provider = services.BuildServiceProvider();
 using var scope = provider.CreateScope();
 var factory = scope.ServiceProvider.GetRequiredService<INewtonsoftJsonDocumentStoreFactory>();
 var databaseKey = new MongoDatabaseKey("app");

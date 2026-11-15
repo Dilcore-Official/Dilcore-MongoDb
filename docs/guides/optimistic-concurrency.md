@@ -5,6 +5,7 @@ Reject updates made from a stale copy of a document with `IHasConcurrencyToken`.
 ## Setup
 
 ```csharp
+using System;
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Extensions;

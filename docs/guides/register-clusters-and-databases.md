@@ -5,6 +5,7 @@ Register MongoDB clusters, logical databases and typed document bindings once, w
 ## Setup
 
 ```csharp
+using System;
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Extensions;
 using Microsoft.Extensions.DependencyInjection;

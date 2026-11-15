@@ -5,6 +5,7 @@ Declare documents with a typed identifier (`Guid` or `ObjectId`) and opt in to p
 ## Setup
 
 ```csharp
+using System;
 using Dilcore.MongoDB.Abstractions;
 using Dilcore.MongoDB.Abstractions.Policies;
 using Dilcore.MongoDB.Extensions;

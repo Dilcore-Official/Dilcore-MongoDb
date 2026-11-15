@@ -109,6 +109,7 @@ if (report.IsFailed)
 - Provision at startup or in a deploy job, never in a request. Resolving a collection does not create indexes.
 - `WithIndexes` takes `CreateIndexModel<T>` values, not raw `IndexKeys` definitions. Set `CreateIndexOptions.Name` on every index.
 - Apply **removes** server indexes that are not declared on the binding. Declare every index you want to keep, and run `DryRunAsync` first on existing data.
+- Run provisioning from one deployment step. `ApplyAsync` recomputes removals from the current index list, so an index created after `DryRunAsync` is removed without passing the `would-remove` check.
 - The provisioning identity needs index and collection create privileges. Run it as a deployment step, see [Production MongoDB posture](../security/production-mongodb.md).
 - Time series collections and other driver-only create options belong in a [custom step](custom-provisioning-steps.md) or a one-off script. Vector indexes are planned, see [ROADMAP](../../ROADMAP.md).
 
