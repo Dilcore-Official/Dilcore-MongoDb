@@ -73,23 +73,30 @@ public sealed class Order : IDocumentEntity<Guid>, IHasConcurrencyToken, ISoftDe
 
 public sealed class OrderService(IGenericRepository<Order> orders)
 {
-    public Task<Result<Order>> CreateAsync(Order order, CancellationToken cancellationToken)
+    public Task<Result<Order>> CreateAsync(Order order, CancellationToken cancellationToken = default)
         => orders.StoreAsync(order, cancellationToken);
 }
 ```
 
 Create indexes and collections explicitly at startup with `IMongoDbProvisioner.ApplyAsync()`. Production hosts should inject a connection string; the samples start MongoDB with Testcontainers for demo purposes only.
 
+## AI coding assistants
+
+Install the usage skill so your assistant picks the right package, follows the rules (typed errors, fail-closed tenancy, explicit provisioning, transaction scope) and starts from tested examples:
+
+```bash
+npx skills add https://github.com/Dilcore-Official/Dilcore-MongoDb --skill using-dilcore-mongodb
+```
+
+It is a standard [Agent Skills](https://agentskills.io) folder, so you can also copy [`skills/using-dilcore-mongodb`](skills/using-dilcore-mongodb) into your agent's skills directory by hand. The documentation is also available through [Context7](https://context7.com) as `/dilcore-official/dilcore-mongodb` once the library is indexed.
+
 ## Documentation
 
 | Topic | Doc |
 |-------|-----|
-| Repositories, paging, typed errors | [docs/guides/repositories.md](docs/guides/repositories.md) |
-| Document policies and identifiers | [docs/guides/document-policies.md](docs/guides/document-policies.md) |
-| Namespace resolution and tenancy | [docs/guides/namespace-resolution.md](docs/guides/namespace-resolution.md) |
-| Provisioning, indexes, TTL, custom steps | [docs/guides/provisioning.md](docs/guides/provisioning.md) |
-| Transactions and budgets | [docs/guides/transactions.md](docs/guides/transactions.md) |
-| JSON adapters | [docs/guides/json-adapters.md](docs/guides/json-adapters.md) |
+| All task guides (setup, repositories, tenancy, provisioning, transactions, JSON) | [docs/guides/README.md](docs/guides/README.md) |
+| Choose a package | [docs/product/package-selection.md](docs/product/package-selection.md) |
+| Use collections without repositories | [docs/guides/resolve-collections.md](docs/guides/resolve-collections.md) |
 | Driver escape hatches | [docs/product/driver-escape-hatches.md](docs/product/driver-escape-hatches.md) |
 | BSON conventions and rollout | [ADR 0003](docs/adr/0003-serialization-conventions.md) |
 | Production MongoDB posture (TLS, secrets, least privilege) | [docs/security/production-mongodb.md](docs/security/production-mongodb.md) |

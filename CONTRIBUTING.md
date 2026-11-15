@@ -164,8 +164,9 @@ A person can also run the workflow by hand to publish a stable version or to do 
 `Dilcore.MongoDB.NewtonsoftJson` always share a version number. A run fails if it does not produce all four.
 
 **Versioning.** Versions follow [SemVer](https://semver.org/). The major version is `2` and lives in
-`MAJOR_VERSION` in the workflow. Nobody edits a version by hand: each run computes the next one from the git
-tags, and a publishing run creates the matching `vX.Y.Z` tag.
+`MAJOR_VERSION` in the workflow. Nobody edits a version by hand: each run computes the next one from the final
+`vX.Y.Z` tags and the `vX.Y.Z-reserved` tags. A publishing run reserves that version on its commit, then creates
+the matching `vX.Y.Z` tag only after the packages are on NuGet.org.
 
 | Run | Version | Next number |
 |-----|---------|-------------|
@@ -198,13 +199,18 @@ from it.
    version, run it by hand: Actions → Publish NuGet Packages → **Run workflow** on `main` with `preview` unticked.
 3. The run computes the next version, restores in locked mode, checks formatting, builds with warnings as
    errors, and runs the whole test suite (including the packed-consumer smoke test and the package metadata
-   tests). After the `nuget` environment is approved it packs with that version, pushes the version tag,
-   pushes the `.nupkg` and `.snupkg` files to NuGet.org, and creates the GitHub Release (marked
-   pre-release for preview versions). The tag is pushed before the publish, so a failed publish never
-   reuses a version number.
+   tests). After the `nuget` environment is approved it packs with that version and reserves it with a
+   lightweight tag `vX.Y.Z-reserved` on this commit. A retry continues only when that reservation already
+   points at the same commit. A different commit cannot publish or claim the version. The run then pushes the
+   `.nupkg` and `.snupkg` files to NuGet.org, and only then creates the final `vX.Y.Z` tag and the GitHub
+   Release (marked pre-release for preview versions). The reservation is removed after that release exists. A failed publish leaves the reservation and
+   no final tag, so the next run of this commit reuses the number and another commit takes the following
+   number. If the tag or release step fails after a successful push, the reservation stays. Re-run the failed
+   jobs of that same run: the reservation matches, the push is skipped as a duplicate, and the same version
+   is tagged and released.
 4. **Dry run:** tick `dry_run` (default off). The run computes the next version, tests, packs, waits for the
    `nuget` environment approval, and logs in to NuGet.org with OIDC, which proves the trusted publishing policy,
-   `NUGET_USER` and the environment name are right. It then stops: no tag, no push, no release, and the packages
+   `NUGET_USER` and the environment name are right. It then stops: no push, no tag, no release, and the packages
    are only uploaded as an artifact. It works from any branch, so run it from the PR branch before merging.
    Without `dry_run`, a run from a branch other than `main` only packs and uploads the artifact.
 
@@ -220,6 +226,45 @@ otherwise. Descriptions say MongoDB and never use DocumentDB branding.
 Author signing is not used: it needs a code-signing certificate and adds a key to protect. Provenance comes from
 the OIDC policy (only this repository, workflow and environment can publish), deterministic builds, Source Link,
 and symbol packages. Build attestations can be added later if consumers ask for them.
+
+## Context7 and the consumer skill
+
+Two things help AI coding assistants use the library correctly. Both are for people who **consume** the packages, so
+they are kept apart from [AGENTS.md](AGENTS.md), which is for maintainers.
+
+**Context7** serves the library documentation to assistants. [`context7.json`](context7.json) lists what is indexed
+(consumer docs, package READMEs, samples) and what is not (`AGENTS.md`, `CONTRIBUTING.md`, tests, skills, tooling
+folders), plus usage rules. `.github/workflows/context7-refresh.yml` calls the Context7 refresh API after a merge
+into `main` that changes Markdown, `docs/`, `samples/` or `context7.json`. Library code alone does not trigger it.
+
+- Preview documentation is `main`. Preview tags (`v2.0.0-preview.N`) are **not** added as Context7 versions: each
+  one would become a separate version (a claimed library is limited to 20) and most would be identical to `main`.
+- Stable versions are added to `previousVersions` in `context7.json` (`{ "tag": "v2.0.0" }`)
+  in the release pull request, and the tag must already exist. Context7 then serves `/dilcore-official/dilcore-mongodb/v2.0.0`
+  next to the latest docs.
+- After changing `context7.json` or after a first setup, query Context7 for these topics and check that the
+  answers come from the consumer docs and not from `AGENTS.md` or tests: DI setup, namespace prefixes and tenancy,
+  JSON adapters, transactions and budgets, typed errors, provisioning, and driver escape hatches.
+
+One-time owner setup (not automated):
+
+1. Add the library on [context7.com](https://context7.com) (`/dilcore-official/dilcore-mongodb`).
+2. Create an API key and store it as the repository secret `CONTEXT7_API_KEY`. Without it the refresh job
+   logs a notice and does nothing.
+3. Claim the library in the Context7 dashboard. Add the generated `url` and `public_key` fields to
+   `context7.json`. A claimed library gets higher refresh limits and can manage versions.
+
+**Consumer skill.** [`skills/using-dilcore-mongodb`](skills/using-dilcore-mongodb) follows the open Agent Skills
+format (`SKILL.md` with `name` and `description` frontmatter, plus `references/`), so any compatible agent can load
+it. It holds the decision guide (toolkit or plain driver, which package, which feature), the rules that prevent real
+bugs, and commented examples of the most common combinations. It is written for consumer projects and is not loaded
+in this repository. Its links are absolute GitHub URLs, so it works when copied elsewhere.
+
+Documentation, example tests and the skill are kept in sync as a required rule:
+[`.cursor/rules/docs-and-skill-sync.mdc`](.cursor/rules/docs-and-skill-sync.mdc) says what to update, and
+`test/ArchitectureTests/DocumentationConsistencyTests.cs` fails the build when a guide breaks the page template, is
+missing from an index, has no example test, or the skill uses a repo-relative link. Every code example in `docs/` is
+run by an integration test in `test/*/Examples/` (`ExampleIntegrationTests` gives each test a clean MongoDB).
 
 ## Dependency updates
 

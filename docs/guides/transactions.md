@@ -1,70 +1,146 @@
-# Transactions
+# Commit several writes together in a transaction
 
-**Current.** Thin coordination over driver sessions. MongoDB multi-document transactions require a **replica set** (or mongos). Standalone `mongo` cannot run them.
+Run writes across collections as one multi-document transaction with `IMongoDbTransactionRunner`. Package: `Dilcore.MongoDB`.
 
-Sample: [samples/MongoDb.Capabilities.Sample](../../samples/MongoDb.Capabilities.Sample) (`POST /transactions/place-order`). Runnable coverage: `test/Repositories.IntegrationTests/TransactionRunnerTests.cs`. Driver session escape hatch: [driver-escape-hatches.md](../product/driver-escape-hatches.md).
+Transactions need a **replica set** (or mongos). A standalone `mongod` cannot run them: `ExecuteAsync` returns a failed `Result` instead of throwing.
 
-## API
-
-`IMongoDbTransactionRunner` is registered by `AddMongoDb` (scoped). `WithTransactionAsync` is a default-interface alias for `ExecuteAsync`.
+## Setup
 
 ```csharp
-var result = await runner.WithTransactionAsync(
-    new MongoClusterKey("primary"),
-    async (tx, ct) =>
-    {
-        var orders = tx.Repositories.GetRepository<Order>("orders");
-        var payments = tx.Repositories.GetRepository<Payment>("payments");
-        var stored = await orders.StoreAsync(order, ct);
-        if (stored.IsFailed)
-            return stored.ToResult();
+using System;
+using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 
-        var payment = await payments.StoreAsync(new Payment { OrderId = stored.Value.Id }, ct);
-        if (payment.IsFailed)
-            return payment.ToResult();
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
-        return Result.Ok(stored.Value.Id);
-    },
-    new MongoTransactionOptions
+services.AddMongoDb(mongo => mongo
+    .AddCluster("primary", c => c.UseConnectionString(connectionString))
+    .AddDatabase("shop", db =>
     {
-        MaxOperations = 1_000,
-        MaxEstimatedBytes = 16 * 1024 * 1024,
-        TimeLimit = TimeSpan.FromSeconds(60)
-    });
+        db.OnCluster("primary");
+        db.AddDocumentBinding<Order>("orders", d => d
+            .WithCollectionName("orders")
+            .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
+        db.AddDocumentBinding<Payment>("payments", d => d
+            .WithCollectionName("payments")
+            .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
+    }));
+
+public sealed class Order : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string Sku { get; set; } = "";
+}
+
+public sealed class Payment : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public Guid OrderId { get; set; }
+}
 ```
 
-`IMongoDbTransactionContext`:
+## Use
 
-- `ClusterKey` — cluster this transaction is bound to
-- `Session` — driver `IClientSessionHandle` for APIs Dilcore does not wrap
-- `Repositories` — `IRepositoryResolver` (same binding keys as DI)
+```csharp
+using Dilcore.MongoDB.Abstractions.Keys;
+using Dilcore.MongoDB.Abstractions.Transactions;
+using FluentResults;
 
-Resolve repositories **from the context**, not from the request scope, so writes join the session.
+public sealed class CheckoutService(IMongoDbTransactionRunner runner)
+{
+    public Task<Result<Guid>> PlaceOrderAsync(Order order, CancellationToken cancellationToken = default)
+    {
+        var clusterKey = new MongoClusterKey("primary");
+        var options = new MongoTransactionOptions
+        {
+            MaxOperations = 100,                     // client-side budget, tighter than the 1000 default
+            TimeLimit = TimeSpan.FromSeconds(10)
+        };
 
-## Rules
+        return runner.WithTransactionAsync(
+            clusterKey,
+            async (tx, ct) =>
+            {
+                // Take repositories from the context, not from DI, so the writes join this session.
+                var orders = tx.Repositories.GetRepository<Order>("orders");
+                var payments = tx.Repositories.GetRepository<Payment>("payments");
 
-- Do not start a second session inside the callback. A nested `ExecuteAsync` opens its own session and can commit even when the outer callback returns a failed `Result`.
-- Resolve repositories from `IMongoDbTransactionContext.Repositories`. A repository taken from the request scope does not join the session, so those writes survive an abort.
-- Work that targets another cluster is rejected as `CrossClusterOperationError` before dispatch.
-- Returning a failed `Result` aborts the transaction. An exception other than a retryable transaction error aborts and propagates to the caller.
-- Callbacks must stay sequential; do not issue parallel operations on the same session.
-- A standalone `mongod` cannot start a multi-document transaction. `ExecuteAsync` returns a failed `Result` instead of throwing.
+                // A retry runs this callback again. A fresh instance keeps Id and ETag unset
+                // after a rolled-back insert, so the next attempt still takes the insert path.
+                var attempt = new Order { Id = order.Id, Sku = order.Sku };
+                var stored = await orders.StoreAsync(attempt, ct);
+                if (stored.IsFailed)
+                {
+                    return stored.ToResult();            // a failed Result aborts the transaction
+                }
+
+                var paymentDocument = new Payment { OrderId = stored.Value.Id };
+                var payment = await payments.StoreAsync(paymentDocument, ct);
+                if (payment.IsFailed)
+                {
+                    return payment.ToResult();
+                }
+
+                return Result.Ok(stored.Value.Id);
+            },
+            options,
+            cancellationToken);
+    }
+}
+```
+
+`IMongoDbTransactionRunner` has `ExecuteAsync` and `WithTransactionAsync` (an alias), each with a `Result` and a `Result<TResult>` overload. `IMongoDbTransactionContext` exposes `ClusterKey`, `Session` (the driver `IClientSessionHandle` for APIs the toolkit does not wrap) and `Repositories` (`IRepositoryResolver`, same binding keys as DI).
 
 ## Budgets
 
-`MongoTransactionOptions` are **client-side estimates**:
+`MongoTransactionOptions` are **client-side estimates**, not MongoDB server limits:
 
 | Option | Default | Meaning |
 |--------|---------|---------|
-| `MaxOperations` | 1_000 | Dilcore-tracked operations. A document write counts as one. A bulk write counts one per model. Reads count as one and reserve 256 bytes. |
-| `MaxEstimatedBytes` | 16 MiB | Sum of rendered BSON sizes for writes. **Not** a MongoDB “16 MiB total transaction” server cap. An estimate equal to the cap is allowed; the next byte is not. Negative estimates fail and do not consume an operation. |
-| `TimeLimit` | 60s | Elapsed wall clock from when the runner starts, including driver retries. Checked on each reservation and again when the callback returns, so a callback that never touches a repository can still exceed it. |
-| `DriverOptions` | null | Passed through to the driver `TransactionOptions` |
+| `MaxOperations` | 1000 | Tracked operations. A document write counts one, a bulk write one per model, a read one (and reserves 256 bytes). |
+| `MaxEstimatedBytes` | 16 MiB | Sum of rendered BSON sizes of writes. Not a MongoDB "total transaction" cap. |
+| `TimeLimit` | 60 s | Wall clock from runner start, including driver retries. Also checked when the callback returns. |
+| `DriverOptions` | `null` | Passed to the driver `TransactionOptions`. |
 
-Exceeding a budget returns `TransactionBudgetExceededError` and aborts. `ResetAttempt` clears the operation and byte counters for a driver retry; it does not extend `TimeLimit`.
+MongoDB's own 16 MiB limit applies per document, and there is no server cap on the sum of a transaction.
 
-MongoDB still enforces its own limits. One document above 16 MiB is `DocumentTooLargeError` when `MaxEstimatedBytes` is high enough to let the write through; otherwise the client budget fails first. Many documents whose total size is above 16 MiB commit on current MongoDB when the client budget allows them. There is no server cap on the sum of a transaction.
+## Handle failures
 
-## Retries
+```csharp
+using Dilcore.MongoDB.Abstractions.Results;
 
-The driver may run the callback more than once when it sees `TransientTransactionError` (including a write conflict). Session-bound repository calls rethrow those errors so the retry happens. Other MongoDB failures stay as `Result` values. Policy fields staged for a write are restored before a retryable error leaves the repository, but the callback itself must be safe to run again. See [production-mongodb.md](../security/production-mongodb.md).
+var result = await checkout.PlaceOrderAsync(order, cancellationToken);
+
+if (result.HasError<TransactionBudgetExceededError>())
+{
+    // A client-side budget ran out. The transaction was aborted.
+}
+else if (result.HasError<CrossClusterOperationError>())
+{
+    // The callback used a repository bound to another cluster.
+}
+else if (result.IsFailed)
+{
+    // Includes a standalone server (no replica set) and any failed Result you returned.
+}
+```
+
+A `MongoException` thrown from the callback before commit aborts the transaction and returns a failed `Result`, including when the error is not retryable. A failure during commit, such as `UnknownTransactionCommitResult` after the driver exhausts commit retries, also returns a failed `Result`, but the writes may already have committed. Do not repeat those writes until you know the outcome. An exception outside that mapping may propagate to the caller.
+
+## Pitfalls
+
+- Resolve repositories from `IMongoDbTransactionContext.Repositories`. A repository taken from the request scope does not join the session, so its writes survive an abort.
+- Do not open a second runner or session inside the callback. A nested `ExecuteAsync` has its own session and can commit even when the outer callback fails.
+- Keep operations sequential. Do not issue parallel operations on the same session.
+- The driver can run the callback again after a `TransientTransactionError` (including a write conflict). Staged ETag and audit values are restored before the retry, but the callback must be safe to repeat. Do not send e-mails or call other systems inside it.
+- Return a failed `Result` to abort. Do not rely on throwing.
+
+## See also
+
+- [Create, read and update documents](crud-with-repositories.md)
+- [Driver escape hatches](../product/driver-escape-hatches.md)
+- [Production MongoDB posture](../security/production-mongodb.md)
+- [Sample](../../samples/MongoDb.Capabilities.Sample)
+- Runnable example: [TransactionsExampleTests](../../test/Repositories.IntegrationTests/Examples/TransactionsExampleTests.cs)

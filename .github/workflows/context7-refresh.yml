@@ -1,0 +1,66 @@
+name: 📚 Refresh Context7
+
+# Keeps the Context7 index of this library in step with main. Context7 refreshes popular libraries by itself, but
+# only some time after the docs changed. This calls the refresh API right after a merge, so an AI assistant that
+# asks Context7 about Dilcore MongoDB sees the new docs. Setup (library, API key, claim): CONTRIBUTING.md, "Context7".
+#
+# Only documentation-shaped files trigger it. Library code alone does not change what Context7 indexes.
+# Preview tags are not added as Context7 versions; main is the preview documentation. Stable versions are listed in
+# context7.json (previousVersions) once they exist.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/*.md'
+      - '!**/AGENTS.md'
+      - 'docs/**'
+      - 'samples/**'
+      - 'context7.json'
+      - '.github/workflows/context7-refresh.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+# A newer merge makes an older refresh pointless.
+concurrency:
+  group: context7-refresh
+  cancel-in-progress: true
+
+env:
+  # Context7 library ID: /owner/repo as shown on context7.com.
+  CONTEXT7_LIBRARY: /dilcore-official/dilcore-mongodb
+
+jobs:
+  refresh:
+    name: 🔄 Refresh library
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: 🔄 Trigger Context7 refresh
+        env:
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          # Until the owner adds the secret the job is a no-op, so merging this workflow does not break main.
+          if [[ -z "${CONTEXT7_API_KEY}" ]]; then
+            echo "::notice::CONTEXT7_API_KEY is not set. Skipping the Context7 refresh."
+            exit 0
+          fi
+
+          body="$(jq -n --arg library "${CONTEXT7_LIBRARY}" '{libraryName: $library}')"
+          status="$(curl --silent --show-error --output response.json --write-out '%{http_code}' \
+            --request POST https://context7.com/api/v1/refresh \
+            --header 'Content-Type: application/json' \
+            --header "Authorization: Bearer ${CONTEXT7_API_KEY}" \
+            --data "${body}")"
+
+          echo "### 📚 Context7 refresh ${CONTEXT7_LIBRARY}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "HTTP ${status}: $(cat response.json)" >> "${GITHUB_STEP_SUMMARY}"
+
+          if [[ "${status}" != 2* ]]; then
+            echo "::error::Context7 refresh failed with HTTP ${status}. Check that the library is added on context7.com and the API key is valid."
+            exit 1
+          fi

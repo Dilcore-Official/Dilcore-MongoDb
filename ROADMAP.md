@@ -252,7 +252,7 @@ Milestone: [M8 Docs, Context7 & Repository AI](https://github.com/Dilcore-Offici
 | [#39](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/39) | README + structured `docs/` overhaul with tested snippets | P0 |
 | [#40](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/40) | `context7.json` + `context7-refresh.yml` for `/dilcore-official/dilcore-mongodb` | P0 |
 | [#41](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/41) | Hierarchical `AGENTS.md` (root, src, test, samples, per-project) | P0 |
-| [#42](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/42) | Consumer skill `.cursor/skills/using-dilcore-mongodb/` | P0 |
+| [#42](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/42) | Consumer skill `skills/using-dilcore-mongodb/` (Agent Skills format, used by consumer projects) | P0 |
 
 **Exit criteria:** Context7 indexes consumer docs only (excludes `AGENTS.md` / skills); skill and AGENTS responsibilities stay separate; representative Context7 queries succeed after refresh.
 
@@ -326,7 +326,7 @@ Not yet scoped or scheduled; not a dependency for Preview or GA. Tracked as a sp
 
 1. Enable Dependabot security updates and dependency graph / alerts in repository settings ([#10](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/10)).
 2. Create the GitHub Project **Dilcore MongoDB v2 Roadmap**, add views (milestone roadmap, current iteration, blockers, post-v2 backlog), and attach all `roadmap`-labeled issues if automation lacked `project` / `read:project` scopes.
-3. Create / claim Context7 library key and store `CONTEXT7_API_KEY` as a repository secret when [#40](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/40) executes (library ID will follow MongoDB naming).
+3. Add the library `/dilcore-official/dilcore-mongodb` on Context7, store the API key as repository secret `CONTEXT7_API_KEY`, claim the library and add the generated `url` and `public_key` to `context7.json` ([#40](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/40); steps in [CONTRIBUTING.md](CONTRIBUTING.md#context7-and-the-consumer-skill)).
 4. Configure NuGet.org OIDC trusted publishing when [#30](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/30) publishing work begins.
 5. Reserve/claim NuGet.org IDs `Dilcore.MongoDB` and `Dilcore.MongoDB.Abstractions` on first publish ([#4](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/4)).
 

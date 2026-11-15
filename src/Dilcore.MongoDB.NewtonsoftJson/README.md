@@ -33,6 +33,10 @@ This package needs [`Dilcore.MongoDB`](https://www.nuget.org/packages/Dilcore.Mo
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.NewtonsoftJson;
+using Microsoft.Extensions.DependencyInjection;
+
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -42,15 +46,21 @@ services.AddNewtonsoftJsonDocuments();
 ```
 
 ```csharp
-using var scope = provider.CreateScope();
-var store = scope.ServiceProvider
-    .GetRequiredService<INewtonsoftJsonDocumentStoreFactory>()
-    .Create(new MongoDatabaseKey("app"));
-
+using Dilcore.MongoDB.Abstractions.Keys;
+using Dilcore.MongoDB.NewtonsoftJson;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
 
-var inserted = await store.InsertAsync("payloads", JObject.Parse("""{ "sku": "A-1", "qty": 2 }"""));
-var loaded = await store.GetJObjectByIdAsync("payloads", inserted.Value["_id"]);
+using var provider = services.BuildServiceProvider();
+using var scope = provider.CreateScope();
+var factory = scope.ServiceProvider.GetRequiredService<INewtonsoftJsonDocumentStoreFactory>();
+var databaseKey = new MongoDatabaseKey("app");
+var store = factory.Create(databaseKey);
+
+var payload = JObject.Parse("""{ "sku": "A-1", "qty": 2 }""");
+var cancellationToken = CancellationToken.None;
+var inserted = await store.InsertAsync("payloads", payload, cancellationToken: cancellationToken);
+var loaded = await store.GetJObjectByIdAsync("payloads", inserted.Value["_id"], cancellationToken: cancellationToken);
 ```
 
 Every call returns a FluentResults `Result`. The collection name (`"payloads"`) is a plain string and does not need a typed document binding.
@@ -72,7 +82,7 @@ All packages are released together with the same version.
 
 ## Guide
 
-[JSON adapters guide](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-adapters.md): conversion options, number handling and persistence.
+Guides: [Newtonsoft.Json documents](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-newtonsoft.md) and [conversion options](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-conversion-options.md).
 
 ## Links
 

@@ -73,7 +73,8 @@ using Dilcore.MongoDB.Abstractions.Provisioning;
 
 using var scope = app.Services.CreateScope();
 var provisioner = scope.ServiceProvider.GetRequiredService<IMongoDbProvisioner>();
-await provisioner.ApplyAsync();
+var cancellationToken = CancellationToken.None;
+await provisioner.ApplyAsync(cancellationToken);
 ```
 
 Inject the repository and use it. Failures come back as typed errors:
@@ -86,7 +87,7 @@ using MongoDB.Driver;
 
 public sealed class OrderService(IGenericRepository<Order> orders)
 {
-    public async Task<Result<Order>> CreateAsync(Order order, CancellationToken cancellationToken)
+    public async Task<Result<Order>> CreateAsync(Order order, CancellationToken cancellationToken = default)
     {
         var stored = await orders.StoreAsync(order, cancellationToken);
 
@@ -98,8 +99,12 @@ public sealed class OrderService(IGenericRepository<Order> orders)
         return stored;
     }
 
-    public Task<Result<Order>> FindAsync(Guid id, CancellationToken cancellationToken)
-        => orders.GetAsync(Builders<Order>.Filter.Eq(x => x.Id, id), cancellationToken);
+    public Task<Result<Order>> FindAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<Order>.Filter.Eq(x => x.Id, id);
+
+        return orders.GetAsync(filter, cancellationToken);
+    }
 }
 ```
 
@@ -117,16 +122,22 @@ var client = provider.GetRequiredKeyedService<IMongoClient>("primary");
 
 This is not a replacement for `MongoDB.Driver`, not Amazon DocumentDB, and not a provider-neutral repository. If your app needs one client and a few collection calls, use the driver directly.
 
+## AI coding assistants
+
+Install the usage skill so your assistant picks the right package and follows the rules (typed errors, fail-closed tenancy, explicit provisioning, transaction scope):
+
+```bash
+npx skills add https://github.com/Dilcore-Official/Dilcore-MongoDb --skill using-dilcore-mongodb
+```
+
+It is a standard [Agent Skills](https://agentskills.io) folder: [`skills/using-dilcore-mongodb`](https://github.com/Dilcore-Official/Dilcore-MongoDb/tree/main/skills/using-dilcore-mongodb).
+
 ## Guides
 
 | Topic | Guide |
 |-------|-------|
-| Repositories, paging, typed errors | [repositories](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/repositories.md) |
-| Document policies and identifiers | [document policies](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/document-policies.md) |
-| Namespace resolution and tenancy | [namespace resolution](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/namespace-resolution.md) |
-| Provisioning, indexes, TTL | [provisioning](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/provisioning.md) |
-| Transactions and budgets | [transactions](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/transactions.md) |
-| JSON adapters | [JSON adapters](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-adapters.md) |
+| All task guides (setup, repositories, tenancy, provisioning, transactions, JSON) | [guides index](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/README.md) |
+| Choose a package | [package selection](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/product/package-selection.md) |
 | Driver escape hatches | [driver escape hatches](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/product/driver-escape-hatches.md) |
 | BSON conventions | [ADR 0003](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/adr/0003-serialization-conventions.md) |
 | Production MongoDB posture | [production MongoDB](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/security/production-mongodb.md) |

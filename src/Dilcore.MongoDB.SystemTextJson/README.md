@@ -30,9 +30,14 @@ This package needs [`Dilcore.MongoDB`](https://www.nuget.org/packages/Dilcore.Mo
 ## Quick start
 
 ```csharp
+using System.Text.Json;
 using Dilcore.MongoDB.Abstractions.Keys;
 using Dilcore.MongoDB.Extensions;
 using Dilcore.MongoDB.SystemTextJson;
+using Microsoft.Extensions.DependencyInjection;
+
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
 
 services.AddMongoDb(mongo => mongo
     .AddCluster("primary", c => c.UseConnectionString(connectionString))
@@ -42,16 +47,22 @@ services.AddSystemTextJsonDocuments();
 ```
 
 ```csharp
-using var scope = provider.CreateScope();
-var store = scope.ServiceProvider
-    .GetRequiredService<ISystemTextJsonDocumentStoreFactory>()
-    .Create(new MongoDatabaseKey("app"));
-
 using System.Text.Json;
+using Dilcore.MongoDB.Abstractions.Keys;
+using Dilcore.MongoDB.SystemTextJson;
+using Microsoft.Extensions.DependencyInjection;
+
+using var provider = services.BuildServiceProvider();
+using var scope = provider.CreateScope();
+var factory = scope.ServiceProvider.GetRequiredService<ISystemTextJsonDocumentStoreFactory>();
+var databaseKey = new MongoDatabaseKey("app");
+var store = factory.Create(databaseKey);
 
 using var json = JsonDocument.Parse("""{ "sku": "A-1", "qty": 2 }""");
-var inserted = await store.InsertAsync("payloads", json.RootElement);
-var loaded = await store.GetJsonElementByIdAsync("payloads", inserted.Value["_id"]);
+var payload = json.RootElement;
+var cancellationToken = CancellationToken.None;
+var inserted = await store.InsertAsync("payloads", payload, cancellationToken: cancellationToken);
+var loaded = await store.GetJsonElementByIdAsync("payloads", inserted.Value["_id"], cancellationToken: cancellationToken);
 ```
 
 Every call returns a FluentResults `Result`. The collection name (`"payloads"`) is a plain string and does not need a typed document binding.
@@ -73,7 +84,7 @@ All packages are released together with the same version.
 
 ## Guide
 
-[JSON adapters guide](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-adapters.md): conversion options, number handling and persistence.
+Guides: [System.Text.Json documents](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-system-text-json.md) and [conversion options](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-conversion-options.md).
 
 ## Links
 

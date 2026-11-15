@@ -1,0 +1,30 @@
+---
+description: Keep consumer docs, their example tests and the consumer skill in sync with src/
+alwaysApply: true
+---
+
+# Docs, example tests and skill stay in sync with the code
+
+This is a required rule, not a suggestion. `test/ArchitectureTests/DocumentationConsistencyTests.cs` enforces the structural part in CI.
+
+## When a change touches usage
+
+A change in `src/` that affects how the library is used (public API, behavior, registration, returned error types, defaults, namespaces) updates three things in the **same pull request**:
+
+1. the affected consumer page under `docs/guides/` (or `docs/product/package-selection.md`, `docs/product/driver-escape-hatches.md`, `docs/security/production-mongodb.md`);
+2. that page's example test (`test/*/Examples/`), whose fixture summary names the page with `Proves docs/<path>.md`;
+3. the consumer skill `skills/using-dilcore-mongodb` (rules and decision tables in `SKILL.md`, `references/examples.md`, `references/docs-index.md`).
+
+Adding, renaming or removing a page also updates `docs/guides/README.md`, `skills/using-dilcore-mongodb/references/docs-index.md` and every inbound link. If nothing about usage changed, say so in the pull request.
+
+## Page template
+
+Every consumer page has, in this order: a title, one sentence with the purpose and the package name, then `## Setup` (complete registration with usings), `## Use` (commented snippet), `## Handle failures` (typed errors), `## Pitfalls`, `## See also`. At least one `csharp` block compiles as written and is proven by an example test that runs it against a real MongoDB.
+
+## Content rules
+
+- Consumer pages stand alone. They do not mention milestones (`M3`, `M4`), `PublicAPI` files, Context7 or the skill. Planned work is labelled "planned" and links to the ROADMAP.
+- Types, namespaces and signatures are checked against `src/` (with Serena), never written from memory. Usings name the declaring namespace.
+- Every `csharp` block in a consumer page, a package or root README, and the skill follows `.cursor/rules/csharp-code-style.mdc` and `.editorconfig`: usings first, registration before type declarations in a setup block, Allman braces, `CancellationToken cancellationToken = default`, and no `Builders` filter or update call passed straight into a method.
+- The skill is used outside this repository. It links only to absolute GitHub URLs or to files inside the skill folder, and it stays tool-neutral (Context7 is optional).
+- Example tests use NUnit and Shouldly with Arrange / Act / Assert comments, and copy the page's registration and types verbatim. They derive from `ExampleIntegrationTests` (or start a replica set when the page needs transactions).

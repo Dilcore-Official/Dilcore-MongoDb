@@ -1,36 +1,123 @@
-# Driver escape hatches
+# Reach the MongoDB driver directly
 
-Dilcore MongoDB keeps `MongoDB.Driver` types visible. Use these recipes when repository helpers are not enough. This is **current** M3 guidance.
+Use `MongoDB.Driver` types when the repository helpers are not enough. Resolve the database or collection through the toolkit so tenant and static prefixes still apply. Package: `Dilcore.MongoDB`.
 
-Runnable catalog: [samples/MongoDb.Capabilities.Sample](../../samples/MongoDb.Capabilities.Sample) (`/escape/client`, `/escape/collection`). Getting-started sample: [MongoDb.WebApi.Sample](../../samples/MongoDb.WebApi.Sample). Transactions how-to: [transactions.md](../guides/transactions.md).
-
-## Clients, databases, collections
-
-Resolve keyed `IMongoClient` / `IMongoDatabase` from DI, or `IMongoDbCollectionFactory` for the same namespace pipeline typed repositories use.
+## Setup
 
 ```csharp
-var client = services.GetRequiredKeyedService<IMongoClient>("primary");
-var collection = (await factory.GetCollectionAsync<Order>(new MongoDocumentBindingKey("orders"))).Value;
+using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
+
+services.AddMongoDb(mongo => mongo
+    .AddCluster("primary", c => c.UseConnectionString(connectionString))
+    .AddDatabase("shop", db =>
+    {
+        db.OnCluster("primary");
+        db.AddDocumentBinding<Order>("orders", d => d.WithCollectionName("orders"));
+    }));
+
+public sealed class Order : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string Sku { get; set; } = "";
+}
 ```
 
-## Concerns, preference, retries
+## Use
 
-Set `WriteConcern`, `ReadConcern`, `ReadPreference`, retry, timeout, compression, and `applicationName` on `MongoClientSettings` when registering the cluster. Collection-level overrides use driver `MongoCollectionSettings` on `GetCollection` after you resolve the database.
+```csharp
+using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Keys;
+using FluentResults;
+using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Bson;
+using MongoDB.Driver;
 
-## Sessions and transactions
+public sealed class ReportService(IMongoDbCollectionFactory collections, IServiceProvider provider)
+{
+    public async Task<Result<IReadOnlyList<BsonDocument>>> GetTopSkusAsync(
+        CancellationToken cancellationToken = default)
+    {
+        // The factory resolves the physical name through the same namespace pipeline
+        // (prefixes, tenants) as the repositories.
+        var bindingKey = new MongoDocumentBindingKey("orders");
+        var resolved = await collections.GetCollectionAsync<Order>(bindingKey, cancellationToken);
+        if (resolved.IsFailed)
+        {
+            return resolved.ToResult();
+        }
 
-Prefer `IMongoDbTransactionRunner.WithTransactionAsync`. The callback’s `IMongoDbTransactionContext.Session` is the driver session. For operations Dilcore does not wrap (aggregation, GridFS, time series), use `Session` plus `IMongoCollection<T>` overloads that take `IClientSessionHandle`.
+        var collection = resolved.Value;
 
-Do not start a second session inside the callback. Cross-cluster work is rejected before dispatch.
+        // Aggregation stays a driver API. Stored field names follow the BSON conventions
+        // (camelCase by default), so Sku is stored as "sku".
+        // Do not hide it behind your own abstraction.
+        var top = await collection.Aggregate()
+            .Group(new BsonDocument { { "_id", "$sku" }, { "count", new BsonDocument("$sum", 1) } })
+            .SortByDescending(x => x["count"])
+            .Limit(10)
+            .ToListAsync(cancellationToken);
 
-## Aggregation, cursors, GridFS, CSE, time series
+        return Result.Ok<IReadOnlyList<BsonDocument>>(top);
+    }
 
-These remain driver APIs:
+    // The singleton client of a cluster, keyed by the cluster name.
+    public IMongoClient GetClient() => provider.GetRequiredKeyedService<IMongoClient>("primary");
+}
+```
 
-- Aggregation: `collection.Aggregate().Match(...).ToListAsync()`
-- Cursors: `collection.Find(filter).ToCursorAsync()` — dispose the cursor
-- GridFS: `new GridFSBucket(database)`
-- Client-side encryption: configure on `MongoClientSettings.AutoEncryptionOptions`
-- Time series: create the collection in provisioning (`CreateCollectionOptions.TimeSeriesOptions`) or a custom `IProvisioningStep`
+What you can resolve:
 
-Do not hide these behind a provider-neutral abstraction in Dilcore.
+| Type | How |
+|------|-----|
+| `IMongoClient` | Keyed singleton, key is the cluster name |
+| `IMongoDatabase` | Keyed scoped service, key is the database name |
+| `IMongoCollection<T>` | Keyed scoped service (key is the binding key), or `IMongoDbCollectionFactory.GetCollectionAsync<T>(bindingKey)` |
+| `IMongoCollection<BsonDocument>` | `GetCollectionAsync(databaseKey, logicalCollectionName)` |
+
+Every option, with failures and names, is in [Use collections without repositories](../guides/resolve-collections.md).
+
+Other driver-only features stay driver APIs:
+
+- Cursors: `collection.Find(filter).ToCursorAsync()`. Dispose the cursor.
+- GridFS: `new GridFSBucket(database)`.
+- Client-side encryption: configure `AutoEncryptionOptions` on the client you supply with `UseExistingClient`.
+- Time series: create the collection in a [custom provisioning step](../guides/custom-provisioning-steps.md).
+- Sessions: inside a [transaction](../guides/transactions.md) callback, `IMongoDbTransactionContext.Session` is the driver session. Pass it to `IMongoCollection<T>` overloads that take an `IClientSessionHandle`.
+
+Write concern, read concern, read preference, retries, timeouts and compression are driver settings. Set them on the connection string, or build a `MongoClientSettings` and give the client to `UseExistingClient`, see [Production MongoDB posture](../security/production-mongodb.md).
+
+## Handle failures
+
+`GetCollectionAsync` returns a `Result`. Check it before using `Value`:
+
+```csharp
+var bindingKey = new MongoDocumentBindingKey("orders");
+var resolved = await collections.GetCollectionAsync<Order>(bindingKey, cancellationToken);
+if (resolved.IsFailed)
+{
+    // An unknown binding, a missing tenant prefix or an invalid physical name. Plain FluentResults errors.
+}
+```
+
+Driver calls on the collection throw driver exceptions (`MongoException` and subclasses), not `Result` values. Handle them as you would with the plain driver.
+
+## Pitfalls
+
+- The keyed `IMongoClient` is a raw driver client. It does not apply namespace resolution, so `GetDatabase` on it bypasses tenant and static prefixes. Resolve the database or collection through `IMongoDatabaseResolver`, the keyed `IMongoDatabase`, the keyed `IMongoCollection<T>`, or `IMongoDbCollectionFactory` before you call the driver. Do not create your own `MongoClient`.
+- Dispose cursors and sessions you open.
+- Inside a transaction callback, do not start a second session. `CrossClusterOperationError` applies to repository operations resolved from the transaction context. Pass `IMongoDbTransactionContext.Session` to raw driver writes, and do not use a raw client for work on another cluster.
+- Do not wrap driver features in your own provider-neutral abstraction.
+
+## See also
+
+- [Use collections without repositories](../guides/resolve-collections.md)
+- [Transactions](../guides/transactions.md)
+- [Custom provisioning steps](../guides/custom-provisioning-steps.md)
+- [Multi-tenant database names](../guides/multi-tenant-databases.md)
+- [Samples](../../samples/MongoDb.Capabilities.Sample)
+- Runnable example: [DriverEscapeHatchesExampleTests](../../test/Repositories.IntegrationTests/Examples/DriverEscapeHatchesExampleTests.cs)

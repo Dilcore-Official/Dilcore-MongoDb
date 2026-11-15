@@ -8,8 +8,16 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
 
 ## [Unreleased]
 
+### Changed
+
+- New guide `docs/guides/resolve-collections.md` shows how to get a collection or database without repositories: keyed `IMongoCollection<T>`, `IMongoDbCollectionFactory` and `IMongoDatabaseResolver`
+- Consumer documentation is rewritten as task-oriented guides in `docs/guides/` (setup, use, failure handling, pitfalls), indexed in `docs/guides/README.md`. Every code example is covered by an integration test under `test/*/Examples/`, and `ArchitectureTests` checks that the guides, their tests and the skill index stay in sync.
+- The release workflow reserves `vX.Y.Z-reserved` on the publishing commit before the NuGet push, creates the final `vX.Y.Z` tag after the packages were pushed, and removes the reservation only after the GitHub Release exists. A retry continues only when that reservation matches the same commit ([#111](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/111)).
+
 ### Added
 
+- Consumer skill `skills/using-dilcore-mongodb` in the open Agent Skills format: decision guide, usage rules, troubleshooting, a docs index and ten commented examples of the most common combinations ([#42](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/42)).
+- Context7 configuration (`context7.json`: consumer docs only, usage rules) and `.github/workflows/context7-refresh.yml`, which refreshes the library after a merge into `main` that changes docs ([#40](https://github.com/Dilcore-Official/Dilcore-MongoDb/issues/40)).
 - Per-package NuGet READMEs (`src/<package>/README.md`) with install command, key features, quick start and preview note, and a rewritten repository README. `test/PackageTests` checks that each package ships its own README.
 - Package `Copyright` metadata that matches the `LICENSE` copyright line; `test/PackageTests` asserts it.
 - Test suites for packed package contents and for an external caller that restores
@@ -61,15 +69,15 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
 - M3 repository correctness: typed `DocumentNotFoundError` / `ConcurrencyConflictError` /
   `DocumentTooLargeError` / `BulkWritePartialFailureError`, collision-safe ETags,
   replace/snapshot/patch, and bulk write options with chunking and partial-failure results.
-- Consumer how-tos: [document policies](docs/guides/document-policies.md) and
-  [repositories](docs/guides/repositories.md).
+- Consumer how-tos: [define documents](docs/guides/define-documents.md) and
+  [CRUD with repositories](docs/guides/crud-with-repositories.md).
 - Idempotent `IMongoDbProvisioner` (DryRun/Apply + `IProvisioningStep`) outside collection
   resolution. Desired-state index reconcile: create, recreate (drop+create on definition drift),
   and remove indexes dropped from bindings; documents and `_id_` are preserved.
-  How-to: [provisioning](docs/guides/provisioning.md).
+  How-to: [provisioning](docs/guides/provision-indexes-and-ttl.md).
 - Optional JSON adapter packages `Dilcore.MongoDB.SystemTextJson` and `Dilcore.MongoDB.NewtonsoftJson`
   with Canonical Extended JSON conversion and `JsonDocumentStore`.
-  How-to: [json adapters](docs/guides/json-adapters.md).
+  How-to: [System.Text.Json](docs/guides/json-system-text-json.md).
 - Keyset pagination (`GetPageAsync`) with sort-aware opaque cursors (implicit `_id`
   tie-breaker), soft-delete `RestoreAsync` / `PurgeAsync`, `FindOptions` list
   overloads, and typed `DuplicateKeyError` / `TransientWriteError` /

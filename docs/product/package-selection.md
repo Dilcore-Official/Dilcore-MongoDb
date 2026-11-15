@@ -1,23 +1,58 @@
-# Package selection
+# Choose a package
 
-Canonical companion: [package-descriptions.md](package-descriptions.md). Naming: [ADR 0001](../adr/0001-package-naming.md). Scope: [ROADMAP.md](../../ROADMAP.md).
+Pick the Dilcore MongoDB package your project needs. Package: `Dilcore.MongoDB` for applications, `Dilcore.MongoDB.Abstractions` for libraries without DI.
 
-**Current:** two core packages plus two optional JSON adapter packages in `src/`. OpenTelemetry and VectorData IDs below are **not shipped**.
+## Setup
+
+Install the application package. All Dilcore MongoDB packages must be on the same version.
+
+```text
+dotnet add package Dilcore.MongoDB --prerelease
+```
+
+```csharp
+using System;
+using Dilcore.MongoDB.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
+
+services.AddMongoDb(mongo => mongo
+    .AddCluster("primary", c => c.UseConnectionString(connectionString))
+    .AddDatabase("app", db => db.OnCluster("primary")));
+```
+
+## Use
 
 | Package | Use when |
 |---------|----------|
-| `Dilcore.MongoDB.Abstractions` | You only need contracts / interfaces (e.g. libraries that define repositories without hosting DI). |
-| `Dilcore.MongoDB` | Application host: DI registration, namespace resolution, repositories, conventions, provisioning, transactions, driver integration. |
-| `Dilcore.MongoDB.SystemTextJson` | System.Text.Json DOM adapters and `AddSystemTextJsonDocuments()` through the shared BSON conversion engine and store factory. |
-| `Dilcore.MongoDB.NewtonsoftJson` | Newtonsoft.Json DOM adapters and `AddNewtonsoftJsonDocuments()`; do not reference this from STJ-only apps. |
+| `Dilcore.MongoDB` | Application host: DI registration, namespace resolution, repositories, conventions, provisioning, transactions, driver integration. Reference this one by default. |
+| `Dilcore.MongoDB.Abstractions` | A library that only needs contracts and interfaces (for example, it defines repositories without hosting DI). |
+| `Dilcore.MongoDB.SystemTextJson` | JSON documents as `JsonElement`, `JsonDocument` or `JsonNode`, plus `AddSystemTextJsonDocuments()`. See [System.Text.Json](../guides/json-system-text-json.md). |
+| `Dilcore.MongoDB.NewtonsoftJson` | JSON documents as `JObject` or `JToken`, plus `AddNewtonsoftJsonDocuments()`. See [Newtonsoft.Json](../guides/json-newtonsoft.md). Do not reference it from an app that only uses System.Text.Json. |
 
-Reference the primary package unless you are authoring a library that must stay DI-free.
+If your app needs one client and a few collection calls, use `MongoDB.Driver` directly instead of this toolkit.
 
-### Optional future packages (not shipped yet)
+OpenTelemetry instrumentation and vector search are planned and are not in any package yet. See the [ROADMAP](../../ROADMAP.md).
 
-These IDs are reserved for later milestones; do **not** create empty projects today:
+## Handle failures
 
-| Future package | Intent |
-|----------------|--------|
-| `Dilcore.MongoDB.OpenTelemetry` | Opt-in OpenTelemetry instrumentation (exporter-neutral) |
-| `Dilcore.MongoDB.VectorData` | MongoDB Vector Search / .NET vector abstractions |
+| Symptom | Cause |
+|---------|-------|
+| `InvalidOperationException` when you call a JSON `Add...Documents` method | `AddMongoDb` was not called first |
+| Restore or build errors about mismatched assemblies | The Dilcore MongoDB packages are on different versions |
+
+## Pitfalls
+
+- Version 2 is in preview, so install with `--prerelease` and keep every Dilcore MongoDB package on one version.
+- Do not add the Newtonsoft package to an app that only uses System.Text.Json.
+- The toolkit sits on top of `MongoDB.Driver`. It is not Amazon DocumentDB and not a provider-neutral repository.
+
+## See also
+
+- [Register clusters and databases](../guides/register-clusters-and-databases.md)
+- [Guides index](../guides/README.md)
+- [Versioning and support](../policies/versioning-and-support.md)
+- [ADR 0001: package naming](../adr/0001-package-naming.md)
+- Runnable example: [PackageSelectionExampleTests](../../test/IntegrationTests/Examples/PackageSelectionExampleTests.cs)

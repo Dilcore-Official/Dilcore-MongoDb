@@ -51,7 +51,7 @@ public sealed class Note : IDocumentEntity<Guid>, IAuditableDocument
 
 public sealed class NoteArchive(IGenericRepository<Note> notes)
 {
-    public Task<Result<IReadOnlyList<Note>>> ListAsync(CancellationToken cancellationToken)
+    public Task<Result<IReadOnlyList<Note>>> ListAsync(CancellationToken cancellationToken = default)
         => notes.GetListAsync(cancellationToken);
 }
 ```
