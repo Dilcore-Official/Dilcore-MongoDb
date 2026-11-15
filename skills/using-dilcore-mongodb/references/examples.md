@@ -318,3 +318,24 @@ public sealed class ReportService(IMongoDbCollectionFactory collections)
 ```
 
 When you need the client itself, resolve the keyed client: `provider.GetRequiredKeyedService<IMongoClient>("primary")`.
+
+To get only a collection, with no repository, inject it by binding key, or use the factory for a collection that has no binding:
+
+```csharp
+public sealed class AuditWriter(
+    [FromKeyedServices("orders")] IMongoCollection<Order> orders,   // key = binding key, scoped
+    IMongoDbCollectionFactory collections)
+{
+    public async Task WriteAsync(string message, CancellationToken cancellationToken)
+    {
+        // Untyped collection by logical name. The namespace pipeline still applies.
+        var audit = await collections.GetCollectionAsync(new MongoDatabaseKey("shop"), "audit-log");
+        if (audit.IsFailed)
+            return;
+
+        await audit.Value.InsertOneAsync(new BsonDocument("message", message), cancellationToken: cancellationToken);
+    }
+}
+```
+
+A raw collection has no soft-delete filter, ETag check, audit stamp or id generation.

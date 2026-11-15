@@ -63,8 +63,10 @@ What you can resolve:
 |------|-----|
 | `IMongoClient` | Keyed singleton, key is the cluster name |
 | `IMongoDatabase` | Keyed scoped service, key is the database name |
-| `IMongoCollection<T>` | `IMongoDbCollectionFactory.GetCollectionAsync<T>(bindingKey)` |
+| `IMongoCollection<T>` | Keyed scoped service (key is the binding key), or `IMongoDbCollectionFactory.GetCollectionAsync<T>(bindingKey)` |
 | `IMongoCollection<BsonDocument>` | `GetCollectionAsync(databaseKey, logicalCollectionName)` |
+
+Every option, with failures and names, is in [Use collections without repositories](../guides/resolve-collections.md).
 
 Other driver-only features stay driver APIs:
 
@@ -99,6 +101,7 @@ Driver calls on the collection throw driver exceptions (`MongoException` and sub
 
 ## See also
 
+- [Use collections without repositories](../guides/resolve-collections.md)
 - [Transactions](../guides/transactions.md)
 - [Custom provisioning steps](../guides/custom-provisioning-steps.md)
 - [Multi-tenant database names](../guides/multi-tenant-databases.md)

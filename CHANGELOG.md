@@ -10,6 +10,7 @@ as described in [docs/policies/versioning-and-support.md](docs/policies/versioni
 
 ### Changed
 
+- New guide `docs/guides/resolve-collections.md` shows how to get a collection or database without repositories: keyed `IMongoCollection<T>`, `IMongoDbCollectionFactory` and `IMongoDatabaseResolver`
 - Consumer documentation is rewritten as task-oriented guides in `docs/guides/` (setup, use, failure handling, pitfalls), indexed in `docs/guides/README.md`. Every code example is covered by an integration test under `test/*/Examples/`, and `ArchitectureTests` checks that the guides, their tests and the skill index stay in sync.
 - The release workflow now creates the `vX.Y.Z` tag only after the packages were pushed to NuGet.org, so the commit history shows which commit produced which version and a failed publish leaves no tag.
 

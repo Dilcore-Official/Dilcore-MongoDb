@@ -31,6 +31,7 @@ Every guide has the same sections: Setup, Use, Handle failures, Pitfalls, See al
 | JSON documents with System.Text.Json | [docs/guides/json-system-text-json.md](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-system-text-json.md) |
 | JSON documents with Newtonsoft.Json | [docs/guides/json-newtonsoft.md](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-newtonsoft.md) |
 | JSON conversion options | [docs/guides/json-conversion-options.md](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/json-conversion-options.md) |
+| Collections without repositories | [docs/guides/resolve-collections.md](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/guides/resolve-collections.md) |
 | Driver escape hatches | [docs/product/driver-escape-hatches.md](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/product/driver-escape-hatches.md) |
 | Production MongoDB posture (TLS, secrets, least privilege) | [docs/security/production-mongodb.md](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/security/production-mongodb.md) |
 | BSON conventions and rollout | [docs/adr/0003-serialization-conventions.md](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/docs/adr/0003-serialization-conventions.md) |

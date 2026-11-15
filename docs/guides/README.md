@@ -20,6 +20,7 @@ Task-oriented pages for the Dilcore MongoDB packages. Every page has the same sh
 - [Page through results with keyset cursors](keyset-paging.md)
 - [Write many documents at once](bulk-writes.md)
 - [Read only the fields you need](projections.md)
+- [Use collections without repositories](resolve-collections.md)
 - [Handle typed errors](handle-errors.md)
 - [Typed error reference](error-reference.md)
 

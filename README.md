@@ -96,6 +96,7 @@ It is a standard [Agent Skills](https://agentskills.io) folder, so you can also 
 |-------|-----|
 | All task guides (setup, repositories, tenancy, provisioning, transactions, JSON) | [docs/guides/README.md](docs/guides/README.md) |
 | Choose a package | [docs/product/package-selection.md](docs/product/package-selection.md) |
+| Use collections without repositories | [docs/guides/resolve-collections.md](docs/guides/resolve-collections.md) |
 | Driver escape hatches | [docs/product/driver-escape-hatches.md](docs/product/driver-escape-hatches.md) |
 | BSON conventions and rollout | [ADR 0003](docs/adr/0003-serialization-conventions.md) |
 | Production MongoDB posture (TLS, secrets, least privilege) | [docs/security/production-mongodb.md](docs/security/production-mongodb.md) |
