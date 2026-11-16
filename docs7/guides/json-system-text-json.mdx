@@ -1,0 +1,96 @@
+---
+title: "Store JSON documents with System.Text.Json"
+description: "Persist documents without a CLR type as JsonElement, JsonDocument or JsonNode. Package: Dilcore.MongoDB.SystemTextJson (with Dilcore.MongoDB)."
+---
+Persist documents without a CLR type as `JsonElement`, `JsonDocument` or `JsonNode`. Package: `Dilcore.MongoDB.SystemTextJson` (with `Dilcore.MongoDB`).
+
+## Setup
+
+```csharp
+using Dilcore.MongoDB.Extensions;
+using Dilcore.MongoDB.SystemTextJson;
+using Microsoft.Extensions.DependencyInjection;
+
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
+
+services.AddMongoDb(mongo => mongo
+    .AddCluster("primary", c => c.UseConnectionString(connectionString))
+    .AddDatabase("app", db => db.OnCluster("primary")));
+
+// Must come after AddMongoDb, otherwise registration throws InvalidOperationException.
+services.AddSystemTextJsonDocuments();
+```
+
+## Use
+
+```csharp
+using System.Text.Json;
+using Dilcore.MongoDB.Abstractions.Json;
+using Dilcore.MongoDB.Abstractions.Keys;
+using Dilcore.MongoDB.SystemTextJson;
+using FluentResults;
+
+public sealed class PayloadService(ISystemTextJsonDocumentStoreFactory stores)
+{
+    public async Task<Result<JsonElement>> RoundTripAsync(
+        JsonElement payload,
+        CancellationToken cancellationToken = default)
+    {
+        var store = stores.Create(new MongoDatabaseKey("app"));
+
+        // The collection is a plain string. No typed binding is needed.
+        var inserted = await store.InsertAsync("payloads", payload, cancellationToken: cancellationToken);
+        if (inserted.IsFailed)
+        {
+            return inserted.ToResult();
+        }
+
+        // Reads return Canonical Extended JSON by default (numbers become {"$numberInt": "3"}).
+        // Ask for relaxed output to get plain JSON back.
+        var relaxed = new JsonBsonConversionOptions { OutputMode = JsonBsonOutputMode.RelaxedExtendedJson };
+
+        return await store.GetJsonElementByIdAsync("payloads", inserted.Value["_id"], relaxed, cancellationToken);
+    }
+}
+```
+
+The store uses the same database and prefix pipeline as typed documents. `stores.Create(databaseKey, staticPrefix)` takes an optional static prefix. The store also accepts `JsonDocument`, `JsonNode`, a JSON `string` and `BsonDocument`, and reads back `GetJsonDocumentByIdAsync` and `GetJsonElementByIdAsync`. `JsonBsonConvert` converts DOM types with `ToBson`, `ToJsonElement` and `ToJsonDocument`.
+
+You can also resolve `IJsonDocumentStoreFactory` (from `Dilcore.MongoDB.Abstractions.Json`) and call the same extension methods on `IJsonDocumentStore`.
+
+## Handle failures
+
+```csharp
+using Dilcore.MongoDB.Abstractions.Results;
+
+var inserted = await store.InsertAsync("payloads", """{ "_id": 1 }""", cancellationToken: cancellationToken);
+if (inserted.HasError<DuplicateKeyError>())
+{
+    // A document with this _id already exists.
+}
+```
+
+| Case | Result |
+|------|--------|
+| Malformed JSON | `JsonConversionError` |
+| JSON larger than `MaxUtf8Bytes` | `DocumentTooLargeError` |
+| Root is not an object | failed `Result` ("JSON root must be a document.") |
+| Unknown `_id` on read | `DocumentNotFoundError` |
+| Duplicate `_id` | `DuplicateKeyError` |
+| Unknown database, or a required prefix is missing | failed `Result` from the shared resolver pipeline |
+| `AddSystemTextJsonDocuments` before `AddMongoDb` | `InvalidOperationException` at registration |
+
+## Pitfalls
+
+- Call `AddSystemTextJsonDocuments()` after `AddMongoDb`.
+- Reads use Canonical Extended JSON unless you pass relaxed options, so numbers come back as `{"$numberInt": "3"}`. Relaxed output can widen numbers. Use Canonical Extended JSON when BSON type fidelity matters: [JSON conversion options](/guides/json-conversion-options).
+- Create the store per scope (it is built from scoped services). Do not keep it in a singleton.
+
+## See also
+
+- [JSON conversion options](/guides/json-conversion-options)
+- [Store JSON documents with Newtonsoft.Json](/guides/json-newtonsoft)
+- [Choose a package](/product/package-selection)
+- Runnable example: [SystemTextJsonExampleTests](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/test/Json.IntegrationTests/Examples/SystemTextJsonExampleTests.cs)
+

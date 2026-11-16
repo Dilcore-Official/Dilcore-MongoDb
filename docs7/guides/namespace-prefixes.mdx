@@ -1,0 +1,110 @@
+---
+title: "Prefix database and collection names"
+description: "Add static or per-environment prefixes to physical database and collection names. Package: Dilcore.MongoDB."
+---
+Add static or per-environment prefixes to physical database and collection names. Package: `Dilcore.MongoDB`.
+
+## Setup
+
+```csharp
+using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
+
+services.AddMongoDb(mongo => mongo
+    .AddCluster("primary", c => c.UseConnectionString(connectionString))
+    .AddDatabase("UserDB", db =>
+    {
+        db.OnCluster("primary");
+
+        // Physical database name: catalog_UserDB
+        db.WithNamespacePrefix("catalog");
+
+        // A binding can add its own prefix to the collection name: feature_users
+        db.AddDocumentBinding<User>("users", d => d
+            .WithCollectionName("users")
+            .WithNamespacePrefix("feature"));
+    }));
+
+public sealed class User : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = "";
+}
+```
+
+## Use
+
+Resolve the physical names through the same pipeline the repositories use:
+
+```csharp
+using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Keys;
+
+public sealed class NameInspector(IMongoDbCollectionFactory collections)
+{
+    public async Task<string?> ResolveCollectionNameAsync(CancellationToken cancellationToken = default)
+    {
+        var bindingKey = new MongoDocumentBindingKey("users");
+        var collection = await collections.GetCollectionAsync<User>(bindingKey, cancellationToken);
+
+        return collection.IsSuccess
+            ? $"{collection.Value.Database.DatabaseNamespace.DatabaseName}.{collection.Value.CollectionNamespace.CollectionName}"
+            : null;
+    }
+}
+```
+
+Prefixes that apply across many databases without per-builder registration come from a cross-cutting `INamespaceSegmentContributor` (namespace `Dilcore.MongoDB.Abstractions.Namespace`), registered in DI as scoped:
+
+```csharp
+using Dilcore.MongoDB.Abstractions.Namespace;
+using FluentResults;
+
+public sealed class EnvironmentSegmentContributor : INamespaceSegmentContributor
+{
+    public int Order => 50;   // runs before the static prefix (100)
+
+    public Task<Result<string?>> ContributeAsync(
+        NamespaceResolutionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var segment = Result.Ok<string?>("staging");
+
+        return Task.FromResult(segment);
+    }
+}
+
+services.AddScoped<INamespaceSegmentContributor, EnvironmentSegmentContributor>();
+```
+
+A contributor runs for every database and collection name, so the example above turns `UserDB` into `staging_catalog_UserDB` and `users` into `staging_feature_users`. Return `null` for requests you do not want to prefix (check `request.Target`).
+
+How resolution works:
+
+1. Contributors run in ascending `Order` (async prefix resolvers at 90, static `WithNamespacePrefix` at 100). Each may emit a segment, or `null` to skip.
+2. Segments are joined with `_` and the logical name is appended, then validated as a physical MongoDB name.
+3. Names from an async prefix resolver are not cached within the scope, so a changed tenant context cannot reuse a stale name.
+
+Prefer `WithNamespacePrefixResolver<T>` when the prefix belongs to one database or binding: [Multi-tenant database names](/guides/multi-tenant-databases).
+
+## Handle failures
+
+A contributor that returns a failed `Result` makes the repository or collection call return a failed `Result`. A segment that produces an invalid MongoDB name does the same. Neither is a `MongoOperationError`; check `IsFailed` and log the errors.
+
+## Pitfalls
+
+- A prefix of `""` or whitespace is rejected at registration. Do not use an empty prefix to mean "no prefix".
+- Contributors are scoped. Do not cache their results in a singleton. A custom contributor value must stay constant for the life of that scope: the namespace cache key does not include contributor output, so a later change in the same scope is ignored. Callers whose prefix depends on the tenant use `WithNamespacePrefixResolver<T>`, which disables caching for that database or binding.
+- Changing a prefix changes the physical name, so existing data stays under the old name.
+
+## See also
+
+- [Multi-tenant database names](/guides/multi-tenant-databases)
+- [Driver escape hatches](/product/driver-escape-hatches)
+- [Production MongoDB posture](/security/production-mongodb)
+- Runnable example: [NamespacePrefixesExampleTests](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/test/IntegrationTests/Examples/NamespacePrefixesExampleTests.cs)
+

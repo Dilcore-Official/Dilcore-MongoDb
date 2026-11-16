@@ -1,0 +1,112 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Dilcore MongoDB",
+  "colors": {
+    "primary": "#0B7A75",
+    "light": "#0E8F89",
+    "dark": "#075E5A"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get started",
+        "pages": [
+          "index",
+          "product/package-selection",
+          "guides/register-clusters-and-databases",
+          "security/production-mongodb"
+        ]
+      },
+      {
+        "group": "Documents",
+        "pages": [
+          "guides/define-documents",
+          "guides/optimistic-concurrency",
+          "guides/soft-delete"
+        ]
+      },
+      {
+        "group": "Read and write",
+        "pages": [
+          "guides/crud-with-repositories",
+          "guides/keyset-paging",
+          "guides/bulk-writes",
+          "guides/projections",
+          "guides/resolve-collections",
+          "guides/handle-errors",
+          "guides/error-reference"
+        ]
+      },
+      {
+        "group": "Tenancy and naming",
+        "pages": [
+          "guides/namespace-prefixes",
+          "guides/multi-tenant-databases"
+        ]
+      },
+      {
+        "group": "Provisioning",
+        "pages": [
+          "guides/provision-indexes-and-ttl",
+          "guides/expire-documents-with-ttl",
+          "guides/custom-provisioning-steps"
+        ]
+      },
+      {
+        "group": "Transactions",
+        "pages": [
+          "guides/transactions"
+        ]
+      },
+      {
+        "group": "JSON documents",
+        "pages": [
+          "guides/json-system-text-json",
+          "guides/json-newtonsoft",
+          "guides/json-conversion-options"
+        ]
+      },
+      {
+        "group": "MongoDB driver",
+        "pages": [
+          "product/driver-escape-hatches",
+          "product/package-descriptions"
+        ]
+      },
+      {
+        "group": "Decisions",
+        "pages": [
+          "adr/0001-package-naming",
+          "adr/0002-generic-document-identifier",
+          "adr/0003-serialization-conventions"
+        ]
+      },
+      {
+        "group": "Policies",
+        "pages": [
+          "policies/versioning-and-support",
+          "api/v1-public-api"
+        ]
+      },
+      {
+        "group": "Project",
+        "pages": [
+          "product/v2-goals",
+          "product/v1-defects"
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/Dilcore-Official/Dilcore-MongoDb"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/Dilcore-Official/Dilcore-MongoDb"
+    }
+  }
+}

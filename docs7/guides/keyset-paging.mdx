@@ -1,0 +1,97 @@
+---
+title: "Page through results with keyset cursors"
+description: "Read large result sets in keyset pages. Package: Dilcore.MongoDB. An immutable sort key stops a document from moving between pages when its sort value changes. Inserts and deletes between page read..."
+---
+Read large result sets in keyset pages. Package: `Dilcore.MongoDB`. An immutable sort key stops a document from moving between pages when its sort value changes. Inserts and deletes between page reads can still add or drop documents, and later pages do not go back for them. The `_id` tie-breaker only orders equal sort values. A consistent snapshot needs snapshot reads.
+
+## Setup
+
+```csharp
+using System;
+using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Policies;
+using Dilcore.MongoDB.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
+
+services.AddMongoDb(mongo => mongo
+    .AddCluster("primary", c => c.UseConnectionString(connectionString))
+    .AddDatabase("blog", db =>
+    {
+        db.OnCluster("primary");
+        db.AddDocumentBinding<Post>("posts", d => d
+            .WithCollectionName("posts")
+            .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7));
+    }));
+
+public sealed class Post : IDocumentEntity<Guid>, IAuditableDocument
+{
+    public Guid Id { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public string Title { get; set; } = "";
+}
+```
+
+## Use
+
+```csharp
+using Dilcore.MongoDB.Abstractions.Options;
+using Dilcore.MongoDB.Abstractions.Repositories;
+using FluentResults;
+using MongoDB.Driver;
+
+public sealed class PostService(IGenericRepository<Post> posts)
+{
+    public Task<Result<KeysetPage<Post>>> ListAsync(string? cursor, CancellationToken cancellationToken = default)
+    {
+        var request = new KeysetPageRequest<Post>
+        {
+            Filter = Builders<Post>.Filter.Empty,
+            Sort = Builders<Post>.Sort.Descending(x => x.CreatedAt),   // the cursor is bound to this sort
+            PageSize = 50,
+            Cursor = cursor                                            // NextCursor of the previous page, or null
+        };
+
+        return posts.GetPageAsync(request, cancellationToken);
+    }
+}
+
+// The caller sends page.Value.NextCursor back while page.Value.HasMore is true.
+```
+
+`KeysetPage<T>` has `Items`, `NextCursor` and `HasMore`. The repository appends `_id` ascending as a tie-breaker when your sort does not include `_id`, so pages stay stable when sort values collide. Seeks follow MongoDB BSON type order for scalar values.
+
+## Handle failures
+
+```csharp
+var page = await service.ListAsync(cursor, cancellationToken);
+if (page.IsFailed)
+{
+    // A malformed cursor, a cursor from another sort, or an invalid request. Nothing is thrown.
+}
+```
+
+A failed `Result` is returned for:
+
+- a malformed cursor, or a cursor used with a different sort than the one that produced it;
+- sort directions other than `1` or `-1` (`$meta` sorts are not supported);
+- array-valued sort fields;
+- a `Projection` that drops a sort key (including `_id`) or replaces one with a computed expression.
+
+## Pitfalls
+
+- Never reuse a cursor with a different sort. Start from `Cursor = null` when the sort changes.
+- Treat the cursor as an opaque string. Do not parse or build one.
+- Filters are applied on every page. Changing the filter between pages can skip or repeat rows.
+- Pages are separate reads. A document whose sort value changes can move into a page you already returned or into one you will skip. `_id` does not freeze a sort value that is not equal to its neighbour. Prefer an immutable sort key, or a snapshot read, for a consistent traversal.
+
+## See also
+
+- [Create, read and update documents](/guides/crud-with-repositories)
+- [Projections](/guides/projections)
+- [Handle typed errors](/guides/handle-errors)
+- Runnable example: [KeysetPagingExampleTests](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/test/Repositories.IntegrationTests/Examples/KeysetPagingExampleTests.cs)
+
