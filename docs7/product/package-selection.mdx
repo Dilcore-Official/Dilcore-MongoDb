@@ -1,0 +1,61 @@
+---
+title: "Choose a package"
+description: "Pick the Dilcore MongoDB package your project needs. Package: Dilcore.MongoDB for applications, Dilcore.MongoDB.Abstractions for libraries without DI."
+---
+Pick the Dilcore MongoDB package your project needs. Package: `Dilcore.MongoDB` for applications, `Dilcore.MongoDB.Abstractions` for libraries without DI.
+
+## Setup
+
+Install the application package. All Dilcore MongoDB packages must be on the same version.
+
+```text
+dotnet add package Dilcore.MongoDB --prerelease
+```
+
+```csharp
+using System;
+using Dilcore.MongoDB.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
+
+services.AddMongoDb(mongo => mongo
+    .AddCluster("primary", c => c.UseConnectionString(connectionString))
+    .AddDatabase("app", db => db.OnCluster("primary")));
+```
+
+## Use
+
+| Package | Use when |
+|---------|----------|
+| `Dilcore.MongoDB` | Application host: DI registration, namespace resolution, repositories, conventions, provisioning, transactions, driver integration. Reference this one by default. |
+| `Dilcore.MongoDB.Abstractions` | A library that only needs contracts and interfaces (for example, it defines repositories without hosting DI). |
+| `Dilcore.MongoDB.SystemTextJson` | JSON documents as `JsonElement`, `JsonDocument` or `JsonNode`, plus `AddSystemTextJsonDocuments()`. See [System.Text.Json](/guides/json-system-text-json). |
+| `Dilcore.MongoDB.NewtonsoftJson` | JSON documents as `JObject` or `JToken`, plus `AddNewtonsoftJsonDocuments()`. See [Newtonsoft.Json](/guides/json-newtonsoft). Do not reference it from an app that only uses System.Text.Json. |
+
+If your app needs one client and a few collection calls, use `MongoDB.Driver` directly instead of this toolkit.
+
+OpenTelemetry instrumentation and vector search are planned and are not in any package yet. See the [ROADMAP](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/ROADMAP.md).
+
+## Handle failures
+
+| Symptom | Cause |
+|---------|-------|
+| `InvalidOperationException` when you call a JSON `Add...Documents` method | `AddMongoDb` was not called first |
+| Restore or build errors about mismatched assemblies | The Dilcore MongoDB packages are on different versions |
+
+## Pitfalls
+
+- Version 2 is in preview, so install with `--prerelease` and keep every Dilcore MongoDB package on one version.
+- Do not add the Newtonsoft package to an app that only uses System.Text.Json.
+- The toolkit sits on top of `MongoDB.Driver`. It is not Amazon DocumentDB and not a provider-neutral repository.
+
+## See also
+
+- [Register clusters and databases](/guides/register-clusters-and-databases)
+- [Guides index](/index)
+- [Versioning and support](/policies/versioning-and-support)
+- [ADR 0001: package naming](/adr/0001-package-naming)
+- Runnable example: [PackageSelectionExampleTests](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/test/IntegrationTests/Examples/PackageSelectionExampleTests.cs)
+

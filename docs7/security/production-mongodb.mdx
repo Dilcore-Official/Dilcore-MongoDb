@@ -1,0 +1,74 @@
+---
+title: "Run MongoDB safely in production"
+description: "Configure secrets, TLS, least privilege and logging for a host that uses Dilcore MongoDB. Package: Dilcore.MongoDB. This is not a substitute for MongoDB server hardening or for SECURITY.md vulnerab..."
+---
+Configure secrets, TLS, least privilege and logging for a host that uses Dilcore MongoDB. Package: `Dilcore.MongoDB`. This is not a substitute for MongoDB server hardening or for [SECURITY](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/SECURITY.md) vulnerability reports.
+
+## Setup
+
+```csharp
+using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Ownership;
+using Dilcore.MongoDB.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Driver;
+
+// connectionString comes from the host secret store (environment variable, Key Vault,
+// Secrets Manager, Kubernetes secret). Never commit it and never log it.
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
+var settings = MongoClientSettings.FromConnectionString(connectionString);
+settings.UseTls = true;                                  // do not disable certificate validation in production
+settings.ApplicationName = "orders-api";
+settings.RetryWrites = true;
+
+services.AddMongoDb(mongo => mongo
+    // Hand the configured client to the toolkit. LibraryOwned: the toolkit disposes it.
+    .AddCluster("primary", c => c.UseExistingClient(new MongoClient(settings), MongoClientOwnership.LibraryOwned))
+    .AddDatabase("shop", db =>
+    {
+        db.OnCluster("primary");
+        db.AddDocumentBinding<Order>("orders", d => d.WithCollectionName("orders"));
+    }));
+
+public sealed class Order : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+}
+```
+
+With a plain connection string you can set the same options in the string (`tls=true`) and use `UseConnectionString`. Use `UseExistingClient` when you need driver settings the string cannot express.
+
+## Use
+
+- **Secrets:** load connection strings and credentials from the host secret store. Do not put them in source or sample code.
+- **Clients:** one singleton `IMongoClient` exists per cluster. Do not construct extra clients per request.
+- **Least privilege:** application users get `readWrite` on the application databases, not `root`. The provisioning identity needs index and collection create privileges. Run [provisioning](/guides/provision-indexes-and-ttl) as a deployment step, not with a request-path identity that is otherwise read-only. Put unique indexes and schema validation in provisioning, not in request code.
+- **Tenants:** the toolkit has no tenant type. Your `INamespacePrefixResolver` must fail closed, see [Multi-tenant database names](/guides/multi-tenant-databases). JSON adapters and typed repositories resolve the same physical collection.
+- **Logging:** log cluster keys (the names you registered), not hosts or connection strings. Never log credentials or change-stream resume tokens. Treat command BSON dumps as sensitive and keep them off by default.
+
+## Handle failures
+
+| Failure | Meaning | Response |
+|---------|---------|----------|
+| `InvalidOperationException` at startup | Registration is invalid | Fix the registration. The host should not start |
+| Failed `Result` with a namespace message | Missing tenant prefix or unknown database | Reject the request. Do not fall back to a shared database |
+| `TransientWriteError` | The write may already have been applied | Retry with backoff only when the write is idempotent |
+| Driver `MongoAuthenticationException` or TLS errors | Credentials or certificate problem | Alert. Do not retry in a loop |
+
+See [Handle typed errors](/guides/handle-errors).
+
+## Pitfalls
+
+- Do not disable TLS certificate validation, and do not embed passwords in source.
+- `TypeNameHandling` other than `None` is rejected by the Newtonsoft adapter for untrusted input. Prefer Canonical Extended JSON when BSON type fidelity matters.
+- Transaction byte budgets are client-side estimates. MongoDB's 16 MiB limit is per BSON document, not per transaction.
+- Transaction callbacks can run more than once on transient errors. Do not perform non-idempotent external side effects inside them. See [Transactions](/guides/transactions).
+
+## See also
+
+- [Reach the MongoDB driver directly](/product/driver-escape-hatches)
+- [Register clusters and databases](/guides/register-clusters-and-databases)
+- [Store JSON documents with Newtonsoft.Json](/guides/json-newtonsoft)
+- Runnable example: [ProductionMongoDbExampleTests](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/test/IntegrationTests/Examples/ProductionMongoDbExampleTests.cs)
+

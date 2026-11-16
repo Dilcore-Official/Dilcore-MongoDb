@@ -1,0 +1,167 @@
+---
+title: "Expire documents automatically with TTL"
+description: "Delete documents when a UTC timestamp passes by declaring a TTL index on the binding and applying it with IMongoDbProvisioner. Package: Dilcore.MongoDB."
+---
+Delete documents when a UTC timestamp passes by declaring a TTL index on the binding and applying it with `IMongoDbProvisioner`. Package: `Dilcore.MongoDB`.
+
+## Setup
+
+```csharp
+using Dilcore.MongoDB.Abstractions;
+using Dilcore.MongoDB.Abstractions.Policies;
+using Dilcore.MongoDB.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+
+var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")!;
+var services = new ServiceCollection();
+
+services.AddMongoDb(mongo => mongo
+    .AddCluster("primary", c => c.UseConnectionString(connectionString))
+    .AddDatabase("app", db =>
+    {
+        db.OnCluster("primary");
+        db.AddDocumentBinding<UserSession>("sessions", d => d
+            .WithCollectionName("sessions")
+            .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7)
+            // Zero seconds: eligible at ExpiresAt itself. The index name is sessions_ttl.
+            .WithCollectionItemsTimeToLive(TimeSpan.Zero, x => x.ExpiresAt!));
+        db.AddDocumentBinding<AuditEntry>("audit-entries", d => d
+            .WithCollectionName("audit_entries")
+            .WithGuidIdGeneration(GuidIdGenerationStrategy.SequentialVersion7)
+            // Thirty days after CreatedAt. The index name is audit_entries_ttl.
+            .WithCollectionItemsTimeToLive(TimeSpan.FromDays(30), x => x.CreatedAt));
+    }));
+
+// Per-document deadline. Null means "keep this document".
+public sealed class UserSession : IDocumentEntity<Guid>
+{
+    public Guid Id { get; set; }
+    public string UserName { get; set; } = "";
+    public DateTime? ExpiresAt { get; set; }
+}
+
+// Fixed retention, counted from the stamp the repository writes on insert.
+public sealed class AuditEntry : IDocumentEntity<Guid>, IAuditableDocument
+{
+    public Guid Id { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public string Action { get; set; } = "";
+}
+```
+
+```csharp
+using Dilcore.MongoDB.Abstractions.Provisioning;
+using Microsoft.Extensions.DependencyInjection;
+
+public static class Provisioning
+{
+    // Call after the host is built and before it serves traffic.
+    // Resolving a collection does not create the index.
+    public static async Task ApplyAsync(IServiceProvider services, CancellationToken cancellationToken = default)
+    {
+        using var scope = services.CreateScope();
+        var provisioner = scope.ServiceProvider.GetRequiredService<IMongoDbProvisioner>();
+
+        var report = await provisioner.ApplyAsync(cancellationToken);
+        if (report.IsFailed)
+        {
+            throw new InvalidOperationException("MongoDB provisioning failed.");
+        }
+    }
+}
+```
+
+`ApplyAsync` creates `{collectionName}_ttl` with `expireAfterSeconds` set to the `TimeSpan` you passed (`0` for sessions, `2592000` for a 30-day audit window). The default camelCase convention stores `ExpiresAt` as `expiresAt` and `CreatedAt` as `createdAt`.
+
+## Use
+
+```csharp
+using Dilcore.MongoDB.Abstractions.Repositories;
+using Dilcore.MongoDB.Repositories;
+using FluentResults;
+using MongoDB.Driver;
+
+public sealed class SessionService(IGenericRepository<UserSession> sessions)
+{
+    public Task<Result<UserSession>> CreateAsync(
+        string userName,
+        DateTime? expiresAt,
+        CancellationToken cancellationToken = default)
+    {
+        var session = new UserSession { UserName = userName, ExpiresAt = expiresAt };
+
+        return sessions.StoreAsync(session, cancellationToken);
+    }
+
+    public Task<Result<UserSession>> FindAsync(Guid id, CancellationToken cancellationToken = default)
+        => sessions.GetAsync(id, cancellationToken);
+
+    // Slide the deadline forward. Pass a UTC DateTime.
+    public Task<Result<UserSession>> ExtendAsync(
+        Guid id,
+        DateTime expiresAt,
+        CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<UserSession>.Filter.Eq(x => x.Id, id);
+        var update = Builders<UserSession>.Update.Set(x => x.ExpiresAt, expiresAt);
+
+        return sessions.PatchAsync(filter, update, cancellationToken);
+    }
+
+    // Remove the date so the TTL monitor skips this document.
+    public Task<Result<UserSession>> PinAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<UserSession>.Filter.Eq(x => x.Id, id);
+        var update = Builders<UserSession>.Update.Unset(x => x.ExpiresAt);
+
+        return sessions.PatchAsync(filter, update, cancellationToken);
+    }
+
+    // Hide a document as soon as its deadline passes, without waiting for the server to delete it.
+    public Task<Result<IReadOnlyList<UserSession>>> ListActiveAsync(
+        DateTime utcNow,
+        CancellationToken cancellationToken = default)
+        => sessions.GetListAsync(x => x.ExpiresAt == null || x.ExpiresAt > utcNow, cancellationToken);
+}
+```
+
+MongoDB deletes an eligible document on a background pass. Until that pass runs, `FindAsync` can still return it. `ListActiveAsync` is the cutoff your callers should use.
+
+## Handle failures
+
+```csharp
+using Dilcore.MongoDB.Abstractions.Results;
+
+var found = await service.FindAsync(id, cancellationToken);
+if (found.HasError<DocumentNotFoundError>())
+{
+    // The session was never stored, or the TTL monitor has already deleted it.
+}
+
+var extended = await service.ExtendAsync(id, DateTime.UtcNow.AddHours(1), cancellationToken);
+if (extended.HasError<DocumentNotFoundError>())
+{
+    // PatchAsync reports the same not-found result once the document is gone.
+}
+```
+
+- `GetAsync`, `ReplaceAsync`, and `PatchAsync` return `DocumentNotFoundError` when the monitor has already removed the document.
+- `ApplyAsync` returns a failed `Result` when the index cannot be created. Treat that as a failed startup: nothing expires until `{collectionName}_ttl` exists.
+- Skipping `ApplyAsync` still lets writes succeed. The collection has no TTL index, so documents stay until something else deletes them.
+
+## Pitfalls
+
+- The TTL monitor only expires a field stored as a BSON `Date`, or an array of BSON `Date`. Use `DateTime` or `DateTime?` and write UTC values (`DateTime.UtcNow`). A `DateTimeKind.Local` value is converted when it is written, which moves the deadline. By default `MongoDB.Driver` stores `DateTimeOffset` as a subdocument (`DateTime`, `Ticks`, `Offset`) and stores numbers as numbers. The index is still created, and no document expires.
+- A null or missing date is not a BSON `Date`. With the default ignore-null convention, `ExpiresAt = null` is omitted on insert, which is how a pinned session stays. `PinAsync` removes the field for the same reason.
+- The monitor runs about once a minute (`ttlMonitorSleepSecs` defaults to 60). Deletion is not the cutoff. Filter reads on the deadline when a document must disappear at that instant.
+- A binding has one TTL index, named `{collectionName}_ttl`. Changing the `TimeSpan` or the field makes the next apply recreate that index. Removing `WithCollectionItemsTimeToLive` drops the index and leaves the documents. See [Provision collections, indexes and TTL](/guides/provision-indexes-and-ttl).
+- A capped collection cannot carry a TTL index. Expire a time series collection with `TimeSeriesOptions` in a [custom provisioning step](/guides/custom-provisioning-steps), not with `WithCollectionItemsTimeToLive`.
+
+## See also
+
+- [Provision collections, indexes and TTL](/guides/provision-indexes-and-ttl)
+- [Define document types](/guides/define-documents)
+- [Create, read and update documents](/guides/crud-with-repositories)
+- Runnable example: [ExpireDocumentsWithTtlExampleTests](https://github.com/Dilcore-Official/Dilcore-MongoDb/blob/main/test/Repositories.IntegrationTests/Examples/ExpireDocumentsWithTtlExampleTests.cs)
+
